@@ -14,8 +14,6 @@ In Claude Code:
 /plugin install carvera-cam@schusterlab-fusion
 ```
 
-The repository is private, so your GitHub account needs access to SchusterLab.
-
 The skill drives Fusion through the Fusion MCP server, so Claude Code needs that server connected, and Fusion must be running and signed in to an account that can see the lab's Cloud Library:
 
 - tool library `Carvera Tools/My Tools`, whose tools carry the `Copper 101-H02` feed preset;
