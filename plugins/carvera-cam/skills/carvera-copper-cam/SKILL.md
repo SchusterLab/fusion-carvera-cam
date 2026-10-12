@@ -1,0 +1,115 @@
+---
+name: carvera-copper-cam
+description: Generate CAM toolpaths in Autodesk Fusion for machining a copper part on SchusterLab's Makera Carvera, following the lab's conventions (Cloud Library tools with the "Copper 101-H02" preset, top and flipped bottom setups, four holding tabs cut by a separate program). Use when the user asks to program, CAM, toolpath or machine a part on the Carvera or Makera, in copper or aluminum. Needs the Fusion MCP server.
+---
+
+# Carvera copper toolpaths
+
+This skill turns a Fusion design of a 2.5-axis part into a ready-to-post Carvera program, in the lab's style.
+It makes two setups (top, then the part flipped), every operation with the lab's tools and feeds, and three NC programs: `<part>_top`, `<part>_bottom` and `<part>_tabs`.
+The same programs machine aluminum: run them with the Carvera's feed and spindle overrides at 200%.
+
+A 2.5-axis part is one whose features are all reached straight down the Z axis from the top or from the bottom: pockets, holes, outlines and through windows.
+The skill does not cut side features, undercuts or 3D surfaces.
+
+## What the generator does
+
+`scripts/carvera_cam.py` runs inside Fusion's Python and has three entry points, each taking one dict of arguments:
+
+| Entry point | What it does |
+|---|---|
+| `analyze(args)` | Recognizes the part's holes, tapped holes, pocket floors, through windows and faces, and prints them as JSON. Changes nothing. |
+| `build(args)` | Deletes earlier setups it made (names ending in `(carvera-cam)`), then creates the setups, tools, operations and NC programs. Does not compute toolpaths. |
+| `generate(args)` | Computes the toolpaths within a time budget and reports each operation's errors, warnings and machining time. |
+
+The lab's conventions it applies are in [references/conventions.md](references/conventions.md); read that file before changing any parameter.
+
+## Workflow
+
+### 1. Open the part
+
+Find the document with the Fusion MCP `read` tool (`queryType: "document"`, `operation: "search"`) and open it with `execute` (`featureType: "document"`, `operation: "open"`).
+Never save the document unless the user asks; the user reviews the toolpaths first.
+
+### 2. Run the analysis
+
+Every call to the generator goes through a short stub passed to the Fusion MCP `execute` tool as a `script`.
+`SCRIPTS` is this skill's `scripts` folder, as an absolute Windows path:
+
+```python
+import runpy
+SCRIPTS = r'<absolute path of this skill>\scripts'
+
+def run(_context: str):
+    runpy.run_path(SCRIPTS + r'\carvera_cam.py')['analyze']({})
+```
+
+Pass `readOnly: true` for `analyze`, since it changes nothing.
+If the design has more than one visible solid body, pass `{"body": "<name>"}`.
+
+The JSON lists, among other things:
+
+- `size_mm`: the part's bounding box, with Z its thickness;
+- `holes`: groups of holes by diameter, side (`top`, `bottom`, or `none` when closed at both ends), through or blind, and `thread`, the thread read from a tapped Hole feature;
+- `tap_candidate`: a thread whose minor diameter matches a plain hole that carries no thread data;
+- `floors`: pocket floors and the two outer faces, each with its smallest inside-corner radius (0 for a sharp corner, null when the walls have no inside corners);
+- `windows`: through openings that are not round holes.
+
+### 3. Agree the plan with the user
+
+Before building, confirm with the user, briefly and in one message:
+
+- **Stock.** The lab's usual stock is a 2″ × 150 mm bar (50.8 × 150 mm) of 6.35 mm (0.25″) or 19 mm thickness, or a 150 × 150 mm copper plate about 6.2 mm thick. The part sits 10 mm from the back of the stock along Y and centred in its thickness. The stock must be thicker than the part, and the margin above and below the part, (stock thickness − part thickness) / 2, is faced off.
+- **Taps.** Lab parts mark tapped holes with Fusion's Hole command, Tapped type, threads not modeled, which leaves a plain hole at the minor diameter. `build` reads that thread data itself. For a hole with only a `tap_candidate`, ask whether it is tapped, and pass the answer as `taps`, keyed by the diameter exactly as `analyze` printed it, for example `{"1.623": "M2"}`. Supported threads: M2, M2.5, M3 and M4.
+- **Anything skipped or doubtful**, such as sharp inside corners, holes no tool fits, or more than six tools (the Carvera's automatic tool changer holds six; the seventh and later need a manual change).
+
+### 4. Build
+
+```python
+def run(_context: str):
+    runpy.run_path(SCRIPTS + r'\carvera_cam.py')['build']({
+        'stock': {'x': 50.8, 'y': 150, 'z': 6.35},
+        'taps': {'1.623': 'M2'},
+        'name': '<part name for the NC programs>',
+    })
+```
+
+Other arguments: `body`, `face` (face the stock off both sides, default true), `chamfer` (deburr the outer faces' edges, default true), `tab_width` (default 5 mm), and in `stock`, `y_mode` (default `back`) and `y_offset` (default 10 mm).
+`build` prints the tool slots, the operations and any warnings; it takes a few seconds.
+
+### 5. Generate the toolpaths
+
+```python
+def run(_context: str):
+    runpy.run_path(SCRIPTS + r'\carvera_cam.py')['generate']({'budget': 50})
+```
+
+If it prints `"status": "running"`, call it again; it resumes where it stopped.
+When done, it lowers any thread mill's pass count that Fusion reported as discarding passes (listed under `adjusted`), and reports every operation.
+Any operation with `"toolpath": false`, `hasError` or `hasWarning` needs attention before the program is used.
+
+### 6. Check the result
+
+Take a screenshot with the Fusion MCP `read` tool (`queryType: "screenshot"`), with the outline operation selected, and check the tabs and stock position.
+Report to the user, plainly:
+
+- the tool list by slot (T1, T2, …), and which slots need a manual tool change;
+- the NC programs and their order on the machine: run `_top`, flip the part, run `_bottom`, then run `_tabs`, which cuts the four tabs and frees the part;
+- the total machining time, and that aluminum runs the same programs at 200% feed and spindle override;
+- every warning, and every feature the generator did not machine.
+
+Post-process (write the G-code) only when the user asks.
+
+## Limits
+
+- The part's machining axis must be the design's Z axis, with the top setup looking down −Z.
+- Pocket entries ramp in a helix; the lab's own setups plunge at pre-drilled points, which the generator cannot choose automatically.
+- A pocket's inside corners finish at the radius of the smallest end mill that fits: 1 mm diameter leaves R0.5 in a sharp corner.
+- A through window with inside corners below R1.59 keeps material in its corners; `build` warns about it.
+- A hole closed at both ends, or one no tool in the library fits, is skipped with a warning.
+
+## Re-learning the conventions
+
+`scripts/dump_cam.py` dumps every CAM setup of a Fusion project to JSON (one document per few seconds; call `dump` repeatedly until it prints `ALL DONE`).
+Use it when the lab's practice changes, compare its output with [references/conventions.md](references/conventions.md), and update `carvera_cam.py` to match.
+`scripts/make_test_part.py` builds a 30 × 20 × 4 mm test part with one of each feature in a new, unsaved document, for testing changes.

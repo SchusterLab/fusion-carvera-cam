@@ -1,0 +1,16 @@
+{
+  "name": "schusterlab-fusion",
+  "owner": {
+    "name": "SchusterLab"
+  },
+  "metadata": {
+    "description": "SchusterLab's Claude Code plugins for Autodesk Fusion."
+  },
+  "plugins": [
+    {
+      "name": "carvera-cam",
+      "source": "./plugins/carvera-cam",
+      "description": "Generate Fusion CAM toolpaths for copper parts on SchusterLab's Makera Carvera."
+    }
+  ]
+}
