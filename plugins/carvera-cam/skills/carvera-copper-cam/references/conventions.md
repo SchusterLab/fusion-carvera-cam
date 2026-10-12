@@ -44,6 +44,19 @@ The work coordinate system (WCS) origin is the stock box's `top 4` corner, with 
 **Bottom setup.**
 The part is flipped about the X axis: Z axis flipped (`axesZX`, `flipZ`), stock from the previous setup, WCS origin at the stock box's `top 2` corner.
 
+## Fixture
+
+Each setup carries a model of the vise, so Fusion's simulation catches collisions with the vise and with the Carvera itself.
+The lab's pattern is `2026-01-20_sample-puck-6port7x7` (project `2026-01-06_smpm-sample-package-6port`, folder `old-versions`).
+
+- The fixture design is `2026-01-18_slab-fixture-3-axis` (project `2026-01-18_slab-fixture`): the Carvera's inch fixture plate with the 4th axis, and a Gen3 hobby mod vise with smooth insert bars.
+- The jaws grip the stock's Y edges, 4.3 mm deep; the fixed jaw is on the back edge, the one the part is 10 mm from, and the adjustable jaw opens to the stock's Y size.
+- The bottom setup has its own copy of the fixture, turned 180° about X with the part, gripping the stock left after the top program.
+- Both setups list their copy as the setup's fixture and attach it to the machine table at the plate's corner (Part Position, Table Attach Point), so the machine's own geometry is checked too.
+
+The lab built this with a Manufacturing Model holding the stock, the part and two embedded copies of the fixture.
+The generator works in the part's design instead, and copies the fixture's bodies into it as fixed geometry: an inserted copy of the fixture assembly comes in through the API with its jointed parts unsolved and scattered.
+
 ## Operation order
 
 Top setup:

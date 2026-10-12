@@ -152,6 +152,8 @@ def _find_body(args):
     for b in design.rootComponent.bRepBodies:
         bodies.append(b)
     for occ in design.rootComponent.allOccurrences:
+        if occ.component.name.startswith(VISE_PREFIX):
+            continue  # the vise an earlier build added
         for b in occ.bRepBodies:
             bodies.append(b)
     bodies = [b for b in bodies if b.isSolid and b.isVisible]
@@ -782,14 +784,167 @@ def _small_endmill(corner_radius, depth):
     return None, None
 
 
-def _setup(cam, name, body, machine, stock, top):
+# ------------------------------------------------------------- the vise
+# The lab's fixture design: the Carvera's fixture plate with the 4th axis and a
+# Gen3 hobby mod vise with smooth insert bars. In its own coordinates (mm) the
+# plate spans x 0..357, y 0..240, z -17.78..0; the fixed jaw's insert bar faces
+# -X at x = 242.93, the adjustable one faces +X at x = 186.72, both bars span
+# y 124.64..220.14 and top out at z = 29.53. The lab grips the stock 4.3 mm deep
+# with the jaws on the stock's Y edges, the fixed jaw on the back (+Y) edge, and
+# attaches the plate's corner (0, 0, -17.78) to the Carvera's table.
+
+FIXTURE_URN = 'urn:adsk.wipprod:dm.lineage:NzVKjVz8TWOi6WBJtR_NAg'
+FIXTURE_NAME = '2026-01-18_slab-fixture-3-axis'
+FX_FIXED_FACE = 242.93
+FX_ADJ_FACE = 186.72
+FX_JAW_CENTRE = (124.64 + 220.14) / 2
+FX_JAW_TOP = 29.53
+FX_PLATE_CORNER = (0.0, 0.0, -17.78)
+FX_MAX_OPENING = 185.0  # the adjustable base reaches the plate's edge beyond this
+GRIP = 4.3
+MOVES_WITH_JAW = ('Adjustable Side Assembly', 'S1822_Gen3_Smooth_Insert_Bar:2')
+
+
+def _fixture_bodies():
+    """The fixture's bodies as temporary B-Reps in its own coordinates.
+
+    Copies the solved geometry out of the fixture document: inserting the
+    assembly instead leaves its jointed parts unsolved and scattered.
+    Returns [(body, moves_with_jaw, is_plate)].
+    """
+    app = _app()
+    keep = app.activeDocument
+    f = app.data.findFileById(FIXTURE_URN)
+    if f is None:
+        raise RuntimeError('fixture design %s not found; is it shared with you?' % FIXTURE_NAME)
+    doc = app.documents.open(f, False)
+    tb = adsk.fusion.TemporaryBRepManager.get()
+    out = []
+    try:
+        root = adsk.fusion.FusionDocument.cast(doc).design.rootComponent
+
+        def walk(occ):
+            if not occ.isLightBulbOn:
+                return
+            path = occ.fullPathName
+            for b in occ.bRepBodies:
+                if b.isVisible:
+                    out.append((tb.copy(b), any(k in path for k in MOVES_WITH_JAW),
+                                'INCH Plate' in path))
+            for ch in occ.childOccurrences:
+                walk(ch)
+        for occ in root.occurrences:
+            walk(occ)
+    finally:
+        doc.close(False)
+        keep.activate()
+    return out
+
+
+def _stock_box(body, stock):
+    """The top setup's stock box in model coordinates, in cm: ((x0, y0, z0), (x1, y1, z1))."""
+    bb = body.boundingBox
+    lo, hi = bb.minPoint, bb.maxPoint
+    cx = (lo.x + hi.x) / 2
+    sx, sy, sz = stock['x'] / 10, stock['y'] / 10, stock['z'] / 10
+    if stock.get('y_mode', 'back') == 'back':
+        y1 = hi.y + stock.get('y_offset', 10) / 10
+        y0 = y1 - sy
+    elif stock.get('y_mode') == 'front':
+        y0 = lo.y - stock.get('y_offset', 10) / 10
+        y1 = y0 + sy
+    else:
+        cy = (lo.y + hi.y) / 2
+        y0, y1 = cy - sy / 2, cy + sy / 2
+    z0 = lo.z - stock['bottom'] / 10
+    return (cx - sx / 2, y0, z0), (cx + sx / 2, y1, z0 + sz)
+
+
+def _vise_matrices(box, held_bottom, held_top, flipped):
+    """Placements (fixed side, adjustable side) of the fixture for one setup.
+
+    held_bottom..held_top is the stock's Z extent in the setup's own upright
+    frame. For the bottom setup that frame is the model turned 180 degrees about
+    X through the stock's centre, as the setup's WCS turns it.
+    """
+    (x0, y0, _), (x1, y1, _) = box
+    cy = (y0 + y1) / 2
+    grip = min(GRIP, (held_top - held_bottom) * 10 - 1.0) / 10
+    # fixture X (towards the fixed jaw) -> +Y, fixture Y -> -X, Z -> Z
+    origin = adsk.core.Point3D.create((x0 + x1) / 2 + FX_JAW_CENTRE / 10,
+                                      y1 - FX_FIXED_FACE / 10,
+                                      held_bottom - (FX_JAW_TOP / 10 - grip))
+    m = adsk.core.Matrix3D.create()
+    m.setWithCoordinateSystem(origin, adsk.core.Vector3D.create(0, 1, 0),
+                              adsk.core.Vector3D.create(-1, 0, 0),
+                              adsk.core.Vector3D.create(0, 0, 1))
+    opening = (y1 - y0) * 10
+    shift = adsk.core.Matrix3D.create()
+    shift.translation = adsk.core.Vector3D.create(
+        (FX_FIXED_FACE - opening - FX_ADJ_FACE) / 10, 0, 0)
+    adj = shift.copy()
+    adj.transformBy(m)
+    if flipped:
+        flip = adsk.core.Matrix3D.create()
+        flip.setToRotation(math.pi, adsk.core.Vector3D.create(1, 0, 0),
+                           adsk.core.Point3D.create(0, cy, 0))
+        m.transformBy(flip)
+        adj.transformBy(flip)
+    return m, adj
+
+
+def _add_vise(design, name, bodies, fixed, adj):
+    """Add the fixture as one component named `name`; returns (occurrence, table attach point)."""
+    root = design.rootComponent
+    occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
+    comp = occ.component
+    comp.name = name
+    tb = adsk.fusion.TemporaryBRepManager.get()
+    parametric = design.designType == adsk.fusion.DesignTypes.ParametricDesignType
+    bf = comp.features.baseFeatures.add() if parametric else None
+    if bf:
+        bf.startEdit()
+    try:
+        for b, moves, _ in bodies:
+            c = tb.copy(b)
+            tb.transform(c, adj if moves else fixed)
+            comp.bRepBodies.add(c, bf) if bf else comp.bRepBodies.add(c)
+    finally:
+        if bf:
+            bf.finishEdit()
+    # the plate's corner is rounded, so the attach point is a construction
+    # point there, as in the fixture design (Point1)
+    corner = adsk.core.Point3D.create(*[v / 10 for v in FX_PLATE_CORNER])
+    corner.transformBy(fixed)
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    sk.name = LAYOUT_SKETCH + ' table attach'
+    sp = sk.sketchPoints.add(sk.modelToSketchSpace(corner))
+    ci = comp.constructionPoints.createInput()
+    ci.setByPoint(sp)
+    cp = comp.constructionPoints.add(ci)
+    cp.name = 'table attach'
+    sk.isVisible = False
+    return occ, cp.createForAssemblyContext(occ)
+
+
+def _setup(cam, name, body, machine, stock, top, vise=None):
     si = cam.setups.createInput(adsk.cam.OperationTypes.MillingOperation)
     si.name = name
     si.models = [body]
     if machine is not None:
         si.machine = machine
+    if vise is not None:
+        si.fixtureEnabled = True
+        si.fixtures = [vise[0]]
     setup = cam.setups.add(si)
     p = setup.parameters
+    if vise is not None:
+        # put the setup on the Carvera's table through the plate's corner, so
+        # simulation checks the machine as well as the vise
+        _try_set(p, 'job_position', 'true')
+        _try_set(p, 'job_positionReference_origin_mode', "'point'")
+        p.itemByName('job_positionAttach').value.value = [vise[1]]
+        p.itemByName('job_positionReference_origin_point').value.value = [vise[1]]
     if top:
         _set(p, 'job_stockMode', "'fixedbox'")
         _set(p, 'job_stockFixedX', '%gmm' % stock['x'])
@@ -822,6 +977,7 @@ def _setup(cam, name, body, machine, stock, top):
 # build() redraws that sketch, named LAYOUT_SKETCH, every time it runs.
 
 LAYOUT_SKETCH = 'carvera-cam'
+VISE_PREFIX = LAYOUT_SKETCH + ' vise '
 TOOL_R = ENDMILL_D / 2 / 10  # cm
 
 
@@ -1466,6 +1622,8 @@ def _delete_previous(cam, design):
         sk.deleteMe()
     for pl in [pl for pl in root.constructionPlanes if pl.name.startswith(LAYOUT_SKETCH)]:
         pl.deleteMe()
+    for occ in [o for o in root.occurrences if o.component.name.startswith(VISE_PREFIX)]:
+        occ.deleteMe()
 
 
 def _nc_program(cam, name, ops, post):
@@ -1493,6 +1651,8 @@ def build(args):
       tab_width: tab width along the outline in mm (default 5)
       tab_z:     model Z of the tab band's centre in mm (default: the mid-plane,
                  or the nearest height clear of pockets that open to the side)
+      fixture:   model the vise and attach the setups to the machine table, for
+                 collision checks (default true)
     """
     t0 = time.time()
     body = _find_body(args)
@@ -1550,9 +1710,23 @@ def build(args):
     if post is None:
         warnings.append('post not found at ' + POST_URL)
     name = args.get('name') or _app().activeDocument.name
-    top = _setup(cam, 'Top ' + SETUP_TAG, body, machine, stock, True)
+    vises = [None, None]
+    if args.get('fixture', True):
+        box = _stock_box(body, stock)
+        opening = stock['y']
+        if opening > FX_MAX_OPENING:
+            warnings.append('the stock is %g mm across the vise jaws; the vise opens to about %g mm'
+                            % (opening, FX_MAX_OPENING))
+        fixture = _fixture_bodies()
+        z0, ztop = box[0][2], a['ztop'] / 10
+        vises = [_add_vise(design, VISE_PREFIX + 'top', fixture,
+                           *_vise_matrices(box, z0, box[1][2], False)),
+                 _add_vise(design, VISE_PREFIX + 'bottom', fixture,
+                           *_vise_matrices(box, -ztop, -z0, True))]
+        vises[1][0].isLightBulbOn = False  # it would hang upside down over the part
+    top = _setup(cam, 'Top ' + SETUP_TAG, body, machine, stock, True, vises[0])
     top_ops = _side_ops(b, top, a, 'top', plan, warnings)
-    bottom = _setup(cam, 'Bottom ' + SETUP_TAG, body, machine, stock, False)
+    bottom = _setup(cam, 'Bottom ' + SETUP_TAG, body, machine, stock, False, vises[1])
     bottom_ops = _side_ops(b, bottom, a, 'bottom', plan, warnings)
     _nc_program(cam, name + '_top', top_ops['main'], post)
     _nc_program(cam, name + '_bottom', bottom_ops['main'], post)

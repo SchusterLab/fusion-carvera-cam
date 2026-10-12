@@ -63,7 +63,8 @@ Before building, confirm with the user, briefly and in one message:
 - **Stock.** The lab's usual stock is a 2″ × 150 mm bar (50.8 × 150 mm) of 6.35 mm (0.25″) or 19 mm thickness, or a 150 × 150 mm copper plate about 6.2 mm thick. The part sits 10 mm from the back of the stock along Y and, by default, centred in its thickness. The stock must be thicker than the part, and the margins above and below the part are faced off. Moving the part up or down in the stock (`bottom`, below) shifts facing time between the top and bottom programs, so the user can choose when to come back to flip the stock.
 - **Taps.** Lab parts mark tapped holes with Fusion's Hole command, Tapped type, threads not modeled, which leaves a plain hole at the minor diameter. `build` reads that thread data itself. For a hole with only a `tap_candidate`, ask whether it is tapped, and pass the answer as `taps`, keyed by the diameter exactly as `analyze` printed it, for example `{"1.623": "M2"}`. Supported threads: M2, M2.5, M3 and M4.
 - **Tab height**, if `analyze` moved `tab_z` off the halfway plane because a pocket opens to the side; the user may prefer another height, passed as `tab_z`.
-- **The design gets a sketch.** `build` adds a sketch named `carvera-cam` (entry points, corner chains and tab spans) to the design, plus a section sketch and construction plane per shelf height, the way the lab sketches these by hand; it redraws them on every build.
+- **The design gets a sketch and the vise.** `build` adds a sketch named `carvera-cam` (entry points, corner chains and tab spans) to the design, plus a section sketch and construction plane per shelf height, the way the lab sketches these by hand. It also adds two copies of the lab's fixture, `carvera-cam vise top` and `carvera-cam vise bottom` (the second hidden), so that simulation checks the tool against the vise and the machine. It redraws all of these on every build.
+- **The stock across the vise.** The jaws grip the stock's Y edges, so the vise opens to the stock's Y size; it opens to about 185 mm.
 - **Anything skipped or doubtful**, such as sharp inside corners, holes no tool fits, or more than six tools (the Carvera's automatic tool changer holds six; the seventh and later need a manual change).
 
 ### 4. Build
@@ -77,10 +78,10 @@ def run(_context: str):
     })
 ```
 
-Other arguments: `body`, `face` (face the stock off both sides, default true), `chamfer` (deburr the outer faces' edges, default true), `tab_width` (default 5 mm), `tab_z` (model Z of the tab band's centre, in mm), and in `stock`, `y_mode` (default `back`), `y_offset` (default 10 mm) and `bottom`.
+Other arguments: `body`, `face` (face the stock off both sides, default true), `chamfer` (deburr the outer faces' edges, default true), `fixture` (model the vise, default true), `tab_width` (default 5 mm), `tab_z` (model Z of the tab band's centre, in mm), and in `stock`, `y_mode` (default `back`), `y_offset` (default 10 mm) and `bottom`.
 `bottom` is the stock left below the part, in mm; the default centres the part in the stock's thickness.
 It sets how long the top program runs before the operator flips the stock: more stock below the part moves facing time from the top program to the bottom one.
-`build` prints the tool slots, the operations, the tab layout, the number of pocket entries and any warnings; it takes a few seconds.
+`build` prints the tool slots, the operations, the tab layout, the number of pocket entries and any warnings; it takes about 10 seconds.
 Call `build` and `generate` in separate MCP calls: a call that runs longer than about a minute times out.
 
 ### 5. Generate the toolpaths
@@ -98,7 +99,8 @@ Any operation with `"toolpath": false`, `hasError` or `hasWarning` needs attenti
 
 ### 6. Check the result
 
-Take a screenshot with the Fusion MCP `read` tool (`queryType: "screenshot"`), with the outline operation selected, and check the tabs and stock position.
+Take a screenshot with the Fusion MCP `read` tool (`queryType: "screenshot"`), with the outline operation selected, and check the tabs, the stock position and the vise.
+Ask the user to run Fusion's simulation with collision checking on each setup before machining; the API cannot run it.
 Report to the user, plainly:
 
 - the tool list by slot (T1, T2, …), and which slots need a manual tool change;

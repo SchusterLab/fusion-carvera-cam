@@ -2,7 +2,7 @@
 
 This repository is a Claude Code plugin marketplace with one plugin, `carvera-cam`.
 Its skill, `carvera-copper-cam`, generates Autodesk Fusion CAM toolpaths for machining copper parts on the lab's Makera Carvera.
-Given a part, it creates the top and flipped bottom setups, every operation with the lab's tools and feeds, and three NC programs: `<part>_top`, `<part>_bottom` and `<part>_tabs`.
+Given a part, it creates the top and flipped bottom setups with the lab's vise modelled for collision checks, every operation with the lab's tools and feeds, and three NC programs: `<part>_top`, `<part>_bottom` and `<part>_tabs`.
 The same programs machine aluminum at 200% feed and spindle override.
 
 ## Install
@@ -18,7 +18,8 @@ The skill drives Fusion through the Fusion MCP server, so Claude Code needs that
 
 - tool library `Carvera Tools/My Tools`, whose tools carry the `Copper 101-H02` feed preset;
 - machine `Makera Carvera 3-axis Community Version 1.17-slab`;
-- post processor `Carvera.cps` (Makera Carvera Community Post).
+- post processor `Carvera.cps` (Makera Carvera Community Post);
+- the fixture design `2026-01-18_slab-fixture-3-axis`.
 
 ## Use
 
