@@ -39,5 +39,5 @@ It does not save the document or write G-code unless you ask.
 ## Limits
 
 The generator handles 2.5-axis parts: pockets, holes, tapped holes, through windows and outlines, all reached along Z from the top or the bottom.
-Its pockets enter on a helical ramp rather than at pre-drilled points, and corners finish at the radius of the smallest end mill that fits.
+Pocket corners finish at the radius of the smallest end mill that fits.
 `SKILL.md` lists the remaining limits.

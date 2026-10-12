@@ -1,6 +1,6 @@
 ---
 name: carvera-copper-cam
-description: Generate CAM toolpaths in Autodesk Fusion for machining a copper part on SchusterLab's Makera Carvera, following the lab's conventions (Cloud Library tools with the "Copper 101-H02" preset, top and flipped bottom setups, four holding tabs cut by a separate program). Use when the user asks to program, CAM, toolpath or machine a part on the Carvera or Makera, in copper or aluminum. Needs the Fusion MCP server.
+description: Generate CAM toolpaths in Autodesk Fusion for machining a copper part on SchusterLab's Makera Carvera, following the lab's conventions (Cloud Library tools with the "Copper 101-H02" preset, top and flipped bottom setups, pre-drilled entry holes, four holding tabs cut by a separate program). Use when the user asks to program, CAM, toolpath or machine a part on the Carvera or Makera, in copper or aluminum. Needs the Fusion MCP server.
 ---
 
 # Carvera copper toolpaths
@@ -19,7 +19,7 @@ The skill does not cut side features, undercuts or 3D surfaces.
 | Entry point | What it does |
 |---|---|
 | `analyze(args)` | Recognizes the part's holes, tapped holes, pocket floors, through windows and faces, and prints them as JSON. Changes nothing. |
-| `build(args)` | Deletes earlier setups it made (names ending in `(carvera-cam)`), then creates the setups, tools, operations and NC programs. Does not compute toolpaths. |
+| `build(args)` | Deletes what an earlier build made (setups ending in `(carvera-cam)`, and the `carvera-cam` sketches and planes), then creates the setups, tools, operations and NC programs. Does not compute toolpaths. |
 | `generate(args)` | Computes the toolpaths within a time budget and reports each operation's errors, warnings and machining time. |
 
 The lab's conventions it applies are in [references/conventions.md](references/conventions.md); read that file before changing any parameter.
@@ -52,15 +52,18 @@ The JSON lists, among other things:
 - `size_mm`: the part's bounding box, with Z its thickness;
 - `holes`: groups of holes by diameter, side (`top`, `bottom`, or `none` when closed at both ends), through or blind, and `thread`, the thread read from a tapped Hole feature;
 - `tap_candidate`: a thread whose minor diameter matches a plain hole that carries no thread data;
-- `floors`: pocket floors and the two outer faces, each with its smallest inside-corner radius (0 for a sharp corner, null when the walls have no inside corners);
-- `windows`: through openings that are not round holes.
+- `floors`: pocket floors and the two outer faces, each with its smallest inside-corner radius (0 for a sharp corner, null when the walls have no inside corners), `side_open` for a pocket open to the side of the part, and `shelf` for a floor that steps down into a deeper pocket;
+- `windows`: through openings that are not round holes;
+- `tab_z`: the height of the tab band's centre that `build` will use: halfway between the part's top and bottom, unless a pocket open to the side is at that height.
 
 ### 3. Agree the plan with the user
 
 Before building, confirm with the user, briefly and in one message:
 
-- **Stock.** The lab's usual stock is a 2″ × 150 mm bar (50.8 × 150 mm) of 6.35 mm (0.25″) or 19 mm thickness, or a 150 × 150 mm copper plate about 6.2 mm thick. The part sits 10 mm from the back of the stock along Y and centred in its thickness. The stock must be thicker than the part, and the margin above and below the part, (stock thickness − part thickness) / 2, is faced off.
+- **Stock.** The lab's usual stock is a 2″ × 150 mm bar (50.8 × 150 mm) of 6.35 mm (0.25″) or 19 mm thickness, or a 150 × 150 mm copper plate about 6.2 mm thick. The part sits 10 mm from the back of the stock along Y and, by default, centred in its thickness. The stock must be thicker than the part, and the margins above and below the part are faced off. Moving the part up or down in the stock (`bottom`, below) shifts facing time between the top and bottom programs, so the user can choose when to come back to flip the stock.
 - **Taps.** Lab parts mark tapped holes with Fusion's Hole command, Tapped type, threads not modeled, which leaves a plain hole at the minor diameter. `build` reads that thread data itself. For a hole with only a `tap_candidate`, ask whether it is tapped, and pass the answer as `taps`, keyed by the diameter exactly as `analyze` printed it, for example `{"1.623": "M2"}`. Supported threads: M2, M2.5, M3 and M4.
+- **Tab height**, if `analyze` moved `tab_z` off the halfway plane because a pocket opens to the side; the user may prefer another height, passed as `tab_z`.
+- **The design gets a sketch.** `build` adds a sketch named `carvera-cam` (entry points, corner chains and tab spans) to the design, plus a section sketch and construction plane per shelf height, the way the lab sketches these by hand; it redraws them on every build.
 - **Anything skipped or doubtful**, such as sharp inside corners, holes no tool fits, or more than six tools (the Carvera's automatic tool changer holds six; the seventh and later need a manual change).
 
 ### 4. Build
@@ -74,8 +77,11 @@ def run(_context: str):
     })
 ```
 
-Other arguments: `body`, `face` (face the stock off both sides, default true), `chamfer` (deburr the outer faces' edges, default true), `tab_width` (default 5 mm), and in `stock`, `y_mode` (default `back`) and `y_offset` (default 10 mm).
-`build` prints the tool slots, the operations and any warnings; it takes a few seconds.
+Other arguments: `body`, `face` (face the stock off both sides, default true), `chamfer` (deburr the outer faces' edges, default true), `tab_width` (default 5 mm), `tab_z` (model Z of the tab band's centre, in mm), and in `stock`, `y_mode` (default `back`), `y_offset` (default 10 mm) and `bottom`.
+`bottom` is the stock left below the part, in mm; the default centres the part in the stock's thickness.
+It sets how long the top program runs before the operator flips the stock: more stock below the part moves facing time from the top program to the bottom one.
+`build` prints the tool slots, the operations, the tab layout, the number of pocket entries and any warnings; it takes a few seconds.
+Call `build` and `generate` in separate MCP calls: a call that runs longer than about a minute times out.
 
 ### 5. Generate the toolpaths
 
@@ -85,6 +91,8 @@ def run(_context: str):
 ```
 
 If it prints `"status": "running"`, call it again; it resumes where it stopped.
+`{'limit': 8}` starts at most 8 operations per call, which keeps each call short on a large part.
+It prints `"status": "partial"`, with the operations not yet generated under `pending`, until every operation has a toolpath.
 When done, it lowers any thread mill's pass count that Fusion reported as discarding passes (listed under `adjusted`), and reports every operation.
 Any operation with `"toolpath": false`, `hasError` or `hasWarning` needs attention before the program is used.
 
@@ -103,7 +111,8 @@ Post-process (write the G-code) only when the user asks.
 ## Limits
 
 - The part's machining axis must be the design's Z axis, with the top setup looking down −Z.
-- Pocket entries ramp in a helix; the lab's own setups plunge at pre-drilled points, which the generator cannot choose automatically.
+- A pocket narrower than the 3.175 mm end mill gets no entry hole; the small end mills clear it by rest machining, plunging as the lab does.
+- The tabs follow the outline of the part's top or bottom face, whichever encloses more area; a part wider in the middle than at both faces gets a warning.
 - A pocket's inside corners finish at the radius of the smallest end mill that fits: 1 mm diameter leaves R0.5 in a sharp corner.
 - A through window with inside corners below R1.59 keeps material in its corners; `build` warns about it.
 - A hole closed at both ends, or one no tool in the library fits, is skipped with a warning.

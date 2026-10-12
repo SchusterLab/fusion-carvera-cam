@@ -37,7 +37,8 @@ T2 roughs every feature in steps; T3, a fresh tool of the same kind, then runs e
 
 **Top setup.**
 The stock is a fixed box: commonly a 2″ × 150 mm bar 6.35 mm (0.25″) or 19 mm thick, or a 150 × 150 mm copper plate 6.2 mm thick.
-The part sits centred in X, 10 mm from the back of the stock in Y, and centred in the stock's thickness.
+The part sits centred in X, 10 mm from the back of the stock in Y, and centred in the stock's thickness unless the user moves it.
+The lab's parts sit at various heights in the stock; the height decides how much facing each program does, and so when the operator must come back to flip the stock.
 The work coordinate system (WCS) origin is the stock box's `top 4` corner, with the model's orientation.
 
 **Bottom setup.**
@@ -47,25 +48,42 @@ The part is flipped about the X axis: Z axis flipped (`axesZX`, `flipZ`), stock 
 
 Top setup:
 
-1. T1 pre-drills the holes the end mill will bore.
-2. T2 roughs: facing the stock top down to the part's top face, pockets, bores, through windows, and the outline down past the part's mid-thickness, with tabs.
+1. T1 drills the entry holes (see "Entry holes") and pre-drills the holes the end mill will bore.
+2. T2 roughs: facing the stock top down to the part's top face, the outline down to the tab band, pockets, bores, through windows, and the outline between the tabs down through the band.
 3. T3 finishes the same features in single full-depth passes.
 4. Small end mills clear pocket corners the 3.175 mm end mill cannot reach (rest machining, plunge entry).
 5. Drills cut plain holes and tap drills.
 6. Thread mills cut the threads.
 7. The chamfering bit deburrs the edges of the top face.
 
-The bottom setup repeats steps 2–7 for the bottom-side features; its outline stops at the bottom of the tab band.
+The bottom setup drills the entry holes of its own pockets, then repeats steps 2–7 for the bottom-side features; its outline stops at the bottom of the tab band.
+
+## Entry holes
+
+The end mill never ramps or plunges into solid metal.
+It enters every cut through a hole the T1 drill (3.175 mm, the end mill's diameter) makes first, at points kept in a sketch:
+
+- **The main entry**, just outside the outline at the edge of a tab, one tool radius out, so the end mill's centre sits on the outline's toolpath. T1 drills it through the whole stock with 0.5 mm breakthrough. Both facing pockets and both outline contours enter there.
+- **One entry per corner chain** (the outline between two tabs; see "Holding tabs"), at the same offset from the start of the chain, drilled from the top through the tab band.
+- **One entry per pocket**, at the point of the pocket farthest from its walls, drilled to the pocket floor. A shelf, a floor that steps down into a deeper pocket inside it, is pocketed with that deeper pocket as one region (the opening just above the shelf), and its entry is the deeper pocket's, drilled to the deeper floor.
+- **A pocket open to the side** gets no hole: its entry sits just outside the opening, where the outline cut has already cleared the stock down to the pocket's floor, and the end mill enters sideways.
+
+The pockets use the `predrill` ramp with these points as their predrill positions, and the outline contours use the main entry as their entry position.
 
 ## Holding tabs
 
-The part stays attached to the stock by four bridges until a separate program cuts them:
+The part stays attached to the stock by four bridges ("tabs") until a separate program cuts them.
+They sit on the longest straight or arc edges of the outline, one at the middle of each, 5 mm wide along the outline.
+The tab band is 1 mm thick (0.4 × the part's thickness for parts under 2.5 mm) and is centred on the plane halfway between the part's top and bottom.
+A pocket open to the side of the part is reached sideways at its own depth, so the band moves to the nearest height clear of every such opening.
 
-- The top setup's outline cuts from the stock top to 0.5 mm below the bottom of a 1 mm-thick band at the part's mid-thickness, leaving rectangular tabs 5 mm wide and 1.5 mm tall at its bottom.
-- The bottom setup's outline cuts from the bottom up to the band, leaving only the 1 mm band at the tabs.
-- `<part>_tabs`, the last program, runs the outline through the band in 0.2 mm steps and frees the part.
+- The top setup's outline cuts from the stock top down to the top of the band.
+- The **outline between tabs** (four corner chains, each running from one tab to the next) then cuts from the top of the band to 0.5 mm below its bottom.
+- The bottom setup's outline cuts from the bottom face up to the bottom of the band.
+- `<part>_tabs`, the last program, cuts each tab span through the band and 0.5 mm past it, in 0.2 mm steps, and frees the part.
 
-For a part thinner than 3 mm the band is a third of the thickness.
+Each tab span is 5 mm along the outline, so the bridge left after the end mill's radius on each side is about 1.8 mm wide.
+The corner chains and tab spans are curves in the `carvera-cam` sketch; the generator orients each chain so a left-compensated tool stays outside the part in both setups.
 
 ## Operation parameters
 
@@ -73,7 +91,7 @@ Feeds, speeds and stepdowns come from the tool preset; the operations set only t
 
 | Operation | Parameters |
 |---|---|
-| 2D pocket | tolerance 0.1 mm, stepover 0.6 × tool diameter, compensation left, no stock to leave; floors selected as pocket faces; the facing pocket starts at the stock top |
+| 2D pocket | tolerance 0.1 mm, stepover 0.6 × tool diameter, compensation left, no stock to leave, `predrill` ramp at the entry holes; floors selected as pocket faces, shelves as the closed opening above them (one counter-clockwise chain per opening); the facing pocket starts at the stock top |
 | 2D contour | tolerance 0.01 mm, compensation left, two finishing stepovers, no ramp, no stock to leave |
 | Drill | chip-breaking cycle, 2 mm pecks; through holes break through 0.5 mm with the drill tip past the bottom |
 | Bore | climb, tolerance 0.01 mm, stepover 0.3 mm with enough passes to reach the wall; through holes go 0.5 mm past the bottom |

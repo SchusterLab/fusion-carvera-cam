@@ -3,7 +3,8 @@
 It has one of each feature the generator handles: an outline with R2 corners,
 a top pocket with R0.8 corners (needs a small end mill), a bottom pocket, a
 through window, two 3.8 mm bores, two M2 tapped holes (Hole command, tapped,
-not modeled) and a blind 2.2 mm hole. Used to test carvera_cam.py.
+not modeled), a blind 2.2 mm hole, and a slot open to the side
+(args {"side_slot": false} leaves it out). Used to test carvera_cam.py.
 """
 
 import adsk.core
@@ -95,6 +96,15 @@ def make(args=None):
     ei = ext.createInput(pick(s, 30), CUT)
     ei.setDistanceExtent(False, V('1 mm'))
     ext.add(ei)
+
+    # a slot open to the +Y side, 2.2 mm deep: the tool enters it sideways, so it
+    # pushes the tabs off the mid-plane (z = 2 mm) to below z = 1.8 mm
+    if (args or {}).get('side_slot', True):
+        s = root.sketches.add(top_plane)
+        s.sketchCurves.sketchLines.addTwoPointRectangle(P(2, 7), P(8, 11))
+        ei = ext.createInput(pick(s, 18), CUT)
+        ei.setDistanceExtent(False, V('-2.2 mm'))
+        ext.add(ei)
 
     # M2 tapped holes: Hole command, tapped, threads not modeled
     hf = root.features.holeFeatures
