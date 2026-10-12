@@ -61,7 +61,7 @@ The JSON lists, among other things:
 Before building, confirm with the user, briefly and in one message:
 
 - **Stock.** The lab's usual stock is a 2″ × 150 mm bar (50.8 × 150 mm) of 6.35 mm (0.25″) or 19 mm thickness, or a 150 × 150 mm copper plate about 6.2 mm thick. The part sits 10 mm from the back of the stock along Y and, by default, centred in its thickness. The stock must be thicker than the part, and the margins above and below the part are faced off. Moving the part up or down in the stock (`bottom`, below) shifts facing time between the top and bottom programs, so the user can choose when to come back to flip the stock.
-- **Taps.** Lab parts mark tapped holes with Fusion's Hole command, Tapped type, threads not modeled, which leaves a plain hole at the minor diameter. `build` reads that thread data itself. For a hole with only a `tap_candidate`, ask whether it is tapped, and pass the answer as `taps`, keyed by the diameter exactly as `analyze` printed it, for example `{"1.623": "M2"}`. Supported threads: M2, M2.5, M3 and M4.
+- **Taps.** Lab parts mark tapped holes with Fusion's Hole command, Tapped type, threads not modeled, which leaves a plain hole at the minor diameter. `build` reads that thread data itself. For a hole with only a `tap_candidate`, ask whether it is tapped, and pass the answer as `taps`, keyed by the diameter exactly as `analyze` printed it, for example `{"1.623": "M2"}`. Supported threads: M2, M2.5, M3 and M4; their pre-drilling and thread-milling settings are in [references/threads.toml](references/threads.toml).
 - **Tab height**, if `analyze` moved `tab_z` off the halfway plane because a pocket opens to the side; the user may prefer another height, passed as `tab_z`.
 - **The design gets a sketch and the vise.** `build` adds a sketch named `carvera-cam` (entry points, corner chains and tab spans) to the design, plus a section sketch and construction plane per shelf height, the way the lab sketches these by hand. It also adds two copies of the lab's fixture, `carvera-cam vise top` and `carvera-cam vise bottom` (the second hidden), so that simulation checks the tool against the vise and the machine. It redraws all of these on every build.
 - **The stock across the vise.** The jaws grip the stock's Y edges, so the vise opens to the stock's Y size; it opens to about 185 mm.
@@ -94,7 +94,7 @@ def run(_context: str):
 If it prints `"status": "running"`, call it again; it resumes where it stopped.
 `{'limit': 8}` starts at most 8 operations per call, which keeps each call short on a large part.
 It prints `"status": "partial"`, with the operations not yet generated under `pending`, until every operation has a toolpath.
-When done, it lowers any thread mill's pass count that Fusion reported as discarding passes (listed under `adjusted`), and reports every operation.
+When done, it reports every operation. If Fusion discards thread-mill passes, it lowers that operation's pass count below the one in `threads.toml` and lists the change under `adjusted`; report any such change to the user.
 Any operation with `"toolpath": false`, `hasError` or `hasWarning` needs attention before the program is used.
 
 ### 6. Check the result

@@ -1,0 +1,112 @@
+# How SchusterLab pre-drills and thread-mills tapped holes on the Carvera.
+#
+# carvera_cam.py reads this file every time it builds toolpaths, so editing a
+# value here changes the next build. Lengths are in mm.
+#
+# The lab models a tapped hole with Fusion's Hole command: Tapped, ISO metric,
+# class 6H, threads not modeled. That leaves a plain hole at the thread's minor
+# diameter (`modelled_hole`), which the generator recognizes by diameter.
+#
+# Each hole is pre-drilled slightly oversize (M4: drilled, then bored to size
+# with the end mill), then thread-milled. Feeds and speeds come from each
+# tool's "Copper 101-H02" preset, not from here:
+#   drills          10000 rpm, plunge 50 mm/min
+#   end mill        6000 rpm, 200 mm/min
+#   thread mills    15000 rpm; M2 100, M2.5 150, M3 200, M4 200 mm/min
+#
+# Sources (Fusion projects; the newest settings win where they differ):
+#   M2    2026-01-06_smpm-sample-package-6port: sample pucks, lids, hangers,
+#         kiutra-beam, bobbin-bottom, aluminum-can-lid (17 parts)
+#   M2.5  copper-can-lid-6port (blind holes, both setups)
+#   M3    Default Project: 2026-04-12_holes-for-copper-finger-1 and -2, and an
+#         Untitled design (the only M3 work; see the note under [M3])
+#   M4    hanger-support-for-chris, hanger-support-for-bluefors-sd-vertical,
+#         eccosorb-clamp-6port, and Default Project: 2026-07-31_amir-puck-finger
+
+
+# ---------------------------------------------------------------- every size
+
+[drill]
+# Fusion's "chip breaking - partial retract" cycle
+cycle = "chip-breaking"
+peck = 2.0                # incremental depth per peck
+chip_break = 0.1          # retract between pecks
+# Through holes: the tip goes 0.5 mm past the bottom. Blind holes stop at the
+# hole bottom.
+through_breakthrough = 0.5
+blind_breakthrough = 0.0
+
+[thread]
+direction = "climb"
+top_offset = 0.0          # start at the hole top
+# Bottom of the thread-mill pass, relative to the hole bottom: 0.3 mm past it
+# in a through hole, at it in a blind hole.
+through_bottom_offset = -0.3
+blind_bottom_offset = 0.0
+
+
+# ---------------------------------------------------------------- per size
+#
+#   pitch                   thread pitch
+#   modelled_hole           the Hole command's minor diameter for the size
+#   drill                   pre-drill, by its description in the tool library
+#   thread_mill             thread mill, by its description in the tool library
+#   pitch_diameter_offset   Fusion's "pitch diameter offset" for the thread mill
+#   passes, stepover        radial passes of the thread mill; stepover "tool"
+#                           takes the thread mill's own stepover (0.1 mm)
+
+[M2]
+pitch = 0.4
+modelled_hole = 1.623
+drill = "1.7*9.6mm Drill"
+thread_mill = "Carvera M2 Threadmill"
+pitch_diameter_offset = 0.5
+passes = 3
+stepover = "tool"
+
+["M2.5"]
+pitch = 0.45
+modelled_hole = 2.0755
+drill = "2.2*8.8mm Drill"
+thread_mill = "Carvera M2.5 Threadmill"
+pitch_diameter_offset = 0.6
+passes = 4
+stepover = "tool"
+
+[M3]
+# The two M3 jobs differ: holes-for-copper-finger drills 2.5 mm with a 0.5 mm
+# offset; the Untitled design drills 2.6 mm with 0.6 mm, following the M2.5
+# pattern. This file uses the second; check it before an M3 job.
+pitch = 0.5
+modelled_hole = 2.529
+drill = "2.6*8.2mm Drill"
+thread_mill = "Carvera M3 Threadmill"
+pitch_diameter_offset = 0.6
+passes = 4
+stepover = "tool"
+
+[M4]
+# No drill matches 3.332 mm, so the 3.175 mm drill opens the hole and the
+# 3.175 mm end mill bores it to size before thread milling.
+pitch = 0.7
+modelled_hole = 3.332
+drill = "3.175*7.4mm Drill"
+thread_mill = "Carvera M4 Threadmill"
+pitch_diameter_offset = 0.8
+
+[M4.bore]
+end_mill = "Spiral O Metal 3.175*12mm"
+stepover = 0.1
+passes = 1
+through_bottom_offset = -0.5
+# A blind hole gets a second, full-depth pass with the finishing end mill
+# (eccosorb-clamp); a through hole in 1/8" plate gets the roughing pass only.
+blind_finish_pass = true
+
+[M4.through]              # 1/8" plate parts and amir-puck-finger
+passes = 3
+stepover = 0.2
+
+[M4.blind]                # eccosorb-clamp, 9.5 mm deep
+passes = 5
+stepover = 0.1

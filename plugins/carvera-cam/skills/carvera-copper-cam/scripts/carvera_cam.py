@@ -22,7 +22,9 @@ Lengths in args are millimetres. Fusion's internal unit is the centimetre.
 
 import json
 import math
+import os
 import time
+import tomllib
 
 import adsk.cam
 import adsk.core
@@ -47,15 +49,24 @@ SMALL_ENDMILLS = [
 ]
 # matched by prefix: the library stores this name with a mis-encoded inch mark
 CHAMFER = 'Chamfering Bit - 1/8'
-# Tapped holes. The lab models a tapped hole as a plain hole at the minor
-# diameter, drills it slightly oversize for the thread mill, then thread-mills.
+# Tapped holes: the lab's pre-drilling and thread-milling recipe, per thread
+# size, lives in references/threads.toml, which is read on every run.
+THREADS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            '..', 'references', 'threads.toml')
+
+
+def _load_threads(path=THREADS_FILE):
+    with open(path, 'rb') as f:
+        data = tomllib.load(f)
+    common = {k: data.pop(k) for k in ('drill', 'thread')}
+    return common, data
+
+
+THREAD_COMMON, THREAD_RECIPES = _load_threads()
 # name: (modelled diameter, tap drill or None to bore, thread mill, pitch)
-THREADS = {
-    'M2': (1.6, '1.7*9.6mm Drill', 'Carvera M2 Threadmill', 0.4),
-    'M2.5': (2.05, '2.2*8.8mm Drill', 'Carvera M2.5 Threadmill', 0.45),
-    'M3': (2.5, '2.6*8.2mm Drill', 'Carvera M3 Threadmill', 0.5),
-    'M4': (3.3, None, 'Carvera M4 Threadmill', 0.7),
-}
+THREADS = {name: (r['modelled_hole'], None if 'bore' in r else r['drill'],
+                  r['thread_mill'], r['pitch'])
+           for name, r in THREAD_RECIPES.items()}
 
 EPS = 1e-4  # cm
 
@@ -755,9 +766,10 @@ CONTOUR = {
     'compensation': "'left'",
     'numberOfFinishingStepovers': '2',
 }
-DRILL = {
-    'cycleType': "'chip-breaking'",
-    'incrementalDepth': '2mm',
+DRILL = {  # every drill op, entry holes included, pecks as threads.toml says
+    'cycleType': "'%s'" % THREAD_COMMON['drill']['cycle'],
+    'incrementalDepth': '%gmm' % THREAD_COMMON['drill']['peck'],
+    'chipBreakDistance': '%gmm' % THREAD_COMMON['drill']['chip_break'],
 }
 BORE = {
     'tolerance': '0.01mm',
@@ -765,11 +777,30 @@ BORE = {
     'doMultiplePasses': 'true',
 }
 THREAD = {
-    'direction': "'climb'",
-    'stepover': 'tool_stepover',
-    'numberOfStepovers': '3',
     'doMultiplePasses': 'true',
 }
+
+
+def _drill_ends(through):
+    """Peck and breakthrough of a drill op, from threads.toml (the lab drills every hole alike)."""
+    d = THREAD_COMMON['drill']
+    brk = d['through_breakthrough'] if through else d['blind_breakthrough']
+    return {'cycleType': "'%s'" % d['cycle'], 'incrementalDepth': '%gmm' % d['peck'],
+            'chipBreakDistance': '%gmm' % d['chip_break'], 'breakThroughDepth': '%gmm' % brk,
+            'drillTipThroughBottom': 'true' if through else 'false'}
+
+
+def _thread_params(name, through):
+    """Thread-mill parameters for one thread size, from threads.toml."""
+    r, c = THREAD_RECIPES[name], THREAD_COMMON['thread']
+    r = dict(r, **r.get('through' if through else 'blind', {}))
+    stepover = 'tool_stepover' if r['stepover'] == 'tool' else '%gmm' % r['stepover']
+    return dict(THREAD, direction="'%s'" % c['direction'], threadPitch='%gmm' % r['pitch'],
+                pitchDiameterOffset='%gmm' % r['pitch_diameter_offset'],
+                numberOfStepovers=str(r['passes']), stepover=stepover,
+                topHeight_offset='%gmm' % c['top_offset'],
+                bottomHeight_offset='%gmm' % (c['through_bottom_offset'] if through
+                                              else c['blind_bottom_offset']))
 CHAMFER_OP = {
     'tolerance': '0.01mm',
     'chamferWidth': '0.1mm',
@@ -1425,10 +1456,9 @@ def _side_ops(b, setup, a, side, plan, warnings):
             else:
                 warnings.append('no tool for %.2f mm hole at (%g, %g); skipped'
                                 % (h['dia'], h['x'], h['y']))
-    # M4-style taps with no tap drill are bored to the modelled diameter first
-    for h, t in tapped:
-        if THREADS[t][1] is None:
-            bored.append((h, (ENDMILL, 'rough'), (ENDMILL, 'finish')))
+    # taps with no matching drill (M4) are drilled, then bored to the modelled
+    # diameter, as threads.toml says
+    tap_bored = [(h, t) for h, t in tapped if THREADS[t][1] is None]
 
     def drill_for(depth):
         # the lab drills up to the flute length (7.4 mm, or 12.7 mm for the long drill)
@@ -1477,13 +1507,15 @@ def _side_ops(b, setup, a, side, plan, warnings):
                                 'Pocket entry holes %g mm' % depth, params, points(pts)))
 
     # T1: pre-drill everything the 3.175 end mill will bore
-    pre = [h for h, rough, _ in bored if rough[0] == ENDMILL]
-    if pre:
-        deep = max(h['depth'] for h in pre)
-        ops['main'].append(b.op(setup, 'drill', drill_for(deep), 'Pre-drill bores', dict(
-            DRILL, breakThroughDepth='0.5mm',
-            drillTipThroughBottom='true' if all(h['through'] for h in pre) else 'false'),
-            _sel_faces('holeFaces', [h['face'] for h in pre])))
+    pre = [h for h, rough, _ in bored if rough[0] == ENDMILL] + [h for h, _ in tap_bored]
+    for through in (True, False):
+        hs = [h for h in pre if h['through'] == through]
+        if not hs:
+            continue
+        ops['main'].append(b.op(setup, 'drill', drill_for(max(h['depth'] for h in hs)),
+                                'Pre-drill bores' + ('' if through else ' (blind)'),
+                                dict(DRILL, **_drill_ends(through)),
+                                _sel_faces('holeFaces', [h['face'] for h in hs])))
 
     pockets = sorted([f for f in floors if f['role'] == 'pocket'], key=lambda f: f['depth'])
     facing = [f for f in floors if f['role'] == 'face']
@@ -1538,6 +1570,21 @@ def _side_ops(b, setup, a, side, plan, warnings):
             params.update({'bottomHeight_offset': '-0.5mm' if h['through'] else '0mm'})
             ops['main'].append(b.op(setup, 'bore', tk, 'Bore %.2f%s' % (h['dia'], suffix),
                                     params, _sel_faces('circularFaces', [x['face'] for x in hs])))
+        # tap holes bored to size: one light pass, plus a finishing pass in blind holes
+        for hs in _group([h for h, _ in tap_bored]):
+            h = hs[0]
+            t = [t for x, t in tap_bored if x is h][0]
+            bore = THREAD_RECIPES[t]['bore']
+            if which == 'finish' and (h['through'] or not bore.get('blind_finish_pass')):
+                continue
+            params = dict(BORE, stepover='%gmm' % bore['stepover'],
+                          numberOfStepovers=str(bore['passes']), doMultiplePasses=multi)
+            params.update(_top_below_part_top(depth_of(h['z1'] if top else h['z0']), m))
+            params.update({'bottomHeight_offset': '%gmm' % (
+                bore['through_bottom_offset'] if h['through'] else 0.0)})
+            ops['main'].append(b.op(setup, 'bore', (bore['end_mill'], which),
+                                    'Bore %s %.3f%s' % (t, h['dia'], suffix), params,
+                                    _sel_faces('circularFaces', [x['face'] for x in hs])))
         if windows:
             for w in windows:
                 params = dict(CONTOUR, doMultipleDepths=multi)
@@ -1599,23 +1646,27 @@ def _side_ops(b, setup, a, side, plan, warnings):
         if THREADS[t][1]:
             by_drill.setdefault(THREADS[t][1], []).append(h)
     for desc, hs in by_drill.items():
-        through = all(h['through'] for h in hs)
-        ops['main'].append(b.op(setup, 'drill', desc, 'Drill ' + desc.split('*')[0], dict(
-            DRILL, breakThroughDepth='0.5mm' if through else '0mm',
-            drillTipThroughBottom='true' if through else 'false'),
-            _sel_faces('holeFaces', [h['face'] for h in hs])))
+        for through in (True, False):
+            sub = [h for h in hs if h['through'] == through]
+            if sub:
+                ops['main'].append(b.op(
+                    setup, 'drill', desc,
+                    'Drill ' + desc.split('*')[0] + ('' if through else ' (blind)'),
+                    dict(DRILL, **_drill_ends(through)),
+                    _sel_faces('holeFaces', [h['face'] for h in sub])))
 
     # thread mills
     by_thread = {}
     for h, t in tapped:
         by_thread.setdefault(t, []).append(h)
-    for t, hs in by_thread.items():
-        _, _, mill, pitch = THREADS[t]
-        through = all(h['through'] for h in hs)
-        ops['main'].append(b.op(setup, 'thread', mill, 'Thread ' + t, dict(
-            THREAD, threadPitch='%gmm' % pitch,
-            bottomHeight_offset='-0.3mm' if through else '0mm'),
-            _sel_faces('circularFaces', [h['face'] for h in hs])))
+    for t, all_hs in by_thread.items():
+        for through in (True, False):
+            hs = [h for h in all_hs if h['through'] == through]
+            if hs:
+                ops['main'].append(b.op(
+                    setup, 'thread', THREADS[t][2], 'Thread ' + t + ('' if through else ' (blind)'),
+                    _thread_params(t, through),
+                    _sel_faces('circularFaces', [h['face'] for h in hs])))
 
     # deburr the outer face's edges
     if face is not None and plan['chamfer']:
@@ -1786,9 +1837,9 @@ def _wait(fut, budget):
 def _fit_thread_passes(cam, adjusted):
     """Lower a thread mill's pass count until Fusion stops discarding passes.
 
-    The lab's 3 passes at the preset's 0.1 mm stepover exceed the radial depth of
-    small threads; Fusion then drops the extra passes and warns. Fewer passes
-    give the same cut without the warning.
+    A safety net: with the pass counts and pitch diameter offsets in
+    threads.toml Fusion should keep every pass. If it does discard some, fewer
+    passes give the same cut without the warning; generate() lists each change.
     """
     for s in cam.setups:
         if not s.name.endswith(SETUP_TAG):

@@ -106,22 +106,18 @@ Feeds, speeds and stepdowns come from the tool preset; the operations set only t
 |---|---|
 | 2D pocket | tolerance 0.1 mm, stepover 0.6 × tool diameter, compensation left, no stock to leave, `predrill` ramp at the entry holes; floors selected as pocket faces, shelves as the closed opening above them (one counter-clockwise chain per opening); the facing pocket starts at the stock top |
 | 2D contour | tolerance 0.01 mm, compensation left, two finishing stepovers, no ramp, no stock to leave |
-| Drill | chip-breaking cycle, 2 mm pecks; through holes break through 0.5 mm with the drill tip past the bottom |
+| Drill | chip-breaking cycle, 2 mm pecks, 0.1 mm chip break; through holes break through 0.5 mm with the drill tip past the bottom |
 | Bore | climb, tolerance 0.01 mm, stepover 0.3 mm with enough passes to reach the wall; through holes go 0.5 mm past the bottom |
-| Thread | climb, the tool's stepover, up to 3 passes (fewer when Fusion would discard passes), 0.3 mm past the bottom of a through hole |
+| Thread | per thread size, from [threads.toml](threads.toml) |
 | 2D chamfer | 0.1 mm chamfer width, 0.5 mm tip offset, 0.1 mm clearance, lead-in and lead-out |
 
 ## Tapped holes
 
 Lab parts model a tapped hole with Fusion's Hole command, Tapped type, threads not modeled: a plain hole at the minor diameter that carries the thread data.
-The lab drills it slightly oversize for the thread mill:
+The lab pre-drills it slightly oversize and thread-mills it; M4 has no matching drill, so it is drilled at 3.175 mm and bored to size with the end mill first.
 
-| Thread | Modelled hole (mm) | Drill | Thread mill | Pitch (mm) |
-|---|---|---|---|---|
-| M2 | 1.6 | 1.7 × 9.6 mm | Carvera M2 | 0.4 |
-| M2.5 | 2.05 | 2.2 × 8.8 mm | Carvera M2.5 | 0.45 |
-| M3 | 2.5 | 2.6 × 8.2 mm | Carvera M3 | 0.5 |
-| M4 | 3.3 | 3.175 drill, then bored | Carvera M4 | 0.7 |
+[threads.toml](threads.toml) holds the recipe for M2, M2.5, M3 and M4: the modelled hole, the drill, the thread mill, the pitch diameter offset, the passes and the depths, with the parts each value came from.
+The generator reads it on every build, so a change there changes the next build.
 
 ## NC programs
 
