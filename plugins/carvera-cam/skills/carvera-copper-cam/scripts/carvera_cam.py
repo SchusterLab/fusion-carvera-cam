@@ -683,9 +683,29 @@ def _sel_face_contours(faces):
     return f
 
 
+REJECTED = []  # (parameter, point) pairs Fusion refused, reported by build()
+
+
 def _sel_faces(param, faces):
     def f(params):
-        params.itemByName(param).value.value = list(faces)
+        if not faces:
+            return  # Fusion refuses an empty list ("Do not have a valid body")
+        v = params.itemByName(param).value
+        try:
+            v.value = list(faces)
+        except RuntimeError:
+            # keep what Fusion accepts, one at a time, and report the rest
+            ok = []
+            for e in faces:
+                try:
+                    v.value = ok + [e]
+                    ok.append(e)
+                except RuntimeError:
+                    g = getattr(e, 'worldGeometry', None) or getattr(e, 'geometry', None)
+                    REJECTED.append((param, None if g is None else
+                                     (round(mm(g.x), 2), round(mm(g.y), 2), round(mm(g.z), 2))))
+            if ok:
+                v.value = ok
     return f
 
 
@@ -1661,14 +1681,16 @@ def build(args):
         raise RuntimeError('args["stock"] is required: {"x":..,"y":..,"z":..} in mm')
     stock = args['stock']
     thickness = a['ztop'] - a['zbot']
-    if stock['z'] < thickness:
+    if stock['z'] < thickness - 1e-3:
         raise RuntimeError('stock is %g mm thick but the part is %g mm' % (stock['z'], thickness))
     # stock left below the part; centred by default. Moving the part up or down
     # shifts machining time between the top and bottom setups, and so when the
     # operator has to come back to flip the stock.
-    bottom = stock.get('bottom', (stock['z'] - thickness) / 2)
-    if not 0 <= bottom <= stock['z'] - thickness:
-        raise RuntimeError('stock["bottom"] must be between 0 and %g mm' % (stock['z'] - thickness))
+    spare = max(0.0, stock['z'] - thickness)  # stock as thick as the part is fine
+    bottom = stock.get('bottom', spare / 2)
+    if not -1e-3 <= bottom <= spare + 1e-3:
+        raise RuntimeError('stock["bottom"] must be between 0 and %g mm' % spare)
+    bottom = min(max(bottom, 0.0), spare)
     stock = dict(stock, bottom=bottom)
     band = min(1.0, 0.4 * thickness)
     overlap = min(0.5, 0.2 * thickness)
@@ -1684,7 +1706,7 @@ def build(args):
         warnings.append('tabs moved off the mid-plane to z=%g mm, clear of the pockets that '
                         'open to the side (open over z %s mm)' % (tab_z, openings))
     plan = {
-        'margin_top': stock['z'] - thickness - bottom,
+        'margin_top': max(0.0, stock['z'] - thickness - bottom),
         'margin_bottom': bottom,
         'taps': {str(k): v for k, v in (args.get('taps') or {}).items()},
         'face': args.get('face', True),
@@ -1735,6 +1757,9 @@ def build(args):
     for h in unreached:
         warnings.append('hole %.2f mm at (%g, %g) is closed at both ends; skipped'
                         % (h['dia'], h['x'], h['y']))
+    for param, pt in REJECTED:
+        warnings.append('Fusion refused the %s point at %s mm; that cut has no pre-drilled entry'
+                        % (param, pt))
     if len(tools.order) > 6:
         warnings.append('%d tools: the Carvera ATC holds 6, so T7+ need manual changes'
                         % len(tools.order))
