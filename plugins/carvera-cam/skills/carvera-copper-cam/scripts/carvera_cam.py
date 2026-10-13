@@ -648,12 +648,73 @@ def _fetch_community(warnings):
     return out
 
 
+# The lab's machine model (Community Version 1.17-slab) differs from upstream in
+# its bed: no wasteboard or anchors, the bed lowered 18 mm for x < 342 mm, where
+# the fixture plate sits, and a construction point Point1 at the corner of that
+# recess, which the setups attach the fixture plate to. _slab_model makes the
+# same changes to the newest upstream model. Machine coordinates, mm.
+SLAB_RECESS = ((-20.0, -20.0), (342.0, 230.0))
+SLAB_BED_TOP = -3.175
+SLAB_RECESS_FLOOR = -21.175
+SLAB_POINT = (-15.0, -15.0, SLAB_RECESS_FLOOR)
+SLAB_POINT_NAME = 'Point1'
+SLAB_EDIT = 1  # bump when _slab_model changes, so the model is uploaded again
+
+
+def _slab_model(path):
+    """Write the upstream machine model with the lab's bed changes; returns its path."""
+    out = os.path.splitext(path)[0] + '-slab.f3d'
+    app = _app()
+    keep = app.activeDocument
+    im = app.importManager
+    doc = im.importToNewDocument(im.createFusionArchiveImportOptions(path))
+    try:
+        design = adsk.fusion.FusionDocument.cast(doc).design
+        root = design.rootComponent
+        bed = next(o for o in root.occurrences if o.component.name == 'Bed')
+        for o in list(bed.childOccurrences):
+            o.deleteMe()
+        body = max(bed.bRepBodies, key=lambda b: b.boundingBox.maxPoint.x - b.boundingBox.minPoint.x)
+        if abs(body.boundingBox.maxPoint.z * 10 - SLAB_BED_TOP) > 0.01:
+            raise RuntimeError('the upstream machine bed is no longer at z = %g mm' % SLAB_BED_TOP)
+        pi = root.constructionPlanes.createInput()
+        pi.setByOffset(root.xYConstructionPlane, adsk.core.ValueInput.createByReal(SLAB_BED_TOP / 10))
+        plane = root.constructionPlanes.add(pi)
+        sk = root.sketches.add(plane)
+        (x0, y0), (x1, y1) = SLAB_RECESS
+        sk.sketchCurves.sketchLines.addTwoPointRectangle(
+            sk.modelToSketchSpace(adsk.core.Point3D.create(x0 / 10, y0 / 10, SLAB_BED_TOP / 10)),
+            sk.modelToSketchSpace(adsk.core.Point3D.create(x1 / 10, y1 / 10, SLAB_BED_TOP / 10)))
+        ei = root.features.extrudeFeatures.createInput(
+            sk.profiles.item(0), adsk.fusion.FeatureOperations.CutFeatureOperation)
+        ei.setDistanceExtent(False, adsk.core.ValueInput.createByReal((SLAB_RECESS_FLOOR - SLAB_BED_TOP) / 10))
+        ei.participantBodies = [body]
+        root.features.extrudeFeatures.add(ei)
+        if abs(body.boundingBox.maxPoint.z * 10 - SLAB_BED_TOP) > 0.01 or not any(
+                abs(v.geometry.z * 10 - SLAB_RECESS_FLOOR) < 1e-3 for v in body.vertices):
+            raise RuntimeError('cutting the fixture recess into the machine bed failed')
+        sk2 = root.sketches.add(root.xYConstructionPlane)
+        sp = sk2.sketchPoints.add(adsk.core.Point3D.create(*[v / 10 for v in SLAB_POINT]))
+        ci = root.constructionPoints.createInput()
+        ci.setByPoint(sp)
+        root.constructionPoints.add(ci).name = SLAB_POINT_NAME
+        sk.isVisible = sk2.isVisible = plane.isLightBulbOn = False
+        opts = design.exportManager.createFusionArchiveExportOptions(out)
+        if not design.exportManager.execute(opts):
+            raise RuntimeError('could not write %s' % out)
+    finally:
+        doc.close(False)
+        keep.activate()
+    return out
+
+
 def _model_urn(path, sha, log):
     """Version URN of the machine's 3D model, uploaded to the user's Fusion hub.
 
     The community .f3d links its 3D model to a file in its author's hub, which
-    other users cannot open, and Fusion then refuses the machine. So the .f3d is
-    uploaded once per hub and per upstream version, to the project MODEL_PROJECT.
+    other users cannot open, and Fusion then refuses the machine. So the .f3d,
+    with the lab's bed (_slab_model), is uploaded once per hub and per upstream
+    version, to the project MODEL_PROJECT.
     """
     data = _app().data
     hub = data.activeHub.id
@@ -663,6 +724,7 @@ def _model_urn(path, sha, log):
             models = json.load(f)
     except (OSError, ValueError):
         models = {}
+    sha = '%s+slab%d' % (sha, SLAB_EDIT)
     known = models.get(hub)
     if known and known['sha'] == sha:
         try:
@@ -672,7 +734,7 @@ def _model_urn(path, sha, log):
             pass
     projects = data.dataProjects
     project = next((p for p in projects if p.name == MODEL_PROJECT), None) or projects.add(MODEL_PROJECT)
-    future = project.rootFolder.uploadFile(path)
+    future = project.rootFolder.uploadFile(_slab_model(path))
     t0 = time.time()
     while future.uploadState == adsk.core.UploadStates.UploadProcessing and time.time() - t0 < 40:
         adsk.doEvents()
@@ -1172,7 +1234,45 @@ def _add_vise(design, name, bodies, fixed, adj):
     return occ, cp.createForAssemblyContext(occ)
 
 
-def _setup(cam, name, body, machine, stock, top, vise=None):
+# The stock box corner each setup's origin sits on, as in the lab's setups:
+# corner 2 is the stock top's corner at the setup's +X and -Y. Box corners and
+# the fixed box's sides follow the setup's axes, whose X is the model's Y.
+WCS_CORNER = {True: 'top 2', False: 'top 2'}
+STOCK_X_MODE = {'back': 'right', 'front': 'left', 'center': 'center'}
+
+
+def _machine_point(cam):
+    """The machine model's table attach point (SLAB_POINT_NAME), in the CAM document."""
+    croot = cam.designRootOccurrence.assemblyContext.sourceComponent
+    found = []
+    for occ in croot.occurrences:
+        if not occ.name.startswith('Machines'):
+            continue
+        stack = list(occ.childOccurrences)
+        while stack:
+            o = stack.pop(0)
+            for cp in o.component.constructionPoints:
+                if cp.name == SLAB_POINT_NAME:
+                    found.append(cp.createForAssemblyContext(o))
+            stack += list(o.childOccurrences)
+    return found[-1] if found else None
+
+
+def _axis_line(design):
+    """A sketch line along the model's +Y: the setups' X axis (see _setup)."""
+    root = design.rootComponent
+    sk = root.sketches.add(root.xYConstructionPlane)
+    sk.name = LAYOUT_SKETCH + ' axes'
+    ln = sk.sketchCurves.sketchLines.addByTwoPoints(adsk.core.Point3D.create(0, 0, 0),
+                                                    adsk.core.Point3D.create(0, 1, 0))
+    sk.isVisible = False
+    return ln
+
+
+def _setup(cam, name, body, machine, stock, top, x_axis, vise=None, warnings=None):
+    """One setup. Its X axis is the model's +Y (top) or -Y (bottom): the vise's
+    jaws close along the Carvera's X axis and grip the stock's Y edges, so the
+    part lies turned 90 degrees on the machine, as in the lab's setups."""
     si = cam.setups.createInput(adsk.cam.OperationTypes.MillingOperation)
     si.name = name
     si.models = [body]
@@ -1183,31 +1283,40 @@ def _setup(cam, name, body, machine, stock, top, vise=None):
         si.fixtures = [vise[0]]
     setup = cam.setups.add(si)
     p = setup.parameters
+    _set(p, 'wcs_orientation_mode', "'axesZX'")
+    p.itemByName('wcs_orientation_axisX').value.value = [x_axis]
     if vise is not None:
-        # put the setup on the Carvera's table through the plate's corner, so
+        # put the fixture plate's corner on the machine's table point, so
         # simulation checks the machine as well as the vise
-        _try_set(p, 'job_position', 'true')
-        _try_set(p, 'job_positionReference_origin_mode', "'point'")
-        p.itemByName('job_positionAttach').value.value = [vise[1]]
-        p.itemByName('job_positionReference_origin_point').value.value = [vise[1]]
+        table = _machine_point(cam) if machine is not None and machine.hasSimulationModel else None
+        if table is None:
+            if warnings is not None and top:
+                warnings.append('the machine model has no table point %r, so the setups are not '
+                                'placed on the machine' % SLAB_POINT_NAME)
+        else:
+            _try_set(p, 'job_position', 'true')
+            _try_set(p, 'job_positionReference_origin_mode', "'point'")
+            p.itemByName('job_positionAttach').value.value = [table]
+            p.itemByName('job_positionReference_origin_point').value.value = [vise[1]]
     if top:
         _set(p, 'job_stockMode', "'fixedbox'")
-        _set(p, 'job_stockFixedX', '%gmm' % stock['x'])
-        _set(p, 'job_stockFixedY', '%gmm' % stock['y'])
+        # the box follows the setup's axes: its X is the model's Y
+        _set(p, 'job_stockFixedX', '%gmm' % stock['y'])
+        _set(p, 'job_stockFixedY', '%gmm' % stock['x'])
         _set(p, 'job_stockFixedZ', '%gmm' % stock['z'])
-        _set(p, 'job_stockFixedXMode', "'center'")
-        _set(p, 'job_stockFixedYMode', "'%s'" % stock.get('y_mode', 'back'))
-        _set(p, 'job_stockFixedYOffset', '%gmm' % stock.get('y_offset', 10))
+        _set(p, 'job_stockFixedXMode', "'%s'" % STOCK_X_MODE[stock.get('y_mode', 'back')])
+        _set(p, 'job_stockFixedXOffset', '%gmm' % stock.get('y_offset', 10))
+        _set(p, 'job_stockFixedYMode', "'center'")
         _set(p, 'job_stockFixedZMode', "'bottom'")
         _set(p, 'job_stockFixedZOffset', '%gmm' % stock['bottom'])
         _set(p, 'wcs_origin_mode', "'stockPoint'")
-        _set(p, 'wcs_origin_boxPoint', "'top 4'")
+        _set(p, 'wcs_origin_boxPoint', "'%s'" % WCS_CORNER[True])
     else:
         _set(p, 'job_stockMode', "'previoussetup'")
-        _set(p, 'wcs_orientation_mode', "'axesZX'")
         _set(p, 'wcs_orientation_flipZ', 'true')
+        _set(p, 'wcs_orientation_flipX', 'true')
         _set(p, 'wcs_origin_mode', "'stockPoint'")
-        _set(p, 'wcs_origin_boxPoint', "'top 2'")
+        _set(p, 'wcs_origin_boxPoint', "'%s'" % WCS_CORNER[False])
     return setup
 
 
@@ -1671,19 +1780,14 @@ def _side_ops(b, setup, a, side, plan, warnings):
     entry_ops = {'holeMode': "'selection-points'", 'topHeight_mode': "'from stock top'",
                  'topHeight_offset': '0mm'}
 
-    # T1 entry holes, before anything the end mill cuts
+    # T1 drills only the main entry before the end mill cuts: the facing and the
+    # outline enter there. Every other hole waits for the end mill to clear the
+    # stock above it (later_drills), so the drill cuts only what it must.
     if top:
         ops['main'].append(b.op(setup, 'drill', drill_for(stock_z), 'Entry hole', dict(
             DRILL, **entry_ops, bottomHeight_mode="'from stock bottom'",
             bottomHeight_offset='0mm', breakThroughDepth='0.5mm', drillTipThroughBottom='true'),
             points([lay['entry']] if lay else [])))
-        if lay is None or len(lay['corner']) > 1:
-            depth = a['ztop'] - chain_bot
-            params = dict(DRILL, **entry_ops, breakThroughDepth='0mm', drillTipThroughBottom='true')
-            params.update(_bottom_below_part_top(depth, m))
-            ops['main'].append(b.op(setup, 'drill', drill_for(m + depth), 'Tab entry holes',
-                                    params, points([c['entry'] for c in lay['corner'][1:]]
-                                                   if lay else [])))
     side_entries = {}
     if lay:
         side_entries = {k: e for k, e in lay['pocket_entries'].items() if e['side'] == side}
@@ -1691,27 +1795,42 @@ def _side_ops(b, setup, a, side, plan, warnings):
         side_entries = {f['face'].tempId: {'point': None, 'depth': f['depth'],
                                            'drill': not f['side_open']}
                         for f in floors if f['role'] == 'pocket'}
-    by_depth, seen = {}, []
-    for e in side_entries.values():
-        if e['drill'] and (e['point'] is None or all(e['point'] is not q for q in seen)):
-            seen.append(e['point'])
-            by_depth.setdefault(round(e['depth'], 3), []).append(e['point'])
-    for depth, pts in sorted(by_depth.items()):
-        params = dict(DRILL, **entry_ops, breakThroughDepth='0mm', drillTipThroughBottom='false')
-        params.update(_bottom_below_part_top(depth, m))
-        ops['main'].append(b.op(setup, 'drill', drill_for(m + depth),
-                                'Pocket entry holes %g mm' % depth, params, points(pts)))
 
-    # T1: pre-drill everything the 3.175 end mill will bore
-    pre = [h for h, rough, _ in bored if rough[0] == ENDMILL] + [h for h, _ in tap_bored]
-    for through in (True, False):
-        hs = [h for h in pre if h['through'] == through]
-        if not hs:
-            continue
-        ops['main'].append(b.op(setup, 'drill', drill_for(max(h['depth'] for h in hs)),
+    def later_drills():
+        """T1 after the rough face and outline: tab entries from the tab band's
+        top, which the outline has cut down to there, and pocket entries and
+        bore pre-drills from the face, on the material left for its finish."""
+        out = []
+        if top and (lay is None or len(lay['corner']) > 1):
+            depth = a['ztop'] - chain_bot
+            params = dict(DRILL, holeMode="'selection-points'", breakThroughDepth='0mm',
+                          drillTipThroughBottom='true')
+            params.update(_top_below_part_top(a['ztop'] - band_top, m))
+            params.update(_bottom_below_part_top(depth, m))
+            out.append(b.op(setup, 'drill', drill_for(m + depth), 'Tab entry holes',
+                            params, points([c['entry'] for c in lay['corner'][1:]]
+                                           if lay else [])))
+        by_depth, seen = {}, []
+        for e in side_entries.values():
+            if e['drill'] and (e['point'] is None or all(e['point'] is not q for q in seen)):
+                seen.append(e['point'])
+                by_depth.setdefault(round(e['depth'], 3), []).append(e['point'])
+        for depth, pts in sorted(by_depth.items()):
+            params = dict(DRILL, holeMode="'selection-points'", breakThroughDepth='0mm',
+                          drillTipThroughBottom='false', **top_at(0))
+            params.update(_bottom_below_part_top(depth, m))
+            out.append(b.op(setup, 'drill', drill_for(m + depth),
+                            'Pocket entry holes %g mm' % depth, params, points(pts)))
+        # pre-drill everything the 3.175 end mill will bore
+        pre = [h for h, rough, _ in bored if rough[0] == ENDMILL] + [h for h, _ in tap_bored]
+        for through in (True, False):
+            hs = [h for h in pre if h['through'] == through]
+            if hs:
+                out.append(b.op(setup, 'drill', drill_for(max(h['depth'] for h in hs)),
                                 'Pre-drill bores' + ('' if through else ' (blind)'),
                                 dict(DRILL, **_drill_ends(through), **from_hole_top),
                                 _sel_faces('holeFaces', [h['face'] for h in hs])))
+        return out
 
     pockets = sorted([f for f in floors if f['role'] == 'pocket'], key=lambda f: f['depth'])
     windows = [w for w in a['windows']] if top else []
@@ -1743,6 +1862,8 @@ def _side_ops(b, setup, a, side, plan, warnings):
             params.update(_bottom_below_part_top(band_bot - a['zbot'], m))
         ops['main'].append(b.op(setup, 'contour2d', tk, 'Outline' + suffix, params, _both(
             _sel_silhouette(), _sel_faces('entryPositions', entry))))
+        if which == 'rough':
+            ops['main'] += later_drills()
         if pockets:
             entries = [side_entries[f['face'].tempId]['point'] for f in pockets
                        if f['face'].tempId in side_entries]
@@ -2002,9 +2123,10 @@ def build(args):
                  _add_vise(design, VISE_PREFIX + 'bottom', fixture,
                            *_vise_matrices(box, -ztop, -z0, True))]
         vises[1][0].isLightBulbOn = False  # it would hang upside down over the part
-    top = _setup(cam, 'Top ' + SETUP_TAG, body, machine, stock, True, vises[0])
+    x_axis = _axis_line(design)
+    top = _setup(cam, 'Top ' + SETUP_TAG, body, machine, stock, True, x_axis, vises[0], warnings)
     top_ops = _side_ops(b, top, a, 'top', plan, warnings)
-    bottom = _setup(cam, 'Bottom ' + SETUP_TAG, body, machine, stock, False, vises[1])
+    bottom = _setup(cam, 'Bottom ' + SETUP_TAG, body, machine, stock, False, x_axis, vises[1], warnings)
     bottom_ops = _side_ops(b, bottom, a, 'bottom', plan, warnings)
     _nc_program(cam, name + '_top', top_ops['main'], post)
     _nc_program(cam, name + '_bottom', bottom_ops['main'], post)

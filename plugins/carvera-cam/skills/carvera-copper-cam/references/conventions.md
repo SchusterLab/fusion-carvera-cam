@@ -16,7 +16,9 @@ The community machine's 3D model links to a file in its author's Fusion account,
 If the upload fails, the setups get the machine without its 3D model and `build` warns that simulation does not check the machine frame.
 
 The lab's own setups before October 2026 used the machine `...Community Version 1.17-slab` and post v1.1.21 from the lab's Cloud Library.
-That machine differs from upstream 1.4.6 only in its tool change time (30 s against 45 s), which changes time estimates, not toolpaths.
+That machine's settings differ from upstream 1.4.6 only in its tool change time (30 s against 45 s), which changes time estimates, not toolpaths.
+Its 3D model differs in the bed, where the fixture plate sits: the wasteboard and its anchors are gone, the bed is 18 mm lower (z = −21.175 mm) for x < 342 mm, and a construction point `Point1` at (−15, −15, −21.175) mm marks the corner of that recess.
+Before uploading the upstream model, `build` makes the same three changes to it (`_slab_model` in `carvera_cam.py`).
 
 Every tool in `My Tools` has a feed preset named **Copper 101-H02** (C10100 oxygen-free copper, H02 half-hard temper), and the lab uses it for everything.
 Aluminum (6063-T5) runs the same programs at 200% feed and spindle override on the Carvera, so there is one set of toolpaths per part.
@@ -45,14 +47,18 @@ T2 roughs every feature in steps; T3, a fresh tool of the same kind, then runs e
 
 ## Setups
 
+Both setups' X axis runs along the part's Y axis: the vise's jaws close along the Carvera's X axis and grip the stock's Y edges (see "Fixture"), so the part lies on the machine turned 90° from its design.
+The top setup's X is the model's +Y; the bottom setup's is −Y.
+
 **Top setup.**
 The stock is a fixed box: commonly a 2″ × 150 mm bar 6.35 mm (0.25″) or 19 mm thick, or a 150 × 150 mm copper plate 6.2 mm thick.
 The part sits centred in X, 10 mm from the back of the stock in Y, and centred in the stock's thickness unless the user moves it.
 The lab's parts sit at various heights in the stock; the height decides how much facing each program does, and so when the operator must come back to flip the stock.
-The work coordinate system (WCS) origin is the stock box's `top 4` corner, with the model's orientation.
+The work coordinate system (WCS) origin is the stock box's `top 2` corner: the corner at the model's +X and +Y, which is the setup's +X and −Y.
+The box's corners and sides follow the setup's axes, so the box is set as `stock y` long along the setup's X.
 
 **Bottom setup.**
-The part is flipped about the X axis: Z axis flipped (`axesZX`, `flipZ`), stock from the previous setup, WCS origin at the stock box's `top 2` corner.
+The part is flipped about the model's X axis: Z and X flipped (`flipZ`, `flipX`), stock from the previous setup, WCS origin at the stock box's `top 2` corner.
 
 ## Fixture
 
@@ -63,7 +69,7 @@ The lab's pattern is `2026-01-20_sample-puck-6port7x7` (project `2026-01-06_smpm
 - The generator downloads those three Saunders STEP files and places them as that design does (`SMW_PLACEMENTS` in `carvera_cam.py`), so it needs no access to the lab's design. It leaves out the 4th-axis module, which Saunders does not publish, so simulation does not check it. It caches the files and the assembled fixture in `%LOCALAPPDATA%\carvera-cam\fixture`, and stops with an error if a changed Saunders model no longer puts the jaw faces where the lab's design has them.
 - The jaws grip the stock's Y edges, 4.3 mm deep; the fixed jaw is on the back edge, the one the part is 10 mm from, and the adjustable jaw opens to the stock's Y size.
 - The bottom setup has its own copy of the fixture, turned 180° about X with the part, gripping the stock left after the top program.
-- Both setups list their copy as the setup's fixture and attach it to the machine table at the plate's corner (Part Position, Table Attach Point), so the machine's own geometry is checked too.
+- Both setups list their copy as the setup's fixture and put it on the machine (Part Position): the fixture's point `Point1`, 2 mm inside the plate's corner and 1.27 mm above its bottom, goes on the machine's `Point1` (the Table Attach Point), so the machine's own geometry is checked too.
 
 The lab built this with a Manufacturing Model holding the stock, the part and two embedded copies of the fixture.
 The generator works in the part's design instead, and adds the fixture's bodies to it as fixed geometry: an inserted copy of the fixture assembly comes in through the API with its jointed parts unsolved and scattered.
@@ -72,16 +78,22 @@ The generator works in the part's design instead, and adds the fixture's bodies 
 
 Top setup:
 
-1. T1 drills the entry holes (see "Entry holes") and pre-drills the holes the end mill will bore.
-2. T2 roughs: facing the stock top down to 0.2 mm above the part's top face, the outline down to the tab band, pockets, bores, through windows, and the outline between the tabs down through the band.
-3. T3 finishes the same features, except the face, in single full-depth passes.
-4. Small end mills clear pocket corners the 3.175 mm end mill cannot reach (rest machining, plunge entry).
-5. Drills cut plain holes and tap drills.
-6. Thread mills cut the threads.
-7. T3 finishes the face, taking off the last 0.2 mm in one pass.
-8. The chamfering bit deburrs the edges of the top face.
+1. T1 drills the main entry hole (see "Entry holes"), through the stock.
+2. T2 faces the stock top down to 0.2 mm above the part's top face and cuts the outline down to the tab band, both entering through the main entry hole.
+3. T1 drills the other entry holes and pre-drills the holes the end mill will bore, each from where the end mill has left the stock: the corner-chain entries from the top of the tab band, the pocket entries and pre-drills from 0.2 mm above the face.
+4. T2 roughs the pockets, bores, through windows, and the outline between the tabs down through the band.
+5. T3 finishes the features of steps 2 and 4, except the face, in single full-depth passes.
+6. Small end mills clear pocket corners the 3.175 mm end mill cannot reach (rest machining, plunge entry).
+7. Drills cut plain holes and tap drills.
+8. Thread mills cut the threads.
+9. T3 finishes the face, taking off the last 0.2 mm in one pass.
+10. The chamfering bit deburrs the edges of the top face.
 
-The bottom setup drills the entry holes of its own pockets, then repeats steps 2–8 for the bottom-side features; its outline stops at the bottom of the tab band.
+The bottom setup repeats steps 2–10 for the bottom-side features, with no main entry hole of its own (the top setup's goes through the stock) and no corner chains; its outline stops at the bottom of the tab band.
+
+A drill only cuts what the end mill cannot cut first: the main entry hole is drilled from the stock top because the first end mill cut enters through it, and every other hole waits until the end mill has cleared the stock above it.
+This saves wear on the drills, at the cost of two more tool changes in the top setup and one in the bottom.
+The lab's parts from October 2026 on (`kiutra-beam`, `tee`) drill this way.
 
 The face is finished last because facing raises fewer burrs than side milling and thread milling, so the last cut across the face removes the burrs the earlier cuts left on it.
 Until then the face still carries 0.2 mm of material, and every operation that starts at the face starts 0.2 mm higher, on that material:
@@ -96,8 +108,8 @@ The end mill never ramps or plunges into solid metal.
 It enters every cut through a hole the T1 drill (3.175 mm, the end mill's diameter) makes first, at points kept in a sketch:
 
 - **The main entry**, just outside the outline at the edge of a tab, one tool radius out, so the end mill's centre sits on the outline's toolpath. T1 drills it through the whole stock with 0.5 mm breakthrough. Both facing pockets and both outline contours enter there.
-- **One entry per corner chain** (the outline between two tabs; see "Holding tabs"), at the same offset from the start of the chain, drilled from the top through the tab band.
-- **One entry per pocket**, at the point of the pocket farthest from its walls, drilled to the pocket floor. A shelf, a floor that steps down into a deeper pocket inside it, is pocketed with that deeper pocket as one region (the opening just above the shelf), and its entry is the deeper pocket's, drilled to the deeper floor.
+- **One entry per corner chain** (the outline between two tabs; see "Holding tabs"), at the same offset from the start of the chain, drilled through the tab band from its top, which the outline cut has already reached there.
+- **One entry per pocket**, at the point of the pocket farthest from its walls, drilled from 0.2 mm above the face to the pocket floor. A shelf, a floor that steps down into a deeper pocket inside it, is pocketed with that deeper pocket as one region (the opening just above the shelf), and its entry is the deeper pocket's, drilled to the deeper floor.
 - **A pocket open to the side** gets no hole: its entry sits just outside the opening, where the outline cut has already cleared the stock down to the pocket's floor, and the end mill enters sideways.
 
 The pockets use the `predrill` ramp with these points as their predrill positions, and the outline contours use the main entry as their entry position.
