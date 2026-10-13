@@ -19,7 +19,7 @@
 #         kiutra-beam, bobbin-bottom, aluminum-can-lid (17 parts)
 #   M2.5  copper-can-lid-6port (blind holes, both setups)
 #   M3    Default Project: 2026-04-12_holes-for-copper-finger-1 and -2, and an
-#         Untitled design (the only M3 work; see the note under [M3])
+#         Untitled design (the only M3 work; the two differ, see [M3])
 #   M4    hanger-support-for-chris, hanger-support-for-bluefors-sd-vertical,
 #         eccosorb-clamp-6port, and Default Project: 2026-07-31_amir-puck-finger
 
@@ -74,9 +74,8 @@ passes = 4
 stepover = "tool"
 
 [M3]
-# The two M3 jobs differ: holes-for-copper-finger drills 2.5 mm with a 0.5 mm
-# offset; the Untitled design drills 2.6 mm with 0.6 mm, following the M2.5
-# pattern. This file uses the second; check it before an M3 job.
+# The lab's standard, confirmed 2026-10-12. (holes-for-copper-finger drilled
+# 2.5 mm with a 0.5 mm offset; that is not the standard.)
 pitch = 0.5
 modelled_hole = 2.529
 drill = "2.6*8.2mm Drill"
