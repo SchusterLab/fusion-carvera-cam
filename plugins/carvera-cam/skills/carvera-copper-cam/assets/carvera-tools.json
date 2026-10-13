@@ -1,0 +1,3470 @@
+{
+ "data": [
+  {
+   "BMC": "carbide",
+   "GRADE": "Mill Generic",
+   "description": "Spiral O Metal 2.5*12mm",
+   "expressions": {
+    "tool_bodyLength": "28 mm",
+    "tool_description": "'Spiral O Metal 2.5*12mm'",
+    "tool_diameter": "2.5 mm",
+    "tool_fluteLength": "12 mm",
+    "tool_material": "'carbide'",
+    "tool_number": "0",
+    "tool_numberOfFlutes": "1",
+    "tool_overallLength": "38 mm",
+    "tool_productLink": "'https://www.makera.com/products/spiral-o-single-flute-bit-for-metal-1-8-shank?variant=43974664650977'",
+    "tool_shaftDiameter": "3.175 mm",
+    "tool_shoulderLength": "12 mm",
+    "tool_vendor": "'Makera'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2.5,
+    "HAND": true,
+    "LB": 28,
+    "LCF": 12,
+    "NOF": 1,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "TA": 0,
+    "TP": 0,
+    "assemblyGaugeLength": 28.51,
+    "shoulder-diameter": 2.5,
+    "shoulder-length": 12,
+    "thread-profile-angle": 60,
+    "tip-diameter": 2.5,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "177f3503-a8b6-45f5-a794-7381d9e7e726",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.51,
+    "guid": "1c6a5f18-a3b4-427b-a1d1-8ab393575819",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 0.5,
+      "lower-diameter": 9,
+      "upper-diameter": 10
+     },
+     {
+      "height": 0.01,
+      "lower-diameter": 16.6,
+      "upper-diameter": 16.6
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "",
+   "product-link": "https://www.makera.com/products/spiral-o-single-flute-bit-for-metal-1-8-shank?variant=43974664650977",
+   "shaft": {
+    "segments": [
+     {
+      "height": 2,
+      "lower-diameter": 2.5,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 7.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 6.5,
+      "lower-diameter": 6.5,
+      "upper-diameter": 6.5
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_coolant": "'disabled'",
+       "tool_feedCutting": "200 mmpm",
+       "tool_feedPlunge": "200 mmpm",
+       "tool_feedRamp": "200 mmpm",
+       "tool_rampAngle": "1.2 degrees",
+       "tool_spindleSpeed": "6000 rpm",
+       "tool_stepdown": "0.2 mm",
+       "tool_stepover": "tool_diameter * 0.1",
+       "use_tool_stepdown": "true",
+       "use_tool_stepover": "false"
+      },
+      "f_n": 0.03333333333333333,
+      "f_z": 0.03333333333333333,
+      "guid": "7655ca09-5637-4572-8e43-79a2c9209b1d",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 6000,
+      "n_ramp": 6000,
+      "name": "Copper 101-H02",
+      "ramp-angle": 1.2,
+      "stepdown": 0.2,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": false,
+      "v_c": 47.1238898038469,
+      "v_f": 200,
+      "v_f_leadIn": 200,
+      "v_f_leadOut": 200,
+      "v_f_plunge": 200,
+      "v_f_ramp": 200,
+      "v_f_transition": 200
+     }
+    ]
+   },
+   "type": "flat end mill",
+   "unit": "millimeters",
+   "vendor": "Makera"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "Mill Generic",
+   "description": "Spiral O Metal 3.175*12mm",
+   "expressions": {
+    "tool_bodyLength": "28 mm",
+    "tool_description": "'Spiral O Metal 3.175*12mm'",
+    "tool_diameter": "3.175 mm",
+    "tool_fluteLength": "12 mm",
+    "tool_material": "'carbide'",
+    "tool_number": "0",
+    "tool_numberOfFlutes": "1",
+    "tool_overallLength": "38 mm",
+    "tool_productLink": "'https://www.makera.com/products/spiral-o-single-flute-bit-for-metal-1-8-shank?variant=43974664618209'",
+    "tool_shaftDiameter": "3.175 mm",
+    "tool_shoulderLength": "12 mm",
+    "tool_vendor": "'Makera'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 3.175,
+    "HAND": true,
+    "LB": 28,
+    "LCF": 12,
+    "NOF": 1,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "TA": 0,
+    "TP": 0,
+    "assemblyGaugeLength": 28.51,
+    "shoulder-diameter": 3.175,
+    "shoulder-length": 12,
+    "thread-profile-angle": 60,
+    "tip-diameter": 3.175,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "853cb203-faa5-404d-b20a-eb32e883e22c",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.51,
+    "guid": "1c6a5f18-a3b4-427b-a1d1-8ab393575819",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 0.5,
+      "lower-diameter": 9,
+      "upper-diameter": 10
+     },
+     {
+      "height": 0.01,
+      "lower-diameter": 16.6,
+      "upper-diameter": 16.6
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "",
+   "product-link": "https://www.makera.com/products/spiral-o-single-flute-bit-for-metal-1-8-shank?variant=43974664618209",
+   "shaft": {
+    "segments": [
+     {
+      "height": 9.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 6.5,
+      "lower-diameter": 6.5,
+      "upper-diameter": 6.5
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_coolant": "'disabled'",
+       "tool_feedCutting": "200 mmpm",
+       "tool_feedPlunge": "200 mmpm",
+       "tool_feedRamp": "300 mmpm",
+       "tool_rampAngle": "1.2 degrees",
+       "tool_spindleSpeed": "6000 rpm",
+       "tool_stepdown": "0.3 mm",
+       "tool_stepover": "tool_diameter * 0.1",
+       "use_tool_stepdown": "true",
+       "use_tool_stepover": "false"
+      },
+      "f_n": 0.03333333333333333,
+      "f_z": 0.03333333333333333,
+      "guid": "6fc330f6-5117-4464-a9af-fbe844ee89b4",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 6000,
+      "n_ramp": 6000,
+      "name": "Copper 101-H02",
+      "ramp-angle": 1.2,
+      "stepdown": 0.3,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": false,
+      "v_c": 59.847340050885556,
+      "v_f": 200,
+      "v_f_leadIn": 200,
+      "v_f_leadOut": 200,
+      "v_f_plunge": 200,
+      "v_f_ramp": 300,
+      "v_f_transition": 200
+     }
+    ]
+   },
+   "type": "flat end mill",
+   "unit": "millimeters",
+   "vendor": "Makera"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "Mill Generic",
+   "description": "Spiral O Metal 2*8mm",
+   "expressions": {
+    "tool_bodyLength": "28 mm",
+    "tool_description": "'Spiral O Metal 2*8mm'",
+    "tool_diameter": "2 mm",
+    "tool_fluteLength": "8 mm",
+    "tool_material": "'carbide'",
+    "tool_number": "0",
+    "tool_numberOfFlutes": "1",
+    "tool_overallLength": "38 mm",
+    "tool_productLink": "'https://www.makera.com/products/spiral-o-single-flute-bit-for-metal-1-8-shank?variant=43974664683745'",
+    "tool_shaftDiameter": "3.175 mm",
+    "tool_shoulderLength": "8 mm",
+    "tool_vendor": "'Makera'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2,
+    "HAND": true,
+    "LB": 28,
+    "LCF": 8,
+    "NOF": 1,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "TA": 0,
+    "TP": 0,
+    "assemblyGaugeLength": 28.51,
+    "shoulder-diameter": 2,
+    "shoulder-length": 8,
+    "thread-profile-angle": 60,
+    "tip-diameter": 2,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "964f3b16-b31c-44a2-ada9-60749b1fbd2f",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.51,
+    "guid": "1c6a5f18-a3b4-427b-a1d1-8ab393575819",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 0.5,
+      "lower-diameter": 9,
+      "upper-diameter": 10
+     },
+     {
+      "height": 0.01,
+      "lower-diameter": 16.6,
+      "upper-diameter": 16.6
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "",
+   "product-link": "https://www.makera.com/products/spiral-o-single-flute-bit-for-metal-1-8-shank?variant=43974664683745",
+   "shaft": {
+    "segments": [
+     {
+      "height": 2.5,
+      "lower-diameter": 2,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 11,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 6.5,
+      "lower-diameter": 6.5,
+      "upper-diameter": 6.5
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_coolant": "'disabled'",
+       "tool_feedCutting": "200 mmpm",
+       "tool_feedPlunge": "200 mmpm",
+       "tool_feedRamp": "200 mmpm",
+       "tool_rampAngle": "1.2 degrees",
+       "tool_spindleSpeed": "6000 rpm",
+       "tool_stepdown": "0.2 mm",
+       "tool_stepover": "tool_diameter * 0.1",
+       "use_tool_stepdown": "true",
+       "use_tool_stepover": "false"
+      },
+      "f_n": 0.03333333333333333,
+      "f_z": 0.03333333333333333,
+      "guid": "7655ca09-5637-4572-8e43-79a2c9209b1d",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 6000,
+      "n_ramp": 6000,
+      "name": "Copper 101-H02",
+      "ramp-angle": 1.2,
+      "stepdown": 0.2,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": false,
+      "v_c": 37.69911184307752,
+      "v_f": 200,
+      "v_f_leadIn": 200,
+      "v_f_leadOut": 200,
+      "v_f_plunge": 200,
+      "v_f_ramp": 200,
+      "v_f_transition": 200
+     }
+    ]
+   },
+   "type": "flat end mill",
+   "unit": "millimeters",
+   "vendor": "Makera"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "Mill Generic",
+   "description": "Carvera M2.5 Threadmill",
+   "expressions": {
+    "tool_bodyLength": "28 mm",
+    "tool_description": "'Carvera M2.5 Threadmill'",
+    "tool_diameter": "1.96 mm",
+    "tool_fluteLength": "2 mm",
+    "tool_material": "'carbide'",
+    "tool_number": "0",
+    "tool_numberOfFlutes": "3",
+    "tool_numberOfTeeth": "1",
+    "tool_overallLength": "38 mm",
+    "tool_productLink": "'https://www.makera.com/products/thread-milling-bit-1-8-shank?variant=43974860603617'",
+    "tool_shaftDiameter": "3.175 mm",
+    "tool_shoulderLength": "7.5 mm"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 1.96,
+    "HAND": true,
+    "LB": 28,
+    "LCF": 2,
+    "NOF": 3,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "TA": 0,
+    "TP": 1,
+    "TPN": 0.45,
+    "TPX": 1,
+    "assemblyGaugeLength": 28.51,
+    "shoulder-diameter": 0.22794920000000005,
+    "shoulder-length": 7.5,
+    "thread-profile-angle": 60,
+    "thread-tip-type": "point",
+    "tip-diameter": 1.96,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "7e0c8e16-e7d3-4116-815b-bee0cacaae31",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.51,
+    "guid": "1c6a5f18-a3b4-427b-a1d1-8ab393575819",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 0.5,
+      "lower-diameter": 9,
+      "upper-diameter": 10
+     },
+     {
+      "height": 0.01,
+      "lower-diameter": 16.6,
+      "upper-diameter": 16.6
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "",
+   "product-link": "https://www.makera.com/products/thread-milling-bit-1-8-shank?variant=43974860603617",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 1.2,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 10,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 6.5,
+      "lower-diameter": 6.5,
+      "upper-diameter": 6.5
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_coolant": "'disabled'",
+       "tool_feedCutting": "150 mmpm",
+       "tool_feedPlunge": "150 mmpm",
+       "tool_spindleSpeed": "15000 rpm",
+       "tool_stepdown": ".45 mm",
+       "tool_stepover": "0.1 mm",
+       "use_tool_stepdown": "false",
+       "use_tool_stepover": "true"
+      },
+      "f_n": 0.01,
+      "f_z": 0.0033333333333333335,
+      "guid": "380e2f74-09f6-4264-98e6-abaa74bc9b76",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 15000,
+      "n_ramp": 15000,
+      "name": "Copper 101-H02",
+      "ramp-angle": 2,
+      "stepover": 0.1,
+      "tool-coolant": "disabled",
+      "use-stepdown": false,
+      "use-stepover": true,
+      "v_c": 92.36282401553991,
+      "v_f": 150,
+      "v_f_leadIn": 150,
+      "v_f_leadOut": 150,
+      "v_f_plunge": 150,
+      "v_f_ramp": 333.333333333333,
+      "v_f_transition": 150
+     }
+    ]
+   },
+   "type": "thread mill",
+   "unit": "millimeters",
+   "vendor": ""
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "2.6*8.2mm Drill",
+   "expressions": {
+    "tool_description": "'2.6*8.2mm Drill'",
+    "tool_diameter": "2.6 mm",
+    "tool_fluteLength": "8.2 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A166'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A166/'",
+    "tool_shoulderLength": "8.2 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2.6,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 8.2,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 6.5,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 8.2,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "b15d5c19-9954-4a48-a4c0-56b2bf86ab00",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A166",
+   "product-link": "https://www.mcmaster.com/2841A166/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 2.6,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm"
+      },
+      "f_z": 0,
+      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 81.68140899333463,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "1.6*9.7mm Drill",
+   "expressions": {
+    "tool_description": "'1.6*9.7mm Drill'",
+    "tool_diameter": "1.6 mm",
+    "tool_fluteLength": "9.7 mm",
+    "tool_number": "0",
+    "tool_productId": "'6415N185'",
+    "tool_productLink": "'https://www.mcmaster.com/6415N185/'",
+    "tool_shoulderLength": "9.7 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 1.6,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 9.7,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 6.5,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 9.7,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "9d9c9f1e-a2e9-4949-b02e-3a0dcef32d24",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "6415N185",
+   "product-link": "https://www.mcmaster.com/6415N185/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 1.6,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm"
+      },
+      "f_z": 0,
+      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 50.26548245743669,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "2.2*8.8mm Drill",
+   "expressions": {
+    "tool_description": "'2.2*8.8mm Drill'",
+    "tool_diameter": "2.2 mm",
+    "tool_fluteLength": "8.8 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A16'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A16/'",
+    "tool_shoulderLength": "8.8 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2.2,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 8.8,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 6.5,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 8.8,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "041d9e35-da80-453e-8e42-69264c86783f",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A16",
+   "product-link": "https://www.mcmaster.com/2841A16/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 2.2,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm"
+      },
+      "f_z": 0,
+      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 69.11503837897544,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "Mill Generic",
+   "description": "Spiral O Metal 4*17mm",
+   "expressions": {
+    "holder_description": "'Carvera ToolHolder 4 mm'",
+    "tool_bodyLength": "30 mm",
+    "tool_description": "'Spiral O Metal 4*17mm'",
+    "tool_diameter": "4 mm",
+    "tool_fluteLength": "17 mm",
+    "tool_material": "'carbide'",
+    "tool_number": "0",
+    "tool_numberOfFlutes": "1",
+    "tool_overallLength": "50 mm",
+    "tool_productLink": "'https://www.makera.com/products/spiral-o-single-flute-bit-for-metal-4mm-shank?variant=47363935633633'",
+    "tool_shaftDiameter": "4 mm",
+    "tool_shoulderLength": "17 mm",
+    "tool_vendor": "'Makera'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 4,
+    "HAND": true,
+    "LB": 30,
+    "LCF": 17,
+    "NOF": 1,
+    "NT": 1,
+    "OAL": 50,
+    "RE": 0,
+    "SFDM": 4,
+    "TA": 0,
+    "TP": 0,
+    "assemblyGaugeLength": 30.5,
+    "shoulder-diameter": 4,
+    "shoulder-length": 17,
+    "thread-profile-angle": 60,
+    "tip-diameter": 4,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "ceee9937-8dd6-406c-8d1a-28c67b50501c",
+   "holder": {
+    "description": "Carvera ToolHolder 4 mm",
+    "gaugeLength": 0.5,
+    "guid": "0a72dd47-d3aa-497b-8af8-f1d3036d1af1",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 4,
+      "upper-diameter": 4
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "",
+   "product-link": "https://www.makera.com/products/spiral-o-single-flute-bit-for-metal-4mm-shank?variant=47363935633633",
+   "shaft": {
+    "segments": [
+     {
+      "height": 6.5,
+      "lower-diameter": 4,
+      "upper-diameter": 4
+     },
+     {
+      "height": 6.5,
+      "lower-diameter": 6.5,
+      "upper-diameter": 6.5
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_coolant": "'disabled'",
+       "tool_feedCutting": "200 mmpm",
+       "tool_feedPlunge": "200 mmpm",
+       "tool_feedRamp": "300 mmpm",
+       "tool_rampAngle": "1.2 degrees",
+       "tool_spindleSpeed": "6000 rpm",
+       "tool_stepdown": "0.3 mm",
+       "tool_stepover": "tool_diameter * 0.1",
+       "use_tool_stepdown": "true",
+       "use_tool_stepover": "false"
+      },
+      "f_n": 0.03333333333333333,
+      "f_z": 0.03333333333333333,
+      "guid": "7655ca09-5637-4572-8e43-79a2c9209b1d",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 6000,
+      "n_ramp": 6000,
+      "name": "Copper 101-H02",
+      "ramp-angle": 1.2,
+      "stepdown": 0.3,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": false,
+      "v_c": 75.39822368615503,
+      "v_f": 200,
+      "v_f_leadIn": 200,
+      "v_f_leadOut": 200,
+      "v_f_plunge": 200,
+      "v_f_ramp": 300,
+      "v_f_transition": 200
+     }
+    ]
+   },
+   "type": "flat end mill",
+   "unit": "millimeters",
+   "vendor": "Makera"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "Mill Generic",
+   "description": "Carvera M2 Threadmill",
+   "expressions": {
+    "tool_bodyLength": "28 mm",
+    "tool_description": "'Carvera M2 Threadmill'",
+    "tool_diameter": "1.54 mm",
+    "tool_fluteLength": "6 mm",
+    "tool_material": "'carbide'",
+    "tool_maximumThreadPitch": "0.4 mm",
+    "tool_number": "0",
+    "tool_numberOfFlutes": "3",
+    "tool_numberOfTeeth": "1",
+    "tool_overallLength": "38 mm",
+    "tool_productLink": "'https://www.makera.com/products/thread-milling-bit-1-8-shank?variant=43974860570849'",
+    "tool_shaftDiameter": "3.175 mm",
+    "tool_shoulderLength": "6 mm"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 1.54,
+    "HAND": true,
+    "LB": 28,
+    "LCF": 6,
+    "NOF": 3,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "TA": 0,
+    "TP": 0.4,
+    "TPN": 0.4,
+    "TPX": 0.4,
+    "assemblyGaugeLength": 28.51,
+    "shoulder-diameter": 0.8471797000000001,
+    "shoulder-length": 6,
+    "thread-profile-angle": 60,
+    "thread-tip-type": "point",
+    "tip-diameter": 1.54,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "34e6c73d-ed8f-4454-bb5a-434c3ac83313",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.51,
+    "guid": "1c6a5f18-a3b4-427b-a1d1-8ab393575819",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 0.5,
+      "lower-diameter": 9,
+      "upper-diameter": 10
+     },
+     {
+      "height": 0.01,
+      "lower-diameter": 16.6,
+      "upper-diameter": 16.6
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "",
+   "product-link": "https://www.makera.com/products/thread-milling-bit-1-8-shank?variant=43974860570849",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 1,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 11.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 6.5,
+      "lower-diameter": 6.5,
+      "upper-diameter": 6.5
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_coolant": "'disabled'",
+       "tool_feedCutting": "100 mmpm",
+       "tool_feedPlunge": "100 mmpm",
+       "tool_spindleSpeed": "15000 rpm",
+       "tool_stepdown": ".4 mm",
+       "tool_stepover": "0.1 mm",
+       "use_tool_stepdown": "false",
+       "use_tool_stepover": "true"
+      },
+      "f_n": 0.006666666666666667,
+      "f_z": 0.0022222222222222222,
+      "guid": "be38e46a-43e6-43f7-866e-377d11aaddbf",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 15000,
+      "n_ramp": 15000,
+      "name": "Copper 101-H02",
+      "ramp-angle": 2,
+      "stepover": 0.1,
+      "tool-coolant": "disabled",
+      "use-stepdown": false,
+      "use-stepover": true,
+      "v_c": 72.57079029792422,
+      "v_f": 100,
+      "v_f_leadIn": 100,
+      "v_f_leadOut": 100,
+      "v_f_plunge": 100,
+      "v_f_ramp": 333.333333333333,
+      "v_f_transition": 100
+     }
+    ]
+   },
+   "type": "thread mill",
+   "unit": "millimeters",
+   "vendor": ""
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "Spot Drill",
+   "expressions": {
+    "tool_comment": "''",
+    "tool_description": "'Spot Drill'",
+    "tool_diameterOffset": "tool_number",
+    "tool_lengthOffset": "tool_number",
+    "tool_number": "0",
+    "tool_productId": "'2911A647'",
+    "tool_productLink": "'https://www.mcmaster.com/2911A647/'",
+    "tool_turret": "0",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 3.175,
+    "HAND": true,
+    "LB": 50.8,
+    "LCF": 9.525,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 50.8,
+    "RE": 0,
+    "SFDM": 3.175,
+    "SIG": 140,
+    "TP": 0,
+    "assemblyGaugeLength": 50.8,
+    "shoulder-length": 9.525,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "0f140c44-6da9-42ba-a0e2-ed9113873ca1",
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2911A647",
+   "product-link": "https://www.mcmaster.com/2911A647/",
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_coolant": "'disabled'",
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
+      },
+      "f_z": 0,
+      "guid": "d5703dd4-056d-41dd-bab8-ff62d432c3c6",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 99.74556675147592,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     },
+     {
+      "description": "",
+      "expressions": {
+       "tool_coolant": "'disabled'",
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
+      },
+      "f_z": 0,
+      "guid": "161930ef-d7d4-4791-b07f-922a7b7e80fe",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Aluminum 6063-T5",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 99.74556675147592,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "2.7*8.1mm Drill",
+   "expressions": {
+    "tool_description": "'2.7*8.1mm Drill'",
+    "tool_diameter": "2.7 mm",
+    "tool_fluteLength": "8.1 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A168'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A168/'",
+    "tool_shoulderLength": "8.1 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2.7,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 8.1,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 6.5,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 8.1,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "db6f6646-e633-4c88-89fe-2d2367164491",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A168",
+   "product-link": "https://www.mcmaster.com/2841A168/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 2.7,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm"
+      },
+      "f_z": 0,
+      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 84.82300164692441,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "description": "Carvera ToolHolder 4 mm",
+   "expressions": {
+    "tool_description": "'Carvera ToolHolder 4 mm'"
+   },
+   "gaugeLength": 0.5,
+   "guid": "0a72dd47-d3aa-497b-8af8-f1d3036d1af1",
+   "product-id": "",
+   "product-link": "",
+   "segments": [
+    {
+     "height": 3.5,
+     "lower-diameter": 4,
+     "upper-diameter": 4
+    }
+   ],
+   "type": "holder",
+   "unit": "millimeters",
+   "vendor": "Makera"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "Mill Generic",
+   "description": "Carvera M4 Threadmill",
+   "expressions": {
+    "tool_bodyLength": "28 mm",
+    "tool_description": "'Carvera M4 Threadmill'",
+    "tool_diameter": "3.15 mm",
+    "tool_fluteLength": "2 mm",
+    "tool_material": "'carbide'",
+    "tool_numberOfFlutes": "3",
+    "tool_numberOfTeeth": "1",
+    "tool_overallLength": "38 mm",
+    "tool_productLink": "'https://www.makera.com/products/thread-milling-bit-1-8-shank?variant=43974860669153'",
+    "tool_shaftDiameter": "3.175 mm",
+    "tool_shoulderLength": "12 mm"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 3.15,
+    "HAND": true,
+    "LB": 28,
+    "LCF": 2,
+    "NOF": 3,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "TA": 0,
+    "TP": 1,
+    "TPN": 0.7,
+    "TPX": 1,
+    "assemblyGaugeLength": 28.51,
+    "shoulder-diameter": 1.4179489999999997,
+    "shoulder-length": 12,
+    "thread-profile-angle": 60,
+    "thread-tip-type": "point",
+    "tip-diameter": 3.15,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "98d10e48-5d4a-4d5a-b00e-4d1233910649",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.51,
+    "guid": "1c6a5f18-a3b4-427b-a1d1-8ab393575819",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 0.5,
+      "lower-diameter": 9,
+      "upper-diameter": 10
+     },
+     {
+      "height": 0.01,
+      "lower-diameter": 16.6,
+      "upper-diameter": 16.6
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "",
+   "product-link": "https://www.makera.com/products/thread-milling-bit-1-8-shank?variant=43974860669153",
+   "shaft": {
+    "segments": [
+     {
+      "height": 2,
+      "lower-diameter": 1.8,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 7.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 6.5,
+      "lower-diameter": 6.5,
+      "upper-diameter": 6.5
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_coolant": "'disabled'",
+       "tool_feedCutting": "200 mmpm",
+       "tool_feedPlunge": "200 mmpm",
+       "tool_spindleSpeed": "15000 rpm",
+       "tool_stepdown": ".7 mm",
+       "tool_stepover": "tool_diameter * 0.2",
+       "use_tool_stepdown": "true",
+       "use_tool_stepover": "true"
+      },
+      "f_n": 0.013333333333333334,
+      "f_z": 0.0044444444444444444,
+      "guid": "73a6114d-404a-47f1-966c-1e5ec07d8d3b",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 15000,
+      "n_ramp": 15000,
+      "name": "Copper 101-H02",
+      "ramp-angle": 2,
+      "stepdown": 0.7,
+      "stepover": 0.63,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": true,
+      "v_c": 148.44025288211773,
+      "v_f": 200,
+      "v_f_leadIn": 200,
+      "v_f_leadOut": 200,
+      "v_f_plunge": 200,
+      "v_f_ramp": 333.333333333333,
+      "v_f_transition": 200
+     }
+    ]
+   },
+   "type": "thread mill",
+   "unit": "millimeters",
+   "vendor": ""
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "Mill Generic",
+   "description": "Chamfering Bit - 1/8â³ Shank",
+   "expressions": {
+    "tool_bodyLength": "28 mm",
+    "tool_description": "'Chamfering Bit - 1/8â³ Shank'",
+    "tool_diameter": "3.175 mm",
+    "tool_fluteLength": "3 mm",
+    "tool_material": "'carbide'",
+    "tool_number": "0",
+    "tool_overallLength": "38 mm",
+    "tool_productLink": "'https://www.makera.com/products/chamfering-bit-1-8-shank'",
+    "tool_shaftDiameter": "3.175 mm",
+    "tool_shoulderLength": "(28-6.5) mm",
+    "tool_tipDiameter": "0.1 mm"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 3.175,
+    "HAND": true,
+    "LB": 28,
+    "LCF": 3,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "TA": 45,
+    "TP": 0,
+    "assemblyGaugeLength": 28.51,
+    "shoulder-diameter": 3.175,
+    "shoulder-length": 21.5,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0.1,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "3523bf4b-9464-4d6f-aa52-2e1d0b5cb010",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.51,
+    "guid": "1c6a5f18-a3b4-427b-a1d1-8ab393575819",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 0.5,
+      "lower-diameter": 9,
+      "upper-diameter": 10
+     },
+     {
+      "height": 0.01,
+      "lower-diameter": 16.6,
+      "upper-diameter": 16.6
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "",
+   "product-link": "https://www.makera.com/products/chamfering-bit-1-8-shank",
+   "shaft": {
+    "segments": [
+     {
+      "height": 6.5,
+      "lower-diameter": 6.5,
+      "upper-diameter": 6.5
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_coolant": "'disabled'",
+       "tool_feedCutting": "200 mmpm",
+       "tool_feedPlunge": "200 mmpm",
+       "tool_feedRamp": "300 mmpm",
+       "tool_spindleSpeed": "6000 rpm",
+       "tool_stepdown": "0.1 mm",
+       "tool_stepover": "0.1 mm",
+       "use_tool_stepdown": "true",
+       "use_tool_stepover": "true"
+      },
+      "f_n": 0.03333333333333333,
+      "f_z": 0.016666666666666666,
+      "guid": "74858405-a5bb-40ba-adc7-3f11e4696825",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 6000,
+      "n_ramp": 6000,
+      "name": "Copper 101-H02",
+      "ramp-angle": 2,
+      "stepdown": 0.1,
+      "stepover": 0.1,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": true,
+      "v_c": 59.847340050885556,
+      "v_f": 200,
+      "v_f_leadIn": 200,
+      "v_f_leadOut": 200,
+      "v_f_plunge": 200,
+      "v_f_ramp": 300,
+      "v_f_transition": 200
+     }
+    ]
+   },
+   "type": "chamfer mill",
+   "unit": "millimeters",
+   "vendor": ""
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "Spot Drill",
+   "expressions": {
+    "tool_bodyLength": "25.4 mm",
+    "tool_description": "'Spot Drill'",
+    "tool_productId": "'2911A641'",
+    "tool_productLink": "'https://www.mcmaster.com/2911A641/'",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 3.175,
+    "HAND": true,
+    "LB": 25.4,
+    "LCF": 9.525,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 50.8,
+    "RE": 0,
+    "SFDM": 3.175,
+    "SIG": 120,
+    "TP": 0,
+    "assemblyGaugeLength": 25.4,
+    "shoulder-length": 9.525,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "f6ce274e-c383-4efe-8062-e44350454f42",
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 1,
+    "length-offset": 1,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2911A641",
+   "product-link": "https://www.mcmaster.com/2911A641/",
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_coolant": "'disabled'",
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
+      },
+      "f_z": 0,
+      "guid": "7f359656-796b-4581-9ecd-d4bff230e98a",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 99.74556675147592,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "Mill Generic",
+   "description": "Spiral O Metal 1*3mm",
+   "expressions": {
+    "tool_bodyLength": "28 mm",
+    "tool_description": "'Spiral O Metal 1*3mm'",
+    "tool_diameter": "1 mm",
+    "tool_fluteLength": "3 mm",
+    "tool_material": "'carbide'",
+    "tool_number": "0",
+    "tool_numberOfFlutes": "1",
+    "tool_overallLength": "38 mm",
+    "tool_productLink": "'https://www.makera.com/products/spiral-o-single-flute-bit-for-metal-1-8-shank?variant=43974664749281'",
+    "tool_shaftDiameter": "3.175 mm",
+    "tool_shoulderLength": "3 mm",
+    "tool_vendor": "'Makera'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 1,
+    "HAND": true,
+    "LB": 28,
+    "LCF": 3,
+    "NOF": 1,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "TA": 0,
+    "TP": 0,
+    "assemblyGaugeLength": 28.51,
+    "shoulder-diameter": 1,
+    "shoulder-length": 3,
+    "thread-profile-angle": 60,
+    "tip-diameter": 1,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "65b9654e-4b53-47ed-9c09-861f197f6116",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.51,
+    "guid": "1c6a5f18-a3b4-427b-a1d1-8ab393575819",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 0.5,
+      "lower-diameter": 9,
+      "upper-diameter": 10
+     },
+     {
+      "height": 0.01,
+      "lower-diameter": 16.6,
+      "upper-diameter": 16.6
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "",
+   "product-link": "https://www.makera.com/products/spiral-o-single-flute-bit-for-metal-1-8-shank?variant=43974664749281",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 1,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 14.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 6.5,
+      "lower-diameter": 6.5,
+      "upper-diameter": 6.5
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_coolant": "'disabled'",
+       "tool_feedCutting": "200 mmpm",
+       "tool_feedPlunge": "200 mmpm",
+       "tool_feedRamp": "200 mmpm",
+       "tool_rampAngle": "1.2 degrees",
+       "tool_spindleSpeed": "6000 rpm",
+       "tool_stepdown": "0.2 mm",
+       "tool_stepover": "tool_diameter * 0.1",
+       "use_tool_stepdown": "true",
+       "use_tool_stepover": "false"
+      },
+      "f_n": 0.03333333333333333,
+      "f_z": 0.03333333333333333,
+      "guid": "7655ca09-5637-4572-8e43-79a2c9209b1d",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 6000,
+      "n_ramp": 6000,
+      "name": "Copper 101-H02",
+      "ramp-angle": 1.2,
+      "stepdown": 0.2,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": false,
+      "v_c": 18.84955592153876,
+      "v_f": 200,
+      "v_f_leadIn": 200,
+      "v_f_leadOut": 200,
+      "v_f_plunge": 200,
+      "v_f_ramp": 200,
+      "v_f_transition": 200
+     }
+    ]
+   },
+   "type": "flat end mill",
+   "unit": "millimeters",
+   "vendor": "Makera"
+  },
+  {
+   "description": "Carvera ToolHolder",
+   "gaugeLength": 0.5,
+   "guid": "12e41b50-520d-4ea6-98b5-df73fd952391",
+   "product-id": "",
+   "product-link": "",
+   "segments": [
+    {
+     "height": 3.5,
+     "lower-diameter": 3.175,
+     "upper-diameter": 3.175
+    }
+   ],
+   "type": "holder",
+   "unit": "millimeters",
+   "vendor": "Makera"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "4*19mm Drill",
+   "expressions": {
+    "holder_description": "'Carvera ToolHolder 4 mm'",
+    "tool_description": "'4*19mm Drill'",
+    "tool_diameter": "4 mm",
+    "tool_fluteLength": "19 mm",
+    "tool_number": "0",
+    "tool_overallLength": "63 mm",
+    "tool_productId": "'27515A713'",
+    "tool_productLink": "'https://www.mcmaster.com/27515A713/'",
+    "tool_shoulderLength": "19 mm",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 4,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 19,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 63,
+    "RE": 0,
+    "SFDM": 6.5,
+    "SIG": 118,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 19,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "fa49515a-9bd7-4891-b8e6-f7bf0508b96a",
+   "holder": {
+    "description": "Carvera ToolHolder 4 mm",
+    "gaugeLength": 0.5,
+    "guid": "0a72dd47-d3aa-497b-8af8-f1d3036d1af1",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 4,
+      "upper-diameter": 4
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "27515A713",
+   "product-link": "https://www.mcmaster.com/27515A713/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 4,
+      "upper-diameter": 4
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm"
+      },
+      "f_z": 0,
+      "guid": "6c6979c3-460d-84f0-6bb9-0bb7ec2c1292",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 125.66370614359172,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "Mill Generic",
+   "description": "Spiral O Metal 1.5*6mm",
+   "expressions": {
+    "tool_bodyLength": "28 mm",
+    "tool_description": "'Spiral O Metal 1.5*6mm'",
+    "tool_diameter": "1.5 mm",
+    "tool_fluteLength": "6 mm",
+    "tool_material": "'carbide'",
+    "tool_number": "0",
+    "tool_numberOfFlutes": "1",
+    "tool_overallLength": "38 mm",
+    "tool_productLink": "'https://www.makera.com/products/spiral-o-single-flute-bit-for-metal-1-8-shank?variant=43974664716513'",
+    "tool_shaftDiameter": "3.175 mm",
+    "tool_shoulderLength": "6 mm",
+    "tool_vendor": "'Makera'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 1.5,
+    "HAND": true,
+    "LB": 28,
+    "LCF": 6,
+    "NOF": 1,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "TA": 0,
+    "TP": 0,
+    "assemblyGaugeLength": 28.51,
+    "shoulder-diameter": 1.5,
+    "shoulder-length": 6,
+    "thread-profile-angle": 60,
+    "tip-diameter": 1.5,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "53edb568-3587-4053-a499-509b2466a2a8",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.51,
+    "guid": "1c6a5f18-a3b4-427b-a1d1-8ab393575819",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 0.5,
+      "lower-diameter": 9,
+      "upper-diameter": 10
+     },
+     {
+      "height": 0.01,
+      "lower-diameter": 16.6,
+      "upper-diameter": 16.6
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "",
+   "product-link": "https://www.makera.com/products/spiral-o-single-flute-bit-for-metal-1-8-shank?variant=43974664716513",
+   "shaft": {
+    "segments": [
+     {
+      "height": 3,
+      "lower-diameter": 1.5,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 12.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 6.5,
+      "lower-diameter": 6.5,
+      "upper-diameter": 6.5
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_coolant": "'disabled'",
+       "tool_feedCutting": "200 mmpm",
+       "tool_feedPlunge": "200 mmpm",
+       "tool_rampAngle": "1.2 degrees",
+       "tool_spindleSpeed": "6000 rpm",
+       "tool_stepdown": "0.2 mm",
+       "tool_stepover": "tool_diameter * 0.1",
+       "use_tool_stepdown": "true",
+       "use_tool_stepover": "false"
+      },
+      "f_n": 0.03333333333333333,
+      "f_z": 0.03333333333333333,
+      "guid": "7655ca09-5637-4572-8e43-79a2c9209b1d",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 6000,
+      "n_ramp": 6000,
+      "name": "Copper 101-H02",
+      "ramp-angle": 1.2,
+      "stepdown": 0.2,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": false,
+      "v_c": 28.274333882308138,
+      "v_f": 200,
+      "v_f_leadIn": 200,
+      "v_f_leadOut": 200,
+      "v_f_plunge": 200,
+      "v_f_ramp": 333.333333333333,
+      "v_f_transition": 200
+     }
+    ]
+   },
+   "type": "flat end mill",
+   "unit": "millimeters",
+   "vendor": "Makera"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "2.1*9.0mm Drill",
+   "expressions": {
+    "tool_description": "'2.1*9.0mm Drill'",
+    "tool_diameter": "2.1 mm",
+    "tool_fluteLength": "9 mm",
+    "tool_number": "0",
+    "tool_productId": "'6415N189'",
+    "tool_productLink": "'https://www.mcmaster.com/6415N189/'",
+    "tool_shoulderLength": "9 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2.1,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 9,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 6.5,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 9,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "030f546e-c083-45f0-88f5-08ffece793b3",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "6415N189",
+   "product-link": "https://www.mcmaster.com/6415N189/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 2.1,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm"
+      },
+      "f_z": 0,
+      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 65.97344572538566,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "2*9.1mm Drill",
+   "expressions": {
+    "tool_description": "'2*9.1mm Drill'",
+    "tool_diameter": "2 mm",
+    "tool_fluteLength": "9.1 mm",
+    "tool_number": "0",
+    "tool_productId": "'6415N188'",
+    "tool_productLink": "'https://www.mcmaster.com/6415N188/'",
+    "tool_shoulderLength": "9.1 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 9.1,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 6.5,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 9.1,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "6eab8272-0018-44a0-80a2-c00862b5341b",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "6415N188",
+   "product-link": "https://www.mcmaster.com/6415N188/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 2,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm"
+      },
+      "f_z": 0,
+      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 62.83185307179586,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "3.175*7.4mm Drill",
+   "expressions": {
+    "tool_description": "'3.175*7.4mm Drill'",
+    "tool_diameter": "3.175 mm",
+    "tool_fluteLength": "7.4 mm",
+    "tool_number": "0",
+    "tool_productId": "'6415N117'",
+    "tool_productLink": "'https://www.mcmaster.com/6415N117/'",
+    "tool_shoulderLength": "7.4 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 3.175,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 7.4,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 6.5,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 7.4,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "598a657a-fd9f-466e-b1d0-63b0c179863a",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "6415N117",
+   "product-link": "https://www.mcmaster.com/6415N117/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm"
+      },
+      "f_z": 0,
+      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 99.74556675147592,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "2.5*8.4mm Drill",
+   "expressions": {
+    "tool_description": "'2.5*8.4mm Drill'",
+    "tool_fluteLength": "8.4 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A137'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A137/'",
+    "tool_shoulderLength": "8.4 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2.5,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 8.4,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 6.5,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 8.4,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "2275c68d-a9ff-4790-aa58-1bb548fe208f",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A137",
+   "product-link": "https://www.mcmaster.com/2841A137/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 2.5,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm"
+      },
+      "f_z": 0,
+      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 78.53981633974482,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "Mill Generic",
+   "description": "Single Flute Engraving Metal 30 deg*.2mm",
+   "expressions": {
+    "tool_number": "0"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 3.175,
+    "HAND": true,
+    "LB": 28,
+    "LCF": 9,
+    "NOF": 1,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 6.5,
+    "TA": 15,
+    "TP": 0,
+    "assemblyGaugeLength": 28.51,
+    "shoulder-diameter": 3.175,
+    "shoulder-length": 9,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0.2,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "cf4878a3-d518-427e-9857-f941695a1f90",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.51,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 0.5,
+      "lower-diameter": 9,
+      "upper-diameter": 10
+     },
+     {
+      "height": 0.01,
+      "lower-diameter": 16.6,
+      "upper-diameter": 16.6
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "",
+   "product-link": "https://www.makera.com/products/single-flute-engraving-bit-for-metal-1-8-shank?variant=43974732218593",
+   "shaft": {
+    "segments": [
+     {
+      "height": 13.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 6.5,
+      "lower-diameter": 6.5,
+      "upper-diameter": 6.5
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "f_n": 0.016719282380106327,
+      "f_z": 0.041666700000000154,
+      "guid": "a4de9d81-453b-5e95-f2eb-5cb55907fc9a",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 11962.2359054102,
+      "n_ramp": 12000,
+      "name": "Aluminum",
+      "ramp-angle": 1.2,
+      "stepdown": 0.2,
+      "stepover": 0.06,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": true,
+      "v_c": 119.31799999999951,
+      "v_f": 498.426894799957,
+      "v_f_leadIn": 500,
+      "v_f_leadOut": 500,
+      "v_f_plunge": 200,
+      "v_f_ramp": 333.333,
+      "v_f_transition": 500
+     },
+     {
+      "description": "",
+      "f_n": 0.008359641190053163,
+      "f_z": 0.02500000000000008,
+      "guid": "8741c0da-45cd-3fc9-f6c0-0183bcb66e0d",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 11962.2359054102,
+      "n_ramp": 12000,
+      "name": "Brass",
+      "ramp-angle": 1.2,
+      "stepdown": 0.1,
+      "stepover": 0.06,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": true,
+      "v_c": 119.31799999999951,
+      "v_f": 299.055897635256,
+      "v_f_leadIn": 300,
+      "v_f_leadOut": 300,
+      "v_f_plunge": 100,
+      "v_f_ramp": 333.333,
+      "v_f_transition": 300
+     },
+     {
+      "description": "",
+      "f_n": 0.008359641190053163,
+      "f_z": 0.02500000000000008,
+      "guid": "1df13f83-4bda-2867-5dbe-c49e46129edf",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 11962.2359054102,
+      "n_ramp": 12000,
+      "name": "Copper",
+      "ramp-angle": 1.2,
+      "stepdown": 0.1,
+      "stepover": 0.06,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": true,
+      "v_c": 119.31799999999951,
+      "v_f": 299.055897635256,
+      "v_f_leadIn": 300,
+      "v_f_leadOut": 300,
+      "v_f_plunge": 100,
+      "v_f_ramp": 333.333,
+      "v_f_transition": 300
+     },
+     {
+      "description": "",
+      "f_n": 0.041798205950265815,
+      "f_z": 0.08333330000000035,
+      "guid": "28997b90-44d7-bded-3c3e-79a7e22f006a",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 11962.2359054102,
+      "n_ramp": 12000,
+      "name": "Hardwood",
+      "ramp-angle": 1.2,
+      "stepdown": 1,
+      "stepover": 0.06,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": true,
+      "v_c": 119.31799999999951,
+      "v_f": 996.852593376324,
+      "v_f_leadIn": 1000,
+      "v_f_leadOut": 1000,
+      "v_f_plunge": 500,
+      "v_f_ramp": 333.333,
+      "v_f_transition": 1000
+     },
+     {
+      "description": "",
+      "f_n": 0.016719282380106327,
+      "f_z": 0.041666700000000154,
+      "guid": "2e6fd533-4ae9-e218-ca05-71ad51db0063",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 11962.2359054102,
+      "n_ramp": 12000,
+      "name": "PCB",
+      "ramp-angle": 1.2,
+      "stepdown": 0.1,
+      "stepover": 0.06,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": true,
+      "v_c": 119.31799999999951,
+      "v_f": 498.426894799957,
+      "v_f_leadIn": 500,
+      "v_f_leadOut": 500,
+      "v_f_plunge": 200,
+      "v_f_ramp": 333.333,
+      "v_f_transition": 500
+     },
+     {
+      "description": "",
+      "f_n": 0.041798205950265815,
+      "f_z": 0.08333330000000035,
+      "guid": "cdc6a401-420e-935f-7372-549f736f9ed8",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 11962.2359054102,
+      "n_ramp": 12000,
+      "name": "Plastic",
+      "ramp-angle": 1.2,
+      "stepdown": 1,
+      "stepover": 0.06,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": true,
+      "v_c": 119.31799999999951,
+      "v_f": 996.852593376324,
+      "v_f_leadIn": 1000,
+      "v_f_leadOut": 1000,
+      "v_f_plunge": 500,
+      "v_f_ramp": 333.333,
+      "v_f_transition": 1000
+     },
+     {
+      "description": "",
+      "f_n": 0.041798205950265815,
+      "f_z": 0.08333330000000035,
+      "guid": "15df503e-4ce6-92b7-2abe-65a95bf83048",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 11962.2359054102,
+      "n_ramp": 12000,
+      "name": "Softwood",
+      "ramp-angle": 1.2,
+      "stepdown": 2,
+      "stepover": 0.06,
+      "tool-coolant": "disabled",
+      "use-stepdown": true,
+      "use-stepover": true,
+      "v_c": 119.31799999999951,
+      "v_f": 996.852593376324,
+      "v_f_leadIn": 1000,
+      "v_f_leadOut": 1000,
+      "v_f_plunge": 500,
+      "v_f_ramp": 333.333,
+      "v_f_transition": 1000
+     }
+    ]
+   },
+   "type": "chamfer mill",
+   "unit": "millimeters",
+   "vendor": ""
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "3.0*7.6mm Drill",
+   "expressions": {
+    "tool_description": "'3.0*7.6mm Drill'",
+    "tool_diameter": "3.0 mm",
+    "tool_fluteLength": "7.6 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A138'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A138/'",
+    "tool_shoulderLength": "7.6 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 3,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 7.6,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 6.5,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 7.6,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "2def14a9-6594-4068-86b7-6e956a11acd3",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A138",
+   "product-link": "https://www.mcmaster.com/2841A138/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 3,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm"
+      },
+      "f_z": 0,
+      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 94.2477796076938,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     },
+     {
+      "description": "",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm"
+      },
+      "f_z": 0,
+      "guid": "b89ee6d8-081d-4c5f-ac17-58dc77a8b598",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Aluminum 6063-T5",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 94.2477796076938,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "Mill Generic",
+   "description": "Carvera M3 Threadmill",
+   "expressions": {
+    "tool_bodyLength": "28 mm",
+    "tool_description": "'Carvera M3 Threadmill'",
+    "tool_diameter": "2.42 mm",
+    "tool_fluteLength": "2 mm",
+    "tool_material": "'carbide'",
+    "tool_number": "0",
+    "tool_numberOfFlutes": "3",
+    "tool_numberOfTeeth": "1",
+    "tool_overallLength": "38 mm",
+    "tool_productLink": "'https://www.makera.com/products/thread-milling-bit-1-8-shank?variant=43974860636385'",
+    "tool_shaftDiameter": "3.175 mm",
+    "tool_shoulderLength": "9 mm"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2.42,
+    "HAND": true,
+    "LB": 28,
+    "LCF": 2,
+    "NOF": 3,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "TA": 0,
+    "TP": 1,
+    "TPN": 0.5,
+    "TPX": 1,
+    "assemblyGaugeLength": 28.51,
+    "shoulder-diameter": 0.6879492,
+    "shoulder-length": 9,
+    "thread-profile-angle": 60,
+    "thread-tip-type": "point",
+    "tip-diameter": 2.42,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "bf66b5c1-13cd-48f6-8b74-52d7d41c2266",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.51,
+    "guid": "1c6a5f18-a3b4-427b-a1d1-8ab393575819",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 0.5,
+      "lower-diameter": 9,
+      "upper-diameter": 10
+     },
+     {
+      "height": 0.01,
+      "lower-diameter": 16.6,
+      "upper-diameter": 16.6
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "",
+   "product-link": "https://www.makera.com/products/thread-milling-bit-1-8-shank?variant=43974860636385",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 1.5,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 8.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     },
+     {
+      "height": 6.5,
+      "lower-diameter": 6.5,
+      "upper-diameter": 6.5
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_coolant": "'disabled'",
+       "tool_feedCutting": "200 mmpm",
+       "tool_feedPlunge": "200 mmpm",
+       "tool_spindleSpeed": "15000 rpm",
+       "tool_stepdown": ".5 mm",
+       "tool_stepover": "0.1 mm",
+       "use_tool_stepdown": "false",
+       "use_tool_stepover": "true"
+      },
+      "f_n": 0.013333333333333334,
+      "f_z": 0.0044444444444444444,
+      "guid": "ff54be6f-9f0c-4ac3-906d-5011d88054f9",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 15000,
+      "n_ramp": 15000,
+      "name": "Copper 101-H02",
+      "ramp-angle": 2,
+      "stepover": 0.1,
+      "tool-coolant": "disabled",
+      "use-stepdown": false,
+      "use-stepover": true,
+      "v_c": 114.03981332530948,
+      "v_f": 200,
+      "v_f_leadIn": 200,
+      "v_f_leadOut": 200,
+      "v_f_plunge": 200,
+      "v_f_ramp": 333.333333333333,
+      "v_f_transition": 200
+     }
+    ]
+   },
+   "type": "thread mill",
+   "unit": "millimeters",
+   "vendor": ""
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "1.7*9.6mm Drill",
+   "expressions": {
+    "tool_description": "'1.7*9.6mm Drill'",
+    "tool_diameter": "1.7 mm",
+    "tool_fluteLength": "9.6 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A155'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A155/'",
+    "tool_shoulderLength": "9.6 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 1.7,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 9.6,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 6.5,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 9.6,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "9ee611cc-3d1d-4349-afa7-d114b2479b0a",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A155",
+   "product-link": "https://www.mcmaster.com/2841A155/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 1.7,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm"
+      },
+      "f_z": 0,
+      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 53.40707511102648,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "0.7*9.1mm Drill",
+   "expressions": {
+    "tool_description": "'0.7*9.1mm Drill'",
+    "tool_diameter": "0.7 mm",
+    "tool_fluteLength": "9.1 mm",
+    "tool_number": "0",
+    "tool_productId": "'6415N172'",
+    "tool_productLink": "'https://www.mcmaster.com/6415N172/'",
+    "tool_shoulderLength": "9.1 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 0.7,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 9.1,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 6.5,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 9.1,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "6d92bede-370d-47d3-9871-6585bbfaaff0",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "6415N172",
+   "product-link": "https://www.mcmaster.com/6415N172/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 0.7,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm"
+      },
+      "f_z": 0,
+      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 21.991148575128552,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "3.175*12.7mm Drill",
+   "expressions": {
+    "tool_description": "'3.175*12.7mm Drill'",
+    "tool_fluteLength": "12.7 mm",
+    "tool_number": "0",
+    "tool_overallLength": "50.8 mm",
+    "tool_productId": "'27515A11'",
+    "tool_productLink": "'https://www.mcmaster.com/27515A11/'",
+    "tool_shoulderLength": "12.7 mm",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 3.175,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 12.7,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 50.8,
+    "RE": 0,
+    "SFDM": 6.5,
+    "SIG": 118,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 12.7,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "b58e8cef-f5a7-443f-88ee-51d4d4bb8e38",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "27515A11",
+   "product-link": "https://www.mcmaster.com/27515A11/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm"
+      },
+      "f_z": 0,
+      "guid": "6c6979c3-460d-84f0-6bb9-0bb7ec2c1292",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 99.74556675147592,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  }
+ ],
+ "version": 37
+}

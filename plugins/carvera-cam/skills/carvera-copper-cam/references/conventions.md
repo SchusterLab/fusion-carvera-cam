@@ -5,16 +5,24 @@ They come from the lab's own Fusion setups: about 40 setups and 530 operations i
 
 ## Machine, post and material
 
-| Item | Value | Fusion Cloud Library location |
+| Item | Value | Where the generator gets it |
 |---|---|---|
-| Machine | Makera Carvera 3-axis Community Version 1.17-slab | `cloud://Makera Carvera 3-axis Community Version 1.mch` |
-| Post processor | Makera Carvera Community Post v1.1.21 | `cloud://Carvera.cps` |
-| Tools | the lab's tool library | `cloud://Carvera Tools/My Tools` |
+| Machine | Makera Carvera 3-axis Community Version, latest | [Carvera Community profiles](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles), `main` branch |
+| Post processor | Makera Carvera Community Post (`Carvera.cps`), latest | the same folder |
+| Tools | the lab's tool library | [`assets/carvera-tools.json`](../assets/carvera-tools.json), exported from the Fusion library `Carvera Tools/My Tools` |
+
+`build` downloads the machine and post again whenever they change upstream, and keeps them in `%LOCALAPPDATA%\carvera-cam\community`; without network it uses the copies there.
+The community machine's 3D model links to a file in its author's Fusion account, which no one else can open, so `build` uploads the machine's `.f3d` once per upstream version to a Fusion project named `carvera-cam` in the user's hub and links the machine to that copy.
+If the upload fails, the setups get the machine without its 3D model and `build` warns that simulation does not check the machine frame.
+
+The lab's own setups before October 2026 used the machine `...Community Version 1.17-slab` and post v1.1.21 from the lab's Cloud Library.
+That machine differs from upstream 1.4.6 only in its tool change time (30 s against 45 s), which changes time estimates, not toolpaths.
 
 Every tool in `My Tools` has a feed preset named **Copper 101-H02** (C10100 oxygen-free copper, H02 half-hard temper), and the lab uses it for everything.
 Aluminum (6063-T5) runs the same programs at 200% feed and spindle override on the Carvera, so there is one set of toolpaths per part.
 No coolant.
-The same Cloud Library folder also holds Makera's stock libraries (O Flute, Drill, Thread Mills, Engraving, Other); their faster presets are not the lab's.
+The Cloud Library folder `Carvera Tools` also holds Makera's stock libraries (O Flute, Drill, Thread Mills, Engraving, Other); their faster presets are not the lab's.
+After changing `My Tools` in Fusion, run `export_tools({})` from `carvera_cam.py` to rewrite `assets/carvera-tools.json`, and commit it.
 
 ## Tool slots
 

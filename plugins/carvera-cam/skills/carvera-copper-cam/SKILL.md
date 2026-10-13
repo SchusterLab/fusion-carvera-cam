@@ -1,6 +1,6 @@
 ---
 name: carvera-copper-cam
-description: Generate CAM toolpaths in Autodesk Fusion for machining a copper part on SchusterLab's Makera Carvera, following the lab's conventions (Cloud Library tools with the "Copper 101-H02" preset, top and flipped bottom setups, pre-drilled entry holes, four holding tabs cut by a separate program). Use when the user asks to program, CAM, toolpath or machine a part on the Carvera or Makera, in copper or aluminum. Needs the Fusion MCP server.
+description: Generate CAM toolpaths in Autodesk Fusion for machining a copper part on SchusterLab's Makera Carvera, following the lab's conventions (the lab's tools with the "Copper 101-H02" preset, the Carvera Community machine and post, top and flipped bottom setups, pre-drilled entry holes, four holding tabs cut by a separate program). Use when the user asks to program, CAM, toolpath or machine a part on the Carvera or Makera, in copper or aluminum. Needs the Fusion MCP server.
 ---
 
 # Carvera copper toolpaths
@@ -64,6 +64,7 @@ Before building, confirm with the user, briefly and in one message:
 - **Taps.** Lab parts mark tapped holes with Fusion's Hole command, Tapped type, threads not modeled, which leaves a plain hole at the minor diameter. `build` reads that thread data itself. For a hole with only a `tap_candidate`, ask whether it is tapped, and pass the answer as `taps`, keyed by the diameter exactly as `analyze` printed it, for example `{"1.623": "M2"}`. Supported threads: M2, M2.5, M3 and M4; their pre-drilling and thread-milling settings are in [references/threads.toml](references/threads.toml).
 - **Tab height**, if `analyze` moved `tab_z` off the halfway plane because a pocket opens to the side; the user may prefer another height, passed as `tab_z`.
 - **The design gets a sketch and the vise.** `build` adds a sketch named `carvera-cam` (entry points, corner chains and tab spans) to the design, plus a section sketch and construction plane per shelf height, the way the lab sketches these by hand. It also adds two copies of the lab's fixture, `carvera-cam vise top` and `carvera-cam vise bottom` (the second hidden), so that simulation checks the tool against the vise and the machine. It redraws all of these on every build.
+- **The machine and post.** `build` fetches the latest Carvera 3-axis machine and Carvera post from the Carvera Community's profiles repository on GitHub. The first build after each new upstream machine uploads the machine's 3D model to a Fusion project named `carvera-cam` in the user's hub (see [references/conventions.md](references/conventions.md)); say so the first time.
 - **The stock across the vise.** The jaws grip the stock's Y edges, so the vise opens to the stock's Y size; it opens to about 185 mm.
 - **Anything skipped or doubtful**, such as sharp inside corners, holes no tool fits, or more than six tools (the Carvera's automatic tool changer holds six; the seventh and later need a manual change).
 
@@ -123,4 +124,5 @@ Post-process (write the G-code) only when the user asks.
 
 `scripts/dump_cam.py` dumps every CAM setup of a Fusion project to JSON (one document per few seconds; call `dump` repeatedly until it prints `ALL DONE`).
 Use it when the lab's practice changes, compare its output with [references/conventions.md](references/conventions.md), and update `carvera_cam.py` to match.
+When the lab changes its tool library `Carvera Tools/My Tools` in Fusion, call `export_tools({})` in `carvera_cam.py` to rewrite [assets/carvera-tools.json](assets/carvera-tools.json), the tools `build` uses.
 `scripts/make_test_part.py` builds a 30 × 20 × 4 mm test part with one of each feature in a new, unsaved document, for testing changes.

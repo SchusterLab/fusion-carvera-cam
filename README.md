@@ -14,12 +14,11 @@ In Claude Code:
 /plugin install carvera-cam@schusterlab-fusion
 ```
 
-The skill drives Fusion through the Fusion MCP server, so Claude Code needs that server connected, and Fusion must be running and signed in to an account that can see the lab's Cloud Library:
+The skill drives Fusion through the Fusion MCP server, so Claude Code needs that server connected, and Fusion must be running and signed in.
 
-- tool library `Carvera Tools/My Tools`, whose tools carry the `Copper 101-H02` feed preset;
-- machine `Makera Carvera 3-axis Community Version 1.17-slab`;
-- post processor `Carvera.cps` (Makera Carvera Community Post);
-- the fixture design `2026-01-18_slab-fixture-3-axis`.
+- **Tools** come with the skill, in `assets/carvera-tools.json`, each with the lab's `Copper 101-H02` feed preset.
+- **The machine and post processor** are the latest Carvera 3-axis machine and `Carvera.cps` in the [Carvera Community profiles](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles), which the skill downloads. The first build uploads the machine's 3D model to a Fusion project named `carvera-cam` in your hub, so that simulation shows the machine.
+- **The vise** is the fixture design `2026-01-18_slab-fixture-3-axis`, so the Fusion account must be able to open it.
 
 ## Use
 
@@ -33,7 +32,9 @@ It does not save the document or write G-code unless you ask.
 |---|---|
 | `plugins/carvera-cam/skills/carvera-copper-cam/SKILL.md` | the skill's instructions |
 | `.../references/conventions.md` | the lab's CAM conventions the generator applies |
-| `.../scripts/carvera_cam.py` | the generator, run inside Fusion's Python: `analyze`, `build`, `generate` |
+| `.../references/threads.toml` | how the lab pre-drills and thread-mills M2 to M4 tapped holes |
+| `.../assets/carvera-tools.json` | the lab's tool library, exported from Fusion |
+| `.../scripts/carvera_cam.py` | the generator, run inside Fusion's Python: `analyze`, `build`, `generate`, `export_tools` |
 | `.../scripts/dump_cam.py` | dumps a project's existing CAM setups to JSON, for re-learning the conventions |
 | `.../scripts/make_test_part.py` | builds a test part with one of each feature, for testing changes |
 

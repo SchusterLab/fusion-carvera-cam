@@ -4,10 +4,11 @@ This module runs inside Fusion's Python interpreter (through the Fusion MCP
 `script` feature or a Fusion script). It encodes the lab's CAM conventions,
 learned from the parts in the project 2026-01-06_smpm-sample-package-6port:
 
-- machine "Makera Carvera 3-axis Community Version 1.17-slab" and the
-  Carvera Community post, both from the Fusion Cloud Library;
-- tools from the Cloud Library "Carvera Tools/My Tools", each with the feed
-  preset "Copper 101-H02" (aluminum runs the same program at 200% override);
+- the Carvera 3-axis machine and the Carvera post, the latest versions in the
+  Carvera Community's profiles repository on GitHub;
+- the lab's tools, exported from its Fusion library "Carvera Tools/My Tools"
+  to assets/carvera-tools.json, each with the feed preset "Copper 101-H02"
+  (aluminum runs the same program at 200% override);
 - a top setup and a flipped bottom setup, the part held to the stock by four
   tabs that a separate "_tabs" program cuts last.
 
@@ -23,16 +24,29 @@ Lengths in args are millimetres. Fusion's internal unit is the centimetre.
 import json
 import math
 import os
+import re
 import time
 import tomllib
+import urllib.request
 
 import adsk.cam
 import adsk.core
 import adsk.fusion
 
+SKILL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+# The lab's tools; export_tools() rewrites this file from the Fusion library.
+TOOLS_FILE = os.path.join(SKILL_DIR, 'assets', 'carvera-tools.json')
 TOOL_LIBRARY_URL = 'cloud://Carvera Tools/My Tools'
-MACHINE_URL = 'cloud://Makera Carvera 3-axis Community Version 1.mch'
-POST_URL = 'cloud://Carvera.cps'
+# The machine and post: the newest files on the Carvera Community's main
+# branch, cached so that a build without network uses the last ones fetched.
+COMMUNITY_API = ('https://api.github.com/repos/Carvera-Community/Carvera_Community_Profiles'
+                 '/contents/CAM_Post_Processors/Fusion360-profiles?ref=main')
+COMMUNITY_POST = 'Carvera.cps'
+COMMUNITY_MACHINE = re.compile(r'Makera Carvera 3-axis Community Version ([\d.]+)\.f3d$')
+CACHE_DIR = os.path.join(os.environ.get('LOCALAPPDATA') or os.path.expanduser('~'),
+                         'carvera-cam', 'community')
+# Fusion project that holds the machine's uploaded 3D model; see _model_urn().
+MODEL_PROJECT = 'carvera-cam'
 PRESET_NAMES = ('Copper 101-H02', 'Copper')
 SETUP_TAG = '(carvera-cam)'
 
@@ -542,13 +556,11 @@ def analyze(args=None):
 # ------------------------------------------------------------- libraries
 
 class Tools:
-    """Tools from the Cloud Library, numbered into Carvera ATC slots."""
+    """The lab's tools from TOOLS_FILE, numbered into Carvera ATC slots."""
 
     def __init__(self):
-        libs = adsk.cam.CAMManager.get().libraryManager.toolLibraries
-        lib = libs.toolLibraryAtURL(adsk.core.URL.create(TOOL_LIBRARY_URL))
-        if lib is None:
-            raise RuntimeError('tool library not found: ' + TOOL_LIBRARY_URL)
+        with open(TOOLS_FILE, encoding='utf-8') as f:
+            lib = adsk.cam.ToolLibrary.createFromJson(f.read())
         self.by_desc = {}
         for t in lib:
             d = t.parameters.itemByName('tool_description').value.value
@@ -577,7 +589,7 @@ class Tools:
         if src is None:
             hits = [d for d in self.by_desc if d.startswith(desc)]
             if len(hits) != 1:
-                raise RuntimeError('tool %r is not in %s' % (desc, TOOL_LIBRARY_URL))
+                raise RuntimeError('tool %r is not in %s' % (desc, TOOLS_FILE))
             src = self.by_desc[hits[0]]
         tool = adsk.cam.Tool.createFromJson(src.toJson())
         number = len(self.order) + 1
@@ -595,14 +607,123 @@ class Tools:
         return self.slots[key]
 
 
-def _machine():
-    lm = adsk.cam.CAMManager.get().libraryManager
-    return lm.machineLibrary.machineAtURL(adsk.core.URL.create(MACHINE_URL))
+def _fetch_community(warnings):
+    """Return local paths of the newest community post and 3-axis machine.
+
+    Downloads only files whose git hash changed since the last fetch. Without
+    network, falls back to the cached files, with a warning.
+    """
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    index_path = os.path.join(CACHE_DIR, 'index.json')
+    try:
+        with open(index_path, encoding='utf-8') as f:
+            index = json.load(f)
+    except (OSError, ValueError):
+        index = {}
+    try:
+        req = urllib.request.Request(COMMUNITY_API, headers={'User-Agent': 'carvera-cam'})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            listing = json.load(r)
+        machines = [(tuple(int(n) for n in m.group(1).split('.')), e) for e in listing
+                    for m in [COMMUNITY_MACHINE.match(e['name'])] if m]
+        wanted = {'post': next(e for e in listing if e['name'] == COMMUNITY_POST),
+                  'machine': max(machines, key=lambda x: x[0])[1]}
+        for key, e in wanted.items():
+            path = os.path.join(CACHE_DIR, e['name'])
+            if index.get(key, {}).get('sha') != e['sha'] or not os.path.exists(path):
+                with urllib.request.urlopen(e['download_url'], timeout=60) as r:
+                    data = r.read()
+                with open(path, 'wb') as f:
+                    f.write(data)
+            index[key] = {'name': e['name'], 'sha': e['sha']}
+        with open(index_path, 'w', encoding='utf-8') as f:
+            json.dump(index, f, indent=1)
+    except Exception as e:  # offline, rate-limited, or the repository moved
+        if not all(k in index for k in ('post', 'machine')):
+            raise RuntimeError('cannot fetch the Carvera Community machine and post: %s' % e)
+        warnings.append('could not reach the Carvera Community repository (%s); using the '
+                        'machine and post fetched earlier' % e)
+    out = {k: os.path.join(CACHE_DIR, index[k]['name']) for k in ('post', 'machine')}
+    out['machine_sha'] = index['machine']['sha']
+    return out
 
 
-def _post():
-    lm = adsk.cam.CAMManager.get().libraryManager
-    return lm.postLibrary.postConfigurationAtURL(adsk.core.URL.create(POST_URL))
+def _model_urn(path, sha, log):
+    """Version URN of the machine's 3D model, uploaded to the user's Fusion hub.
+
+    The community .f3d links its 3D model to a file in its author's hub, which
+    other users cannot open, and Fusion then refuses the machine. So the .f3d is
+    uploaded once per hub and per upstream version, to the project MODEL_PROJECT.
+    """
+    data = _app().data
+    hub = data.activeHub.id
+    models_path = os.path.join(CACHE_DIR, 'models.json')
+    try:
+        with open(models_path, encoding='utf-8') as f:
+            models = json.load(f)
+    except (OSError, ValueError):
+        models = {}
+    known = models.get(hub)
+    if known and known['sha'] == sha:
+        try:
+            if data.findFileById(known['urn']) is not None:
+                return known['urn']
+        except RuntimeError:
+            pass
+    projects = data.dataProjects
+    project = next((p for p in projects if p.name == MODEL_PROJECT), None) or projects.add(MODEL_PROJECT)
+    future = project.rootFolder.uploadFile(path)
+    t0 = time.time()
+    while future.uploadState == adsk.core.UploadStates.UploadProcessing and time.time() - t0 < 40:
+        adsk.doEvents()
+        time.sleep(0.2)
+    if future.uploadState != adsk.core.UploadStates.UploadFinished:
+        raise RuntimeError('upload of the machine model did not finish')
+    urn = future.dataFile.versionId
+    models[hub] = {'sha': sha, 'urn': urn}
+    with open(models_path, 'w', encoding='utf-8') as f:
+        json.dump(models, f, indent=1)
+    log.append('uploaded the machine model to the Fusion project %r' % MODEL_PROJECT)
+    return urn
+
+
+def _machine(community, log, warnings):
+    """The community machine, with its 3D model in the user's hub when possible."""
+    loc = adsk.cam.LibraryLocations.ExternalLibraryLocation
+    machine = adsk.cam.Machine.createFromFile(loc, community['machine'])
+    try:
+        urn = _model_urn(community['machine'], community['machine_sha'], log)
+    except Exception as e:
+        warnings.append('the machine has no 3D model, so simulation does not check the tool '
+                        'against the machine frame: %s' % e)
+        machine.clearSimulationModel()
+        return machine
+    mch = os.path.join(CACHE_DIR, 'machine.mch')
+    machine.save(loc, mch)
+    with open(mch, encoding='utf-8') as f:
+        d = json.load(f)
+    d['fusion']['default']['model_urn'] = urn
+    with open(mch, 'w', encoding='utf-8') as f:
+        json.dump(d, f, indent=1)
+    return adsk.cam.Machine.createFromFile(loc, mch)
+
+
+def _post(path):
+    with open(path, encoding='utf-8') as f:
+        return adsk.cam.PostConfiguration.createFromContent(f.read())
+
+
+def export_tools(args=None):
+    """Rewrite TOOLS_FILE from the lab's Fusion tool library, after it changes."""
+    libs = adsk.cam.CAMManager.get().libraryManager.toolLibraries
+    lib = libs.toolLibraryAtURL(adsk.core.URL.create(TOOL_LIBRARY_URL))
+    if lib is None:
+        raise RuntimeError('tool library not found: ' + TOOL_LIBRARY_URL)
+    data = json.loads(lib.toJson())
+    with open(TOOLS_FILE, 'w', encoding='utf-8', newline='\n') as f:
+        json.dump(data, f, indent=1, ensure_ascii=False, sort_keys=True)
+        f.write('\n')
+    print('wrote %d tools to %s' % (len(data['data']), TOOLS_FILE))
 
 
 # ------------------------------------------------------------ operations
@@ -1777,11 +1898,10 @@ def build(args):
         tools.get(desc, key)
     plan['layout'] = _make_layout(design, a, plan, warnings)
     b = Builder(cam, tools, log)
-    machine, post = _machine(), _post()
-    if machine is None:
-        warnings.append('machine not found at ' + MACHINE_URL)
-    if post is None:
-        warnings.append('post not found at ' + POST_URL)
+    community = _fetch_community(warnings)
+    machine = _machine(community, log, warnings)
+    post = _post(community['post'])
+    log.append('machine %s, post %s' % (machine.description, post.description))
     name = args.get('name') or _app().activeDocument.name
     vises = [None, None]
     if args.get('fixture', True):
