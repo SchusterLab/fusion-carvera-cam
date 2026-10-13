@@ -18,7 +18,7 @@ The skill drives Fusion through the Fusion MCP server, so Claude Code needs that
 
 - **Tools** come with the skill, in `assets/carvera-tools.json`, each with the lab's `Copper 101-H02` feed preset.
 - **The machine and post processor** are the latest Carvera 3-axis machine and `Carvera.cps` in the [Carvera Community profiles](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles), which the skill downloads. The first build uploads the machine's 3D model to a Fusion project named `carvera-cam` in your hub, so that simulation shows the machine.
-- **The vise** is the fixture design `2026-01-18_slab-fixture-3-axis`, so the Fusion account must be able to open it.
+- **The fixture plate and vise** are Saunders Machine Works' published models of the Carvera fixture plate, the Gen3 hobby mod vise and its smooth insert bars, which the skill downloads from saundersmachineworks.com and assembles as the lab mounts them.
 
 ## Use
 

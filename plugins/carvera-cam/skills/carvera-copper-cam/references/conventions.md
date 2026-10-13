@@ -57,13 +57,14 @@ The part is flipped about the X axis: Z axis flipped (`axesZX`, `flipZ`), stock 
 Each setup carries a model of the vise, so Fusion's simulation catches collisions with the vise and with the Carvera itself.
 The lab's pattern is `2026-01-20_sample-puck-6port7x7` (project `2026-01-06_smpm-sample-package-6port`, folder `old-versions`).
 
-- The fixture design is `2026-01-18_slab-fixture-3-axis` (project `2026-01-18_slab-fixture`): the Carvera's inch fixture plate with the 4th axis, and a Gen3 hobby mod vise with smooth insert bars.
+- The lab's fixture design is `2026-01-18_slab-fixture-3-axis` (project `2026-01-18_slab-fixture`): Saunders Machine Works' [Carvera fixture plate](https://saundersmachineworks.com/products/makera-carvera-fixture-tooling-plate) (inch), a [Gen3 hobby mod vise](https://saundersmachineworks.com/products/modular-vise-system-hobby-gen3) (1/4″) with two [smooth insert bars](https://saundersmachineworks.com/products/smooth-jaw-insert-for-modular-vise), and the Carvera's 4th-axis module.
+- The generator downloads those three Saunders STEP files and places them as that design does (`SMW_PLACEMENTS` in `carvera_cam.py`), so it needs no access to the lab's design. It leaves out the 4th-axis module, which Saunders does not publish, so simulation does not check it. It caches the files and the assembled fixture in `%LOCALAPPDATA%\carvera-cam\fixture`, and stops with an error if a changed Saunders model no longer puts the jaw faces where the lab's design has them.
 - The jaws grip the stock's Y edges, 4.3 mm deep; the fixed jaw is on the back edge, the one the part is 10 mm from, and the adjustable jaw opens to the stock's Y size.
 - The bottom setup has its own copy of the fixture, turned 180° about X with the part, gripping the stock left after the top program.
 - Both setups list their copy as the setup's fixture and attach it to the machine table at the plate's corner (Part Position, Table Attach Point), so the machine's own geometry is checked too.
 
 The lab built this with a Manufacturing Model holding the stock, the part and two embedded copies of the fixture.
-The generator works in the part's design instead, and copies the fixture's bodies into it as fixed geometry: an inserted copy of the fixture assembly comes in through the API with its jointed parts unsolved and scattered.
+The generator works in the part's design instead, and adds the fixture's bodies to it as fixed geometry: an inserted copy of the fixture assembly comes in through the API with its jointed parts unsolved and scattered.
 
 ## Operation order
 

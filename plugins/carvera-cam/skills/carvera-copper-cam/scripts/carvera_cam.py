@@ -957,16 +957,31 @@ def _small_endmill(corner_radius, depth):
 
 
 # ------------------------------------------------------------- the vise
-# The lab's fixture design: the Carvera's fixture plate with the 4th axis and a
-# Gen3 hobby mod vise with smooth insert bars. In its own coordinates (mm) the
-# plate spans x 0..357, y 0..240, z -17.78..0; the fixed jaw's insert bar faces
-# -X at x = 242.93, the adjustable one faces +X at x = 186.72, both bars span
-# y 124.64..220.14 and top out at z = 29.53. The lab grips the stock 4.3 mm deep
-# with the jaws on the stock's Y edges, the fixed jaw on the back (+Y) edge, and
-# attaches the plate's corner (0, 0, -17.78) to the Carvera's table.
+# The lab's fixture, from Saunders Machine Works' published models: the Carvera
+# fixture plate (inch) and a Gen3 hobby mod vise (1/4") with two smooth insert
+# bars, assembled as in the lab's design 2026-01-18_slab-fixture-3-axis (less
+# its 4th-axis module). In fixture coordinates (mm) the plate spans x 0..357,
+# y 0..240, z -17.78..0; the fixed jaw's insert bar faces -X at x = 242.93, the
+# adjustable one faces +X at x = 186.72, both bars span y 124.64..220.14 and
+# top out at z = 29.53. The lab grips the stock 4.3 mm deep with the jaws on the
+# stock's Y edges, the fixed jaw on the back (+Y) edge, and attaches the plate's
+# corner (0, 0, -17.78) to the Carvera's table.
 
-FIXTURE_URN = 'urn:adsk.wipprod:dm.lineage:NzVKjVz8TWOi6WBJtR_NAg'
-FIXTURE_NAME = '2026-01-18_slab-fixture-3-axis'
+SMW_URL = 'https://saundersmachineworks.com/cdn/shop/files/'
+SMW_FILES = {'plate': 'Makera_Carvera_Fixture_Plate.step',
+             'vise': 'Gen3_Hobby_Mod_Vise_Inch.step',
+             'bar': 'S1822_Gen3_Smooth_Insert_Bar.step'}
+# (file, bodies whose path contains this, turn about Z in degrees, shift in mm,
+#  moves with the adjustable jaw), measured from the lab's fixture design.
+# The vise's own file has the adjustable side where the lab's design has it.
+SMW_PLACEMENTS = [
+    ('plate', 'INCH Plate', 0, (2.0, 0.0, 1.27), False),
+    ('vise', 'Fixed Side', -90, (280.354, 172.388, 0.0), False),
+    ('vise', 'Adjustable Side', -90, (280.354, 172.388, 0.0), True),
+    ('bar', '', 90, (249.283, 172.388, 29.528), False),
+    ('bar', '', 90, (180.369, 172.388, 29.528), True),
+]
+FIXTURE_CACHE = os.path.join(os.path.dirname(CACHE_DIR), 'fixture')
 FX_FIXED_FACE = 242.93
 FX_ADJ_FACE = 186.72
 FX_JAW_CENTRE = (124.64 + 220.14) / 2
@@ -974,42 +989,94 @@ FX_JAW_TOP = 29.53
 FX_PLATE_CORNER = (0.0, 0.0, -17.78)
 FX_MAX_OPENING = 185.0  # the adjustable base reaches the plate's edge beyond this
 GRIP = 4.3
-MOVES_WITH_JAW = ('Adjustable Side Assembly', 'S1822_Gen3_Smooth_Insert_Bar:2')
 
 
-def _fixture_bodies():
-    """The fixture's bodies as temporary B-Reps in its own coordinates.
-
-    Copies the solved geometry out of the fixture document: inserting the
-    assembly instead leaves its jointed parts unsolved and scattered.
-    Returns [(body, moves_with_jaw, is_plate)].
-    """
+def _step_bodies(path):
+    """[(occurrence path, temporary body)] of a STEP file, via a throwaway document."""
     app = _app()
     keep = app.activeDocument
-    f = app.data.findFileById(FIXTURE_URN)
-    if f is None:
-        raise RuntimeError('fixture design %s not found; is it shared with you?' % FIXTURE_NAME)
-    doc = app.documents.open(f, False)
+    im = app.importManager
+    doc = im.importToNewDocument(im.createSTEPImportOptions(path))
     tb = adsk.fusion.TemporaryBRepManager.get()
     out = []
     try:
         root = adsk.fusion.FusionDocument.cast(doc).design.rootComponent
-
-        def walk(occ):
-            if not occ.isLightBulbOn:
-                return
-            path = occ.fullPathName
-            for b in occ.bRepBodies:
-                if b.isVisible:
-                    out.append((tb.copy(b), any(k in path for k in MOVES_WITH_JAW),
-                                'INCH Plate' in path))
-            for ch in occ.childOccurrences:
-                walk(ch)
-        for occ in root.occurrences:
-            walk(occ)
+        out += [('', tb.copy(b)) for b in root.bRepBodies]
+        for occ in root.allOccurrences:
+            out += [(occ.fullPathName, tb.copy(b)) for b in occ.bRepBodies]
     finally:
         doc.close(False)
         keep.activate()
+    return out
+
+
+def _assemble_fixture():
+    """Download the Saunders models and place them in fixture coordinates.
+
+    Returns [(body, moves_with_jaw)]. Checks that the insert bars' faces land
+    on FX_FIXED_FACE and FX_ADJ_FACE, in case Saunders changes a model.
+    """
+    os.makedirs(FIXTURE_CACHE, exist_ok=True)
+    parts = {}
+    for key, name in SMW_FILES.items():
+        path = os.path.join(FIXTURE_CACHE, name)
+        if not os.path.exists(path):
+            req = urllib.request.Request(SMW_URL + name, headers={'User-Agent': 'carvera-cam'})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                data = r.read()
+            with open(path, 'wb') as f:
+                f.write(data)
+        parts[key] = _step_bodies(path)
+    tb = adsk.fusion.TemporaryBRepManager.get()
+    out = []
+    for key, match, turn, shift, moves in SMW_PLACEMENTS:
+        m = adsk.core.Matrix3D.create()
+        m.setToRotation(math.radians(turn), adsk.core.Vector3D.create(0, 0, 1),
+                        adsk.core.Point3D.create(0, 0, 0))
+        t = adsk.core.Matrix3D.create()
+        t.translation = adsk.core.Vector3D.create(*[v / 10 for v in shift])
+        m.transformBy(t)
+        for path, b in parts[key]:
+            if match in path:
+                c = tb.copy(b)
+                tb.transform(c, m)
+                out.append((c, moves))
+    # the insert bars are the bodies that reach the jaws' top
+    faces = {False: [], True: []}
+    for c, moves in out:
+        bb = c.boundingBox
+        if abs(bb.maxPoint.z * 10 - FX_JAW_TOP) < 0.05:
+            faces[moves].append(round((bb.maxPoint.x if moves else bb.minPoint.x) * 10, 3))
+    if not (faces[False] and faces[True]
+            and all(abs(x - FX_FIXED_FACE) < 0.05 for x in faces[False])
+            and all(abs(x - FX_ADJ_FACE) < 0.05 for x in faces[True])):
+        raise RuntimeError('the Saunders vise models no longer line up with the lab fixture '
+                           '(jaw faces at %s); update SMW_PLACEMENTS' % faces)
+    return out
+
+
+def _fixture_bodies():
+    """The fixture's bodies as temporary B-Reps in fixture coordinates: [(body, moves_with_jaw)].
+
+    Assembled once from the Saunders models, then cached as an .smt file.
+    """
+    smt = os.path.join(FIXTURE_CACHE, 'fixture.smt')
+    meta = os.path.join(FIXTURE_CACHE, 'fixture.json')
+    key = json.dumps([SMW_FILES, SMW_PLACEMENTS])
+    tb = adsk.fusion.TemporaryBRepManager.get()
+    try:
+        with open(meta, encoding='utf-8') as f:
+            m = json.load(f)
+        if m['key'] == key and os.path.exists(smt):
+            bodies = tb.createFromFile(smt)
+            if bodies.count == len(m['moves']):
+                return [(bodies.item(i), mv) for i, mv in enumerate(m['moves'])]
+    except (OSError, ValueError, KeyError, RuntimeError):
+        pass
+    out = _assemble_fixture()
+    tb.exportToFile([c for c, _ in out], smt)
+    with open(meta, 'w', encoding='utf-8') as f:
+        json.dump({'key': key, 'moves': [mv for _, mv in out]}, f)
     return out
 
 
@@ -1077,7 +1144,7 @@ def _add_vise(design, name, bodies, fixed, adj):
     if bf:
         bf.startEdit()
     try:
-        for b, moves, _ in bodies:
+        for b, moves in bodies:
             c = tb.copy(b)
             tb.transform(c, adj if moves else fixed)
             comp.bRepBodies.add(c, bf) if bf else comp.bRepBodies.add(c)
