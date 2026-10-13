@@ -900,6 +900,11 @@ BORE = {
 THREAD = {
     'doMultiplePasses': 'true',
 }
+# The rough face leaves this much on the outer face, and the finishing face
+# takes it off after every other cut but the deburr: facing leaves fewer burrs
+# than side milling and thread milling. Until then every operation that starts
+# at the face starts this much higher.
+FACE_ALLOWANCE = 0.2
 
 
 def _drill_ends(through):
@@ -911,15 +916,16 @@ def _drill_ends(through):
             'drillTipThroughBottom': 'true' if through else 'false'}
 
 
-def _thread_params(name, through):
-    """Thread-mill parameters for one thread size, from threads.toml."""
+def _thread_params(name, through, allow=0.0):
+    """Thread-mill parameters for one thread size, from threads.toml; `allow` is
+    the material still on the face above the hole top."""
     r, c = THREAD_RECIPES[name], THREAD_COMMON['thread']
     r = dict(r, **r.get('through' if through else 'blind', {}))
     stepover = 'tool_stepover' if r['stepover'] == 'tool' else '%gmm' % r['stepover']
     return dict(THREAD, direction="'%s'" % c['direction'], threadPitch='%gmm' % r['pitch'],
                 pitchDiameterOffset='%gmm' % r['pitch_diameter_offset'],
                 numberOfStepovers=str(r['passes']), stepover=stepover,
-                topHeight_offset='%gmm' % c['top_offset'],
+                topHeight_offset='%gmm' % (c['top_offset'] + allow),
                 bottomHeight_offset='%gmm' % (c['through_bottom_offset'] if through
                                               else c['blind_bottom_offset']))
 CHAMFER_OP = {
@@ -1610,6 +1616,14 @@ def _side_ops(b, setup, a, side, plan, warnings):
     # stock above the part's face this setup machines: the top margin, or the bottom one
     m = plan['margin_top'] if top else plan['margin_bottom']
     ops = {'main': [], 'tabs': []}
+    facing = [f for f in floors if f['role'] == 'face'] if plan['face'] else []
+    # the material the rough face leaves on the face, until the finishing face
+    allow = FACE_ALLOWANCE if facing else 0.0
+
+    def top_at(depth):
+        # an operation starting at the outer face starts on the material left there
+        return _top_below_part_top(depth - allow if abs(depth) < 1e-6 else depth, m)
+    from_hole_top = {'topHeight_offset': '%gmm' % allow}
 
     def depth_of(z):
         return (a['ztop'] - z) if top else (z - a['zbot'])
@@ -1696,24 +1710,30 @@ def _side_ops(b, setup, a, side, plan, warnings):
             continue
         ops['main'].append(b.op(setup, 'drill', drill_for(max(h['depth'] for h in hs)),
                                 'Pre-drill bores' + ('' if through else ' (blind)'),
-                                dict(DRILL, **_drill_ends(through)),
+                                dict(DRILL, **_drill_ends(through), **from_hole_top),
                                 _sel_faces('holeFaces', [h['face'] for h in hs])))
 
     pockets = sorted([f for f in floors if f['role'] == 'pocket'], key=lambda f: f['depth'])
-    facing = [f for f in floors if f['role'] == 'face']
     windows = [w for w in a['windows']] if top else []
+    entry = [lay['entry']] if lay else []
+
+    def face_op(which, multi, suffix, leave):
+        params = dict(POCKET, doMultipleDepths=multi, topHeight_mode="'from stock top'",
+                      topHeight_offset='0mm', bottomHeight_mode="'from contour'",
+                      rampType="'predrill'")
+        if leave:
+            params.update(useStockToLeave='true', simpleStockToLeave='false',
+                          stockToLeave='0mm', verticalStockToLeave='%gmm' % leave)
+        return b.op(setup, 'pocket2d', (ENDMILL, which), 'Face' + suffix, params,
+                    _both(_sel_pocket([f['face'] for f in facing]),
+                          _sel_faces('predrillPositions', entry)))
+
+    if facing:
+        ops['main'].append(face_op('rough', 'true', '', allow))
 
     passes = (('rough', 'true', ''), ('finish', 'false', ' (finish)'))
     for which, multi, suffix in passes:
         tk = (ENDMILL, which)
-        entry = [lay['entry']] if lay else []
-        if facing and plan['face']:
-            ops['main'].append(b.op(setup, 'pocket2d', tk, 'Face' + suffix, dict(
-                POCKET, doMultipleDepths=multi, topHeight_mode="'from stock top'",
-                topHeight_offset='0mm', bottomHeight_mode="'from contour'",
-                rampType="'predrill'"),
-                _both(_sel_pocket([f['face'] for f in facing]),
-                      _sel_faces('predrillPositions', entry))))
         # outline: the top setup cuts down to the tab band, the bottom setup up to it
         params = dict(CONTOUR, doMultipleDepths=multi, topHeight_mode="'from stock top'",
                       topHeight_offset='0mm')
@@ -1740,7 +1760,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
             ops['main'].append(b.op(setup, 'pocket2d', tk, 'Pockets' + suffix, dict(
                 POCKET, doMultipleDepths=multi, bottomHeight_mode="'from contour'",
                 rampType="'predrill'" if entries else "'plunge'",
-                **_top_below_part_top(0, m)),
+                **top_at(0)),
                 _both(_sel_pocket_regions(plain, chains),
                       _sel_faces('predrillPositions', unique))))
         for hs in _group([h for h, rough, _ in bored if rough[0] == ENDMILL]):
@@ -1748,7 +1768,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
             radial = max(0.1, (h['dia'] - ENDMILL_D) / 2)
             params = dict(BORE, stepover='0.3mm',
                           numberOfStepovers=str(max(1, math.ceil(radial / 0.3))))
-            params.update(_top_below_part_top(depth_of(h['z1'] if top else h['z0']), m))
+            params.update(top_at(depth_of(h['z1'] if top else h['z0'])))
             params.update({'bottomHeight_offset': '-0.5mm' if h['through'] else '0mm'})
             ops['main'].append(b.op(setup, 'bore', tk, 'Bore %.2f%s' % (h['dia'], suffix),
                                     params, _sel_faces('circularFaces', [x['face'] for x in hs])))
@@ -1761,7 +1781,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
                 continue
             params = dict(BORE, stepover='%gmm' % bore['stepover'],
                           numberOfStepovers=str(bore['passes']), doMultiplePasses=multi)
-            params.update(_top_below_part_top(depth_of(h['z1'] if top else h['z0']), m))
+            params.update(top_at(depth_of(h['z1'] if top else h['z0'])))
             params.update({'bottomHeight_offset': '%gmm' % (
                 bore['through_bottom_offset'] if h['through'] else 0.0)})
             ops['main'].append(b.op(setup, 'bore', (bore['end_mill'], which),
@@ -1770,7 +1790,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
         if windows:
             for w in windows:
                 params = dict(CONTOUR, doMultipleDepths=multi)
-                params.update(_top_below_part_top(depth_of(w['z']), m))
+                params.update(top_at(depth_of(w['z'])))
                 params.update(_bottom_below_part_top(thickness + 0.5, m))
                 ops['main'].append(b.op(setup, 'contour2d', tk, 'Window' + suffix, params,
                                         _sel_chains([w['loop']])))
@@ -1802,7 +1822,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
     for (em, d), faces in corners.items():
         ops['main'].append(b.op(setup, 'pocket2d', em, 'Pocket corners %g' % d, dict(
             POCKET, doMultipleDepths='true', rampType="'plunge'", useRestMachining='true',
-            bottomHeight_mode="'from contour'", **_top_below_part_top(0, m)),
+            bottomHeight_mode="'from contour'", **top_at(0)),
             _sel_pocket(faces)))
     for w in windows:
         r = w['corner_radius']
@@ -1815,7 +1835,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
             small.setdefault(rough[0], []).append(h)
     for em, group in small.items():
         for hs in _group(group):
-            params = dict(BORE, stepover='0.2mm', numberOfStepovers='2')
+            params = dict(BORE, stepover='0.2mm', numberOfStepovers='2', **from_hole_top)
             params.update({'bottomHeight_offset': '-0.5mm' if hs[0]['through'] else '0mm'})
             ops['main'].append(b.op(setup, 'bore', em, 'Bore %.2f' % hs[0]['dia'], params,
                                     _sel_faces('circularFaces', [x['face'] for x in hs])))
@@ -1834,7 +1854,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
                 ops['main'].append(b.op(
                     setup, 'drill', desc,
                     'Drill ' + desc.split('*')[0] + ('' if through else ' (blind)'),
-                    dict(DRILL, **_drill_ends(through)),
+                    dict(DRILL, **_drill_ends(through), **from_hole_top),
                     _sel_faces('holeFaces', [h['face'] for h in sub])))
 
     # thread mills
@@ -1847,8 +1867,12 @@ def _side_ops(b, setup, a, side, plan, warnings):
             if hs:
                 ops['main'].append(b.op(
                     setup, 'thread', THREADS[t][2], 'Thread ' + t + ('' if through else ' (blind)'),
-                    _thread_params(t, through),
+                    _thread_params(t, through, allow),
                     _sel_faces('circularFaces', [h['face'] for h in hs])))
+
+    # the finishing face, after every cut that leaves burrs on the face
+    if facing:
+        ops['main'].append(face_op('finish', 'false', ' (finish)', 0))
 
     # deburr the outer face's edges
     if face is not None and plan['chamfer']:

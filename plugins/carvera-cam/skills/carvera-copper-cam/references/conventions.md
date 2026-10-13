@@ -73,14 +73,22 @@ The generator works in the part's design instead, and adds the fixture's bodies 
 Top setup:
 
 1. T1 drills the entry holes (see "Entry holes") and pre-drills the holes the end mill will bore.
-2. T2 roughs: facing the stock top down to the part's top face, the outline down to the tab band, pockets, bores, through windows, and the outline between the tabs down through the band.
-3. T3 finishes the same features in single full-depth passes.
+2. T2 roughs: facing the stock top down to 0.2 mm above the part's top face, the outline down to the tab band, pockets, bores, through windows, and the outline between the tabs down through the band.
+3. T3 finishes the same features, except the face, in single full-depth passes.
 4. Small end mills clear pocket corners the 3.175 mm end mill cannot reach (rest machining, plunge entry).
 5. Drills cut plain holes and tap drills.
 6. Thread mills cut the threads.
-7. The chamfering bit deburrs the edges of the top face.
+7. T3 finishes the face, taking off the last 0.2 mm in one pass.
+8. The chamfering bit deburrs the edges of the top face.
 
-The bottom setup drills the entry holes of its own pockets, then repeats steps 2–7 for the bottom-side features; its outline stops at the bottom of the tab band.
+The bottom setup drills the entry holes of its own pockets, then repeats steps 2–8 for the bottom-side features; its outline stops at the bottom of the tab band.
+
+The face is finished last because facing raises fewer burrs than side milling and thread milling, so the last cut across the face removes the burrs the earlier cuts left on it.
+Until then the face still carries 0.2 mm of material, and every operation that starts at the face starts 0.2 mm higher, on that material:
+- pockets, bores, windows and pocket corners that open in the face start 0.2 mm above it;
+- drills, bores and thread mills that start at the hole top start 0.2 mm above it.
+
+The lab's parts from October 2026 on (`kiutra-beam`, `tee`) work this way; older parts finish the face with the other T3 passes.
 
 ## Entry holes
 
@@ -115,11 +123,11 @@ Feeds, speeds and stepdowns come from the tool preset; the operations set only t
 
 | Operation | Parameters |
 |---|---|
-| 2D pocket | tolerance 0.1 mm, stepover 0.6 × tool diameter, compensation left, no stock to leave, `predrill` ramp at the entry holes; floors selected as pocket faces, shelves as the closed opening above them (one counter-clockwise chain per opening); the facing pocket starts at the stock top |
+| 2D pocket | tolerance 0.1 mm, stepover 0.6 × tool diameter, compensation left, no stock to leave, `predrill` ramp at the entry holes; floors selected as pocket faces, shelves as the closed opening above them (one counter-clockwise chain per opening); the facing pocket starts at the stock top, and its roughing pass leaves 0.2 mm on the face (axial stock to leave 0.2 mm, radial 0) |
 | 2D contour | tolerance 0.01 mm, compensation left, two finishing stepovers, no ramp, no stock to leave |
 | Drill | chip-breaking cycle, 2 mm pecks, 0.1 mm chip break; through holes break through 0.5 mm with the drill tip past the bottom |
 | Bore | climb, tolerance 0.01 mm, stepover 0.3 mm with enough passes to reach the wall; through holes go 0.5 mm past the bottom |
-| Thread | per thread size, from [threads.toml](threads.toml) |
+| Thread | per thread size, from [threads.toml](threads.toml); the top offset there is from the finished face, and 0.2 mm is added while the face still carries its finishing allowance |
 | 2D chamfer | 0.1 mm chamfer width, 0.5 mm tip offset, 0.1 mm clearance, lead-in and lead-out |
 
 ## Tapped holes
