@@ -9,7 +9,7 @@ They come from the lab's own Fusion setups: about 40 setups and 530 operations i
 |---|---|---|
 | Machine | Makera Carvera 3-axis Community Version, latest | [Carvera Community profiles](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles), `main` branch |
 | Post processor | Makera Carvera Community Post (`Carvera.cps`), latest | the same folder |
-| Tools | the lab's tool library | [`assets/carvera-tools.json`](../assets/carvera-tools.json), exported from the Fusion library `Carvera Tools/My Tools` |
+| Tools | the lab's 29 tools, and 53 more of Makera's for metal | [`assets/carvera-tools.json`](../assets/carvera-tools.json): the lab's exported from the Fusion library `Carvera Tools/My Tools`, Makera's from the [community tool files](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files) |
 
 `build` downloads the machine and post again whenever they change upstream, and keeps them in `%LOCALAPPDATA%\carvera-cam\community`; without network it uses the copies there.
 The community machine's 3D model links to a file in its author's Fusion account, which no one else can open, so `build` uploads the machine's `.f3d` once per upstream version to a Fusion project named `carvera-cam` in the user's hub and links the machine to that copy.
@@ -23,8 +23,22 @@ Before uploading the upstream model, `build` makes the same three changes to it 
 Every tool in `My Tools` has a feed preset named **Copper 101-H02** (C10100 oxygen-free copper, H02 half-hard temper), and the lab uses it for everything.
 Aluminum (6063-T5) runs the same programs at 200% feed and spindle override on the Carvera, so there is one set of toolpaths per part.
 No coolant.
-The Cloud Library folder `Carvera Tools` also holds Makera's stock libraries (O Flute, Drill, Thread Mills, Engraving, Other); their faster presets are not the lab's.
-After changing `My Tools` in Fusion, run `export_tools({})` from `carvera_cam.py` to rewrite `assets/carvera-tools.json`, and commit it.
+After changing `My Tools` in Fusion, run `export_tools({})` from `carvera_cam.py` to rewrite the lab's tools in `assets/carvera-tools.json`, and commit it.
+
+The library also holds 53 of Makera's tools for metal that the lab lacks: drills from 0.2 to 3.175 mm, Spiral O end mills of 4 and 6 mm, ball end mills of 1 to 6 mm, engraving bits, and thread mills for M1, M5, M6 and M8.
+Makera's own copper presets spin its end mills at 12000 rpm and 300 mm/min against the lab's 6000 rpm and 200 mm/min, and plunge its drills at 100 mm/min against the lab's 50.
+So each added tool also gets a Copper 101-H02 preset made by the lab's rule for its kind of tool, and the preset's description says so:
+
+| Kind | Copper 101-H02, as in the lab's own presets |
+|---|---|
+| end mills, flat or ball | 6000 rpm, 200 mm/min, plunge 200 mm/min; stepdown 0.3 mm and ramp 300 mm/min from 3.175 mm diameter up, 0.2 mm and 200 mm/min below |
+| drills | 10000 rpm, plunge 50 mm/min |
+| thread mills | 15000 rpm, and Makera's copper feed: M1 50 mm/min, M5 to M8 200 mm/min |
+| engraving bits | as the chamfering bit: 6000 rpm, 200 mm/min, 0.1 mm steps |
+
+The lab has not cut with these tools, so `build` prefers the lab's own tool when both fit and warns when it uses an added one, and the toolpath check flags them (N6 in [rules.md](rules.md)).
+`scripts/tool_library.py` makes these additions; run it with plain Python (`python -I tool_library.py`) to fetch the community tool files again.
+It leaves out Makera's tools for wood, plastic and circuit boards.
 
 ## Tool slots
 

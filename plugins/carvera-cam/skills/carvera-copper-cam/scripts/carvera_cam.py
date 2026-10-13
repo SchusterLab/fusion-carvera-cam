@@ -25,6 +25,7 @@ import json
 import math
 import os
 import re
+import runpy
 import time
 import tomllib
 import urllib.request
@@ -37,6 +38,7 @@ SKILL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 # The lab's tools; export_tools() rewrites this file from the Fusion library.
 TOOLS_FILE = os.path.join(SKILL_DIR, 'assets', 'carvera-tools.json')
 TOOL_LIBRARY_URL = 'cloud://Carvera Tools/My Tools'
+ADDED_MARK = 'carvera-cam: added from '  # tool_library.ADDED
 # The machine and post: the newest files on the Carvera Community's main
 # branch, cached so that a build without network uses the last ones fetched.
 COMMUNITY_API = ('https://api.github.com/repos/Carvera-Community/Carvera_Community_Profiles'
@@ -562,11 +564,16 @@ class Tools:
         with open(TOOLS_FILE, encoding='utf-8') as f:
             lib = adsk.cam.ToolLibrary.createFromJson(f.read())
         self.by_desc = {}
+        self.added = set()  # tools the lab has not cut with (tool_library.ADDED)
         for t in lib:
             d = t.parameters.itemByName('tool_description').value.value
             self.by_desc.setdefault(d, t)
+            comment = t.parameters.itemByName('tool_comment')
+            if comment is not None and comment.value.value.startswith(ADDED_MARK):
+                self.added.add(d)
         self.slots = {}   # key -> (tool, preset)
         self.order = []
+        self.unproven = []
 
     def has(self, desc):
         return desc in self.by_desc
@@ -578,7 +585,8 @@ class Tools:
             if p.itemByName('tool_type').value.value == 'drill' and 'Spot' not in d:
                 out.append((d, mm(p.itemByName('tool_diameter').value.value),
                             mm(p.itemByName('tool_fluteLength').value.value)))
-        return sorted(out, key=lambda x: x[1])
+        # the lab's own drills before added ones of the same size
+        return sorted(out, key=lambda x: (x[1], x[0] in self.added))
 
     def get(self, desc, key=None):
         """Return (tool, preset) for a slot; `key` lets one tool fill two slots (T2/T3)."""
@@ -604,6 +612,8 @@ class Tools:
                 break
         self.slots[key] = (tool, preset)
         self.order.append((number, desc, preset.name if preset else None))
+        if desc in self.added:
+            self.unproven.append(desc)
         return self.slots[key]
 
 
@@ -782,10 +792,13 @@ def export_tools(args=None):
     if lib is None:
         raise RuntimeError('tool library not found: ' + TOOL_LIBRARY_URL)
     data = json.loads(lib.toJson())
-    with open(TOOLS_FILE, 'w', encoding='utf-8', newline='\n') as f:
-        json.dump(data, f, indent=1, ensure_ascii=False, sort_keys=True)
-        f.write('\n')
-    print('wrote %d tools to %s' % (len(data['data']), TOOLS_FILE))
+    tl = runpy.run_path(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tool_library.py'))
+    current = tl['read'](TOOLS_FILE)['data'] if os.path.exists(TOOLS_FILE) else []
+    lab = len(data['data'])
+    data['data'] = tl['merge'](data['data'], current)
+    tl['write'](data, TOOLS_FILE)
+    print('wrote %d lab tools and kept %d added ones in %s'
+          % (lab, len(data['data']) - lab, TOOLS_FILE))
 
 
 # ------------------------------------------------------------ operations
@@ -2138,6 +2151,9 @@ def build(args):
     for param, pt in REJECTED:
         warnings.append('Fusion refused the %s point at %s mm; that cut has no pre-drilled entry'
                         % (param, pt))
+    for desc in tools.unproven:
+        warnings.append('%s is not one of the lab tools: its Copper 101-H02 preset is '
+                        'derived (see tool_library.py); check the feeds before cutting' % desc)
     if len(tools.order) > 6:
         warnings.append('%d tools: the Carvera ATC holds 6, so T7+ need manual changes'
                         % len(tools.order))

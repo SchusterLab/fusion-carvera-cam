@@ -1,6 +1,6 @@
 ---
 name: carvera-copper-cam
-description: Generate CAM toolpaths in Autodesk Fusion for machining a copper part on SchusterLab's Makera Carvera, following the lab's conventions (the lab's tools with the "Copper 101-H02" preset, the Carvera Community machine and post, top and flipped bottom setups, pre-drilled entry holes, four holding tabs cut by a separate program). Use when the user asks to program, CAM, toolpath or machine a part on the Carvera or Makera, in copper or aluminum. Needs the Fusion MCP server.
+description: Generate CAM toolpaths in Autodesk Fusion for machining a copper part on SchusterLab's Makera Carvera, following the lab's conventions (the lab's tools with the "Copper 101-H02" preset, the Carvera Community machine and post, top and flipped bottom setups, pre-drilled entry holes, four holding tabs cut by a separate program), and check existing Carvera toolpaths for crash, spindle-stall and tool-wear risks against the lab's rules. Use when the user asks to program, CAM, toolpath or machine a part on the Carvera or Makera, in copper or aluminum, or to check, review or verify Carvera toolpaths. Needs the Fusion MCP server.
 ---
 
 # Carvera copper toolpaths
@@ -8,6 +8,7 @@ description: Generate CAM toolpaths in Autodesk Fusion for machining a copper pa
 This skill turns a Fusion design of a 2.5-axis part into a ready-to-post Carvera program, in the lab's style.
 It makes two setups (top, then the part flipped), every operation with the lab's tools and feeds, and three NC programs: `<part>_top`, `<part>_bottom` and `<part>_tabs`.
 The same programs machine aluminum: run them with the Carvera's feed and spindle overrides at 200%.
+It also checks existing toolpaths, the lab's own as well as those it generates, against the lab's rules for avoiding crashes, spindle stalls and tool wear (see "Checking existing toolpaths").
 
 A 2.5-axis part is one whose features are all reached straight down the Z axis from the top or from the bottom: pockets, holes, outlines and through windows.
 The skill does not cut side features, undercuts or 3D surfaces.
@@ -100,6 +101,7 @@ Any operation with `"toolpath": false`, `hasError` or `hasWarning` needs attenti
 
 ### 6. Check the result
 
+Run the toolpath check (see "Checking existing toolpaths") and fix or report every error it finds.
 Take a screenshot with the Fusion MCP `read` tool (`queryType: "screenshot"`), with the outline operation selected, and check the tabs, the stock position and the vise.
 Ask the user to run Fusion's simulation with collision checking on each setup before machining; the API cannot run it.
 Report to the user, plainly:
@@ -107,9 +109,29 @@ Report to the user, plainly:
 - the tool list by slot (T1, T2, …), and which slots need a manual tool change;
 - the NC programs and their order on the machine: run `_top`, flip the part, run `_bottom`, then run `_tabs`, which cuts the four tabs and frees the part;
 - the total machining time, and that aluminum runs the same programs at 200% feed and spindle override;
-- every warning, and every feature the generator did not machine.
+- every warning from `build`, `generate` and the check, and every feature the generator did not machine.
 
 Post-process (write the G-code) only when the user asks.
+
+## Checking existing toolpaths
+
+`scripts/check_cam.py` checks the toolpaths of the active document against the lab's rules for avoiding crashes, spindle stalls and tool wear, which [references/rules.md](references/rules.md) lists with their thresholds and evidence.
+It works on any milling setups, including ones the lab programmed by hand.
+Open the document (Workflow, step 1), then run:
+
+```python
+def run(_context: str):
+    runpy.run_path(SCRIPTS + r'\check_cam.py')['check']({})
+```
+
+`{'setups': ['Setup1']}` checks only the named setups.
+The check takes a few seconds per setup; if it prints `"status": "running"`, call it again, and it goes on with the setups in `pending`.
+It prints every finding with its rule id, its severity (`error` or `warning`), the setup, the operation and a message.
+To read each setup's moves, it adds a temporary NC program to the document and deletes it again, so the document then counts as changed: close it without saving unless the user asks otherwise.
+
+Report the errors first, grouped by rule, then the warnings, with the operations each applies to and what rules.md says each guards against.
+Errors P1, P2 and P3 mean the toolpaths need regenerating before any other finding can be trusted.
+The check does not replace Fusion's simulation with collision checking, which the user still runs on each setup.
 
 ## Limits
 
@@ -124,5 +146,7 @@ Post-process (write the G-code) only when the user asks.
 
 `scripts/dump_cam.py` dumps every CAM setup of a Fusion project to JSON (one document per few seconds; call `dump` repeatedly until it prints `ALL DONE`).
 Use it when the lab's practice changes, compare its output with [references/conventions.md](references/conventions.md), and update `carvera_cam.py` to match.
-When the lab changes its tool library `Carvera Tools/My Tools` in Fusion, call `export_tools({})` in `carvera_cam.py` to rewrite [assets/carvera-tools.json](assets/carvera-tools.json), the tools `build` uses.
+When the lab changes its tool library `Carvera Tools/My Tools` in Fusion, call `export_tools({})` in `carvera_cam.py` to rewrite the lab's tools in [assets/carvera-tools.json](assets/carvera-tools.json), the tools `build` uses; it keeps the tools added from Makera's libraries.
+To fetch those Makera tools again from the Carvera Community repository, run `python -I scripts/tool_library.py` outside Fusion (see [references/conventions.md](references/conventions.md), "Machine, post and material").
+When the lab's practice changes, update the thresholds at the top of `check_cam.py` and the evidence in [references/rules.md](references/rules.md) to match.
 `scripts/make_test_part.py` builds a 30 × 20 × 4 mm test part with one of each feature in a new, unsaved document, for testing changes.
