@@ -1581,24 +1581,18 @@ def _group(holes):
 
 
 def _slot_order(needed):
-    """The lab's slot order: T1 drill, T2/T3 end mill, small end mills, drills, threads, chamfer."""
+    """The lab's slot order: T1 the 3.175 mm drill, T2/T3 the roughing and
+    finishing end mill, then every other tool in the order the programs first
+    use it (`needed` is in that order: the top setup's operations, then the
+    bottom's)."""
     def rank(item):
         desc, key = item
         if desc == DRILL_3175 and key is None:
-            return (0, 0)
+            return 0
         if desc == ENDMILL:
-            return (1, 0 if key == 'rough' else 1)
-        small = [d for d, _, _ in SMALL_ENDMILLS]
-        if desc in small:
-            return (2, small.index(desc))
-        if 'Drill' in desc:
-            return (3, desc)
-        if 'Threadmill' in desc:
-            return (4, desc)
-        if desc.startswith('Chamfer'):
-            return (6, 0)
-        return (5, desc)
-    return sorted(needed, key=rank)
+            return 1 if key == 'rough' else 2
+        return 3
+    return sorted(needed, key=rank)  # stable, so the rest keep their order of use
 
 
 def _side_ops(b, setup, a, side, plan, warnings):

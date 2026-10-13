@@ -27,17 +27,19 @@ After changing `My Tools` in Fusion, run `export_tools({})` from `carvera_cam.py
 ## Tool slots
 
 The Carvera's automatic tool changer holds six tools.
-The lab fills the slots in this order:
+T1, T2 and T3 are always the same three tools; every other tool takes the next slot in the order the programs first use it, the top program's operations first, then the bottom's.
 
 | Slot | Tool | Copper 101-H02 preset |
 |---|---|---|
 | T1 | 3.175 × 7.4 mm drill (McMaster 6415N117) | 10000 rpm, plunge 50 mm/min |
 | T2 | Spiral O Metal 3.175 × 12 mm, one flute: roughing | 6000 rpm, 200 mm/min, ramp 300 mm/min, stepdown 0.3 mm |
 | T3 | the same end mill, a second one: finishing | as T2 |
-| next | small end mills: Spiral O Metal 2.5, 2, 1.5 or 1 mm | 6000 rpm, 200 mm/min, stepdown 0.2 mm |
-| next | other drills: tap drills and plain holes (0.7–4 mm) | 10000 rpm, plunge 50 mm/min |
-| next | Carvera thread mills, M2 to M4 | 15000 rpm; M2 100 mm/min, M2.5 150 mm/min, M3 and M4 200 mm/min |
-| last | chamfering bit, 1/8″ shank | 6000 rpm, 200 mm/min |
+| T4 on, by first use | small end mills: Spiral O Metal 2.5, 2, 1.5 or 1 mm | 6000 rpm, 200 mm/min, stepdown 0.2 mm |
+| | other drills: tap drills and plain holes (0.7–4 mm) | 10000 rpm, plunge 50 mm/min |
+| | Carvera thread mills, M2 to M4 | 15000 rpm; M2 100 mm/min, M2.5 150 mm/min, M3 and M4 200 mm/min |
+| | chamfering bit, 1/8″ shank | 6000 rpm, 200 mm/min |
+
+With the lab's operation order (see below), that usually puts the small end mills first, then the drills, the thread mills and the chamfering bit.
 
 T2 roughs every feature in steps; T3, a fresh tool of the same kind, then runs each roughing operation again at full depth in one pass, which cleans the walls.
 
