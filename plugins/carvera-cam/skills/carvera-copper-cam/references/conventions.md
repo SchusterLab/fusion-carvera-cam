@@ -9,7 +9,7 @@ They come from the lab's own Fusion setups: about 40 setups and 530 operations i
 |---|---|---|
 | Machine | Makera Carvera 3-axis Community Version, latest | [Carvera Community profiles](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles), `main` branch |
 | Post processor | Makera Carvera Community Post (`Carvera.cps`), latest | the same folder |
-| Tools | the lab's 29 tools, 243 more McMaster-Carr drills and 23 of Makera's tools for metal | [`assets/carvera-tools.json`](../assets/carvera-tools.json): the lab's exported from the Fusion library `Carvera Tools/My Tools`, the drills from McMaster-Carr's table of [expanded-shank carbide drill bits](https://www.mcmaster.com/products/drill-bits/expanded-shank-carbide-drill-bits~~/) (copied to [`assets/mcmaster-expanded-shank-carbide-drills.csv`](../assets/mcmaster-expanded-shank-carbide-drills.csv)), Makera's from the [community tool files](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files) |
+| Tools | the lab's 29 tools, 113 more McMaster-Carr drills and 23 of Makera's tools for metal | [`assets/carvera-tools.json`](../assets/carvera-tools.json): the lab's exported from the Fusion library `Carvera Tools/My Tools`, the drills from McMaster-Carr's table of [expanded-shank carbide drill bits](https://www.mcmaster.com/products/drill-bits/expanded-shank-carbide-drill-bits~~/) (copied to [`assets/mcmaster-expanded-shank-carbide-drills.csv`](../assets/mcmaster-expanded-shank-carbide-drills.csv)), Makera's from the [community tool files](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files) |
 
 `build` downloads the machine and post again whenever they change upstream, and keeps them in `%LOCALAPPDATA%\carvera-cam\community`; without network it uses the copies there.
 The community machine's 3D model links to a file in its author's Fusion account, which no one else can open, so `build` uploads the machine's `.f3d` once per upstream version to a Fusion project named `carvera-cam` in the user's hub and links the machine to that copy.
@@ -28,9 +28,9 @@ After changing `My Tools` in Fusion, run `export_tools({})` from `carvera_cam.py
 The library also holds tools the lab lacks: drills from McMaster-Carr, and tools from Makera.
 
 Most of the lab's drills are McMaster-Carr's expanded-shank carbide drills, which have a 1/8″ (3.175 mm) shank for the Carvera's collet whatever their diameter.
-The library adds the other 243 drills of that series, from 0.152 mm (0.006″) to 3.175 mm, in metric, fractional-inch and wire-gauge sizes.
-A diameter can come coated with TiN (part numbers 6415N…) or TiAlN (2598N…) or uncoated (2841A…), and the coatings differ in their maximum drilling depth, so each part number is a drill of its own, with that depth as its flute length and its coating at the end of its name, for example `1.613*9.1mm Drill (No. 52) TiAlN`.
-The TiN and uncoated drills have a 130° point and the TiAlN drills 135°, whether the catalogue calls the point four-facet or standard (checked on the product pages of eleven drills across the three series).
+The series comes coated with TiN (part numbers 6415N…) or TiAlN (2598N…) or uncoated (2841A…), and every diameter comes uncoated, so the library adds only uncoated drills: 113 of them, from 0.152 mm (0.006″) to 3.175 mm, in metric, fractional-inch and wire-gauge sizes.
+Each has its maximum drilling depth as its flute length, for example `1.613*9.7mm Drill (No. 52)`, and a 130° point, whether the catalogue calls the point four-facet or standard (checked on product pages).
+The library skips an uncoated drill when the lab already has one of the same diameter and depth in another coating, such as `2*9.1mm Drill`; the lab's own drills keep their coatings.
 
 The 23 tools from Makera are its tools for metal: Spiral O end mills of 4 and 6 mm, ball end mills of 1 to 6 mm, engraving bits, and thread mills for M1, M5, M6 and M8.
 Makera's drills are left out, because the McMaster-Carr drills cover their diameters.
@@ -47,8 +47,8 @@ So each added tool, from either source, gets a Copper 101-H02 preset made by the
 The lab's smallest drill is 0.7 mm, so for smaller drills the drill preset's feed of 0.005 mm per revolution has no evidence behind it.
 
 The lab has not cut with any added tool, so `build` warns when it uses one, and the toolpath check flags them (N6 in [rules.md](rules.md)).
-For a hole, `build` takes a lab drill whenever one fits (within −0.02 to +0.05 mm of the hole's diameter, and a flute at least 0.5 mm longer than the hole's depth); otherwise it takes the added drill closest in diameter, and of those the TiN drill before the uncoated one before the TiAlN one.
-`scripts/tool_library.py` makes these additions; run it with plain Python (`python -I tool_library.py`) to fetch the community tool files again and rebuild the drills from the CSV file, which holds McMaster-Carr's table with the point angle and coating of each part.
+For a hole, `build` takes a lab drill whenever one fits (within −0.02 to +0.05 mm of the hole's diameter, and a flute at least 0.5 mm longer than the hole's depth); otherwise it takes the added drill closest in diameter.
+`scripts/tool_library.py` makes these additions; run it with plain Python (`python -I tool_library.py`) to fetch the community tool files again and rebuild the drills from the CSV file, which holds McMaster-Carr's whole table, coated drills included, with the point angle and coating of each part.
 It leaves out Makera's tools for wood, plastic and circuit boards.
 
 ## Tool slots
