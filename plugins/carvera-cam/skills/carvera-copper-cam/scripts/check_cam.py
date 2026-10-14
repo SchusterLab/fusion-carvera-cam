@@ -32,15 +32,12 @@ STATE = os.path.join(tempfile.gettempdir(), 'carvera-cam-check.json')
 
 # Thresholds, in mm and mm/min, from the lab's setups (see rules.md for the evidence).
 CHIP_LOAD_MILL = 0.034       # mm/tooth, end mills and chamfer bits (lab: 0.0333)
-PLUNGE_PER_REV_MILL = 0.034  # mm/rev, end mill plunge (lab: 0.0333)
-DRILL_FEED_PER_REV = 0.0051  # mm/rev (lab: 50 mm/min at 10000 rpm)
 STEPDOWN_LARGE = 0.3         # end mills of 3 mm and up
 STEPDOWN_SMALL = 0.2         # smaller end mills, at most 0.2 x diameter
 POCKET_STEPOVER = 0.6        # x diameter
 BORE_STEPOVER = 0.3
 PECK_MAX = 0.1
 ACCUMULATED_PECK_MAX = 1.0
-PLUNGE_MAX_D = 2.1           # end mills that may plunge into a cut, by diameter
 BELOW_STOCK_MAX = 0.5        # cuts below the stock bottom, besides a drill's tip
 STICKOUT_WARN = 0.75         # deepest cut below stock top / tool length below holder
 STICKOUT_ERROR = 0.95
@@ -136,14 +133,6 @@ def _check_op(rep, s, o, t, earlier, lab, through_before=False):
         if fz > CHIP_LOAD_MILL:
             rep.add('F2', 'warning', sn, on, 'chip load %.4f mm/tooth is above the lab\'s %.4f'
                     % (fz, CHIP_LOAD_MILL), feed=t['feed'], rpm=t['rpm'])
-        if t['plunge'] / t['rpm'] > PLUNGE_PER_REV_MILL:
-            rep.add('F2', 'warning', sn, on, 'plunge %.4f mm/rev is above the lab\'s %.4f'
-                    % (t['plunge'] / t['rpm'], PLUNGE_PER_REV_MILL), plunge=t['plunge'])
-    if t['type'] in ('drill', 'spot drill', 'center drill'):
-        fr = t['plunge'] / t['rpm']
-        if fr > DRILL_FEED_PER_REV:
-            rep.add('F3', 'warning', sn, on, 'drill feed %.4f mm/rev is above the lab\'s 0.005 '
-                    '(50 mm/min at 10000 rpm)' % fr, plunge=t['plunge'], rpm=t['rpm'])
     preset = lab.get(_ascii(t['desc']))
     if preset is None:
         rep.add('N5', 'warning', sn, on, '%s is not in the skill\'s tool library, so its feeds '
@@ -187,16 +176,17 @@ def _check_op(rep, s, o, t, earlier, lab, through_before=False):
                 rep.add('D6', 'warning', sn, on, 'pocket stepover %.2f mm is above 0.6 x tool '
                         'diameter' % so)
             ramp = _v(p, 'rampType', '')
-            drills_before = any(e['type'] == 'drill' for e in earlier) or through_before
-            if ramp == 'plunge' and d > PLUNGE_MAX_D and multi and not rest:
-                rep.add('E2', 'warning', sn, on, 'the %.3g mm end mill plunges into the pocket at '
-                        'every depth; the lab plunges only with end mills up to 2 mm, in rest '
-                        'machining or on a finishing pass' % d)
+            # an entry hole is full width to its bottom only with the drill's tip through it
+            predrilled = any(e['tip_through'] for e in earlier) or through_before
+            if ramp == 'plunge':
+                rep.add('E2', 'warning', sn, on, 'the %.3g mm end mill plunges into the pocket '
+                        'instead of entering a pre-drilled hole' % d)
             elif ramp == 'disabled':
                 rep.add('E1', 'warning', sn, on, 'pocket entry ramp is disabled')
-            elif ramp == 'predrill' and not drills_before:
-                rep.add('E4', 'warning', sn, on, 'predrill entry, but no drill runs before it in '
-                        'this setup: check that the entry holes exist')
+            elif ramp == 'predrill' and not predrilled:
+                rep.add('E4', 'warning', sn, on, 'predrill entry, but no drill with "drill tip '
+                        'through bottom" runs before it in this setup: check that the entry '
+                        'holes exist and are full width to the pocket floor')
     if strat == 'bore':
         so = _mm(_v(p, 'stepover'))
         if so and so > BORE_STEPOVER + 1e-6:
@@ -511,7 +501,9 @@ def check(args=None):
                 tools.append(t)
             _check_op(rep, s, o, t, earlier, lab, through_before)
             earlier.append({'strategy': o.strategy, 'type': t['type'], 'd': t['d'] or 0,
-                            'multi': bool(_v(o.parameters, 'doMultipleDepths'))})
+                            'multi': bool(_v(o.parameters, 'doMultipleDepths')),
+                            'tip_through': o.strategy == 'drill'
+                            and bool(_v(o.parameters, 'drillTipThroughBottom', False))})
         if ok:
             folder = tempfile.mkdtemp(prefix='carvera-check-')
             text = _post_setup(cam, s, ok, post, folder)

@@ -59,8 +59,7 @@ Chip load is the feed per cutting edge per revolution: feed ÷ (rpm × flutes).
 |---|---|---|---|---|
 | F0 | the spindle speed is 0 | error | — | feeding a stopped tool into the stock |
 | F1 | the spindle speed, cutting feed or plunge feed differs from the tool's Copper 101-H02 preset | warning | the feeds match the tool's Copper 101-H02 preset in all 916 operations whose tool had one; the other 88 use tools without one (rule N5) | settings the lab has not used with that tool |
-| F2 | an end mill or chamfering bit cuts at more than 0.034 mm chip load, or its plunge feed exceeds 0.034 mm per revolution | warning | all 647 end-mill operations cut at 0.033 mm (one flute) or 0.017 mm (two flutes), and all 112 chamfering operations at 0.017 mm | stall and broken small end mills |
-| F3 | a drill feeds more than 0.0051 mm per revolution | warning | 217 of 218 drill operations feed 0.005 mm per revolution | broken drills |
+| F2 | an end mill or chamfering bit cuts at more than 0.034 mm chip load | warning | all 647 end-mill operations cut at 0.033 mm (one flute) or 0.017 mm (two flutes), and all 112 chamfering operations at 0.017 mm | stall and broken small end mills |
 
 ### How much the tool cuts at once
 
@@ -78,13 +77,14 @@ A roughing pass below means a multi-depth pass that cuts the feature to size in 
 ### How the tool enters the cut
 
 The lab's end mills enter pockets through holes a drill makes first (Fusion's `predrill` entry), not by ramping into solid metal.
-They plunge straight down only when the end mill is 2 mm or less, or the material below has been cleared by a larger tool.
+The checker warns about every other entry, whatever the feed, since an end mill plunging into copper can stall or break.
+An entry hole counts only if its drill has "drill tip through bottom" set, so that the hole is full width down to its bottom.
 
 | Id | Finding when | Severity | Evidence | Guards against |
 |---|---|---|---|---|
 | E1 | a pocket's entry (Fusion's ramp type) is set to none | warning | 259 of 263 pockets enter by `predrill` (213) or by plunging (46) | an entry Fusion chooses, into solid stock |
-| E2 | an end mill over 2.1 mm (2 mm plus a margin for rounding) plunges into a pocket's roughing pass that is not rest machining | warning | 39 of 46 plunging pockets use a 1 or 2 mm end mill, or finish or rest-machine a pocket already roughed | stall and broken end mills from plunging into solid copper |
-| E4 | a pocket enters by `predrill`, but no drill runs before it in its setup, nor a drill through the stock in an earlier setup | warning | 86 of 111 `predrill` pockets in the current parts have a drill before them in their setup; most of the rest are bottom-side pockets, which the check accepts when an earlier setup drilled through | the end mill plunging where the entry hole should be |
+| E2 | a pocket enters by plunging | warning | — (46 of the lab's 263 pockets plunge, 39 of them with a 1 or 2 mm end mill or into a pocket already roughed) | stall and broken end mills from plunging into solid copper |
+| E4 | a pocket enters by `predrill`, but no drill with "drill tip through bottom" runs before it in its setup, nor a drill through the stock in an earlier setup | warning | 86 of 111 `predrill` pockets in the current parts have a drill before them in their setup (whether its tip goes through was not counted); most of the rest are bottom-side pockets, which the check accepts when an earlier setup drilled through | the end mill plunging where the entry hole should be |
 
 ### Heights, depth and reach
 
