@@ -563,12 +563,15 @@ class Tools:
         with open(TOOLS_FILE, encoding='utf-8') as f:
             lib = adsk.cam.ToolLibrary.createFromJson(f.read())
         self.by_desc = {}
-        self.added = set()  # tools the lab has not cut with (tool_library.ADDED)
+        # tools the lab has not cut with (tool_library.ADDED), but the McMaster-Carr
+        # drills, whose preset is the lab's (tool_library.is_proven)
+        self.added = set()
         for t in lib:
             d = t.parameters.itemByName('tool_description').value.value
             self.by_desc.setdefault(d, t)
             comment = t.parameters.itemByName('tool_comment')
-            if comment is not None and comment.value.value.startswith(ADDED_MARK):
+            if comment is not None and comment.value.value.startswith(ADDED_MARK) \
+                    and 'McMaster-Carr' not in comment.value.value:
                 self.added.add(d)
         self.slots = {}   # key -> (tool, preset)
         self.order = []
@@ -1788,8 +1791,8 @@ def _side_ops(b, setup, a, side, plan, warnings):
         match = [d for d in drills if h['dia'] - 0.02 <= d[1] <= h['dia'] + 0.05
                  and d[2] >= h['depth'] + 0.5]
         if match:
-            # a lab drill if one fits, else the added drill closest in diameter
-            best = min(match, key=lambda d: (d[3], d[3] and round(abs(d[1] - h['dia']), 4)))
+            # the closest in diameter, a proven drill before an unproven one
+            best = min(match, key=lambda d: (d[3], round(abs(d[1] - h['dia']), 4)))
             drilled.append((h, best[0]))
         elif h['dia'] > ENDMILL_D + 0.1:
             bored.append((h, (ENDMILL, 'rough'), (ENDMILL, 'finish')))

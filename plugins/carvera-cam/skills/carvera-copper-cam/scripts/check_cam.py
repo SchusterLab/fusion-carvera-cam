@@ -86,13 +86,14 @@ class Report:
 # ------------------------------------------------------------- the tools
 
 def _lab_tools():
-    """{description: (preset values, added)} from the skill's tool library."""
+    """{description: (preset values, added)} from the skill's tool library; the
+    McMaster-Carr drills count as the lab's (tool_library.is_proven)."""
     tl = runpy.run_path(os.path.join(HERE, 'tool_library.py'))
     out = {}
     for t in tl['read']()['data']:
         p = next((p for p in t.get('start-values', {}).get('presets', [])
                   if p['name'] == tl['PRESET']), None)
-        out[_ascii(t['description'])] = (p, tl['is_added'](t))
+        out[_ascii(t['description'])] = (p, not tl['is_proven'](t))
     return out
 
 

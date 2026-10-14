@@ -4,14 +4,14 @@ tools that cut copper.
 assets/carvera-tools.json holds two kinds of tools:
   - the lab's own, exported from the Fusion library "Carvera Tools/My Tools"
     (carvera_cam.export_tools), each with the lab's "Copper 101-H02" preset;
-    its drills from McMaster-Carr's expanded-shank series are rebuilt from the
-    catalogue's table as the added ones are (lab_drills), its other drills are
-    left out, and every drill's preset follows the lab's drill rule;
+    its own drills are left out (the user's choice, 2026-10-14): the
+    McMaster-Carr drills below replace them;
   - added tools, marked in their post-processor comment (ADDED): every
     uncoated drill of McMaster-Carr's expanded-shank carbide drills, the series
-    most lab drills come from (read from MCMASTER_DRILLS, a copy of the
-    catalogue's table), and the end mills and thread mills for metal from the
-    Carvera Community's copies of Makera's tool libraries. The lab has not cut with these, so their
+    the lab's drills came from (read from MCMASTER_DRILLS, a copy of the
+    catalogue's table), with the lab's drill preset (DRILL_PRESET); and the end
+    mills and thread mills for metal from the Carvera Community's copies of
+    Makera's tool libraries. The lab has not cut with Makera's tools, so their
     Copper 101-H02 preset is derived from the lab's presets for the same kind
     of tool (lab_preset), and says so.
 
@@ -39,6 +39,8 @@ COMMUNITY_TOOLS = ('https://raw.githubusercontent.com/Carvera-Community/Carvera_
 MCMASTER_DRILLS = os.path.join(os.path.dirname(HERE), 'assets', 'mcmaster-expanded-shank-carbide-drills.csv')
 PRESET = 'Copper 101-H02'
 ADDED = 'carvera-cam: added from '
+DRILL_PRESET = ("The lab's Copper 101-H02 preset for every drill (set 2026-10-13): "
+                '10000 rpm, plunge 50 mm/min, retract 500 mm/min.')
 DERIVED = ('Derived by carvera-cam from the lab\'s Copper 101-H02 presets for this kind of '
            'tool; the lab has not cut copper with this tool yet.')
 
@@ -142,6 +144,11 @@ def is_added(t):
     return t.get('post-process', {}).get('comment', '').startswith(ADDED)
 
 
+def is_proven(t):
+    """A lab tool, or a McMaster-Carr drill: their presets are the lab's own."""
+    return not is_added(t) or 'McMaster-Carr' in t['post-process']['comment']
+
+
 def _templates(lab):
     out = {}
     for kind, desc in TEMPLATES.items():
@@ -178,39 +185,11 @@ def read_mcmaster(path=MCMASTER_DRILLS):
         return list(csv.DictReader(f))
 
 
-def _drill_template(lab):
-    return next(t for t in lab if t['type'] == 'drill' and t['description'].startswith(TEMPLATES['drill']))
+def _drill_template(tools):
+    return next(t for t in tools if t['type'] == 'drill' and t['description'].startswith(TEMPLATES['drill']))
 
 
-def lab_drills(lab, rows, templates):
-    """The lab's tools with each of its McMaster-Carr expanded-shank carbide drills
-    rebuilt from its row of MCMASTER_DRILLS (as mcmaster_drills builds them), with
-    the Copper 101-H02 preset of the lab's drill rule (lab_preset). The lab's
-    other drills (the 4 and 3.175 mm long drills, the spot drills) are left out."""
-    by_part = {r['part']: r for r in rows}
-    template = _drill_template(lab)
-    out = []
-    for t in lab:
-        if t['type'] != 'drill':
-            out.append(t)
-            continue
-        presets = t.get('start-values', {}).get('presets', [])
-        old = next((p for p in presets if p['name'] == PRESET), templates['drill'])
-        r = by_part.get(t.get('product-id'))
-        if r is None:
-            continue
-        post = t['post-process']
-        t = _mcmaster_drill(r, template)
-        t['post-process'] = copy.deepcopy(post)
-        presets = [p for p in presets if p['name'] != PRESET]
-        p = make_preset(t, old, lab_preset(t, None), old.get('description', ''))
-        p['guid'] = old['guid']
-        t['start-values'] = {'presets': [p] + presets}
-        out.append(t)
-    return out
-
-
-def mcmaster_drills(lab, rows, templates):
+def mcmaster_drills(lab, rows, templates, template):
     """A drill for each of McMaster-Carr's uncoated expanded-shank carbide drills
     (rows of MCMASTER_DRILLS), lab drills' sizes and parts included, with its
     maximum drilling depth as its flute length. The TiN and TiAlN drills are
@@ -218,7 +197,6 @@ def mcmaster_drills(lab, rows, templates):
     after the name, so every tool keeps a name of its own."""
     have = {t.get('product-id') for t in lab if t['type'] == 'drill'}
     names = {t['description'] for t in lab}
-    template = _drill_template(lab)
     out = []
     for r in sorted(rows, key=lambda r: float(r['diameter_mm'])):
         if r['coating'] != 'uncoated':
@@ -231,7 +209,9 @@ def mcmaster_drills(lab, rows, templates):
             t['expressions']['tool_description'] = "'%s'" % t['description'].replace("'", "\\'")
         t['post-process']['comment'] = ADDED + 'McMaster-Carr "Expanded-Shank Carbide Drill Bits"'
         t['start-values'] = {'presets': []}
-        out.append(_with_preset(t, templates))
+        t = _with_preset(t, templates)
+        t['start-values']['presets'][0]['description'] = DRILL_PRESET
+        out.append(t)
     return out
 
 
@@ -262,13 +242,17 @@ def _mcmaster_drill(r, template):
     return t
 
 
-def complete(lab, community, mcmaster=()):
-    """The lab's tools, then the McMaster-Carr drills and the community tools for
-    metal that the lab lacks."""
-    templates = _templates(lab)
-    lab = [_with_preset(copy.deepcopy(t), templates) for t in lab_drills(lab, mcmaster, templates)]
+def complete(lab, community, mcmaster=(), previous=()):
+    """The lab's tools but its drills, then the McMaster-Carr drills and the
+    community tools for metal that the lab lacks. The presets and the drill
+    the added tools are made from come from the lab's tools or, once the lab's
+    drills are gone, from `previous`, the library as it was."""
+    pool = list(lab) + list(previous)
+    templates = _templates(pool)
+    template = copy.deepcopy(_drill_template(pool))
+    lab = [_with_preset(copy.deepcopy(t), templates) for t in lab if t['type'] != 'drill']
     seen = {_key(t) for t in lab} | {_name(t) for t in lab}
-    added = mcmaster_drills(lab, mcmaster, templates)
+    added = mcmaster_drills(lab, mcmaster, templates, template)
     seen |= {_key(t) for t in added} | {_name(t) for t in added}
     for name, tools in community.items():
         for t in tools:
@@ -286,11 +270,11 @@ def complete(lab, community, mcmaster=()):
 
 
 def merge(lab, current):
-    """After an export from Fusion: the lab's tools, its drills rebuilt as
-    lab_drills does, plus the added tools already in the library: the
-    McMaster-Carr drills, and the others that do not duplicate a lab tool."""
-    templates = _templates(lab)
-    lab = [_with_preset(copy.deepcopy(t), templates) for t in lab_drills(lab, read_mcmaster(), templates)]
+    """After an export from Fusion: the lab's tools but its drills, plus the
+    added tools already in the library: the McMaster-Carr drills, and the
+    others that do not duplicate a lab tool."""
+    templates = _templates(list(lab) + list(current))
+    lab = [_with_preset(copy.deepcopy(t), templates) for t in lab if t['type'] != 'drill']
     seen = {_key(t) for t in lab} | {_name(t) for t in lab}
     return lab + [t for t in current if is_added(t) and (
         'McMaster-Carr' in t['post-process']['comment'] or _key(t) not in seen and _name(t) not in seen)]
@@ -311,7 +295,7 @@ def main():
     sys.stdout.reconfigure(encoding='utf-8')
     data = read()
     lab = [t for t in data['data'] if not is_added(t)]
-    data['data'] = complete(lab, fetch_community(), read_mcmaster())
+    data['data'] = complete(lab, fetch_community(), read_mcmaster(), data['data'])
     write(data)
     added = [t for t in data['data'] if is_added(t)]
     print('%d lab tools, %d added:' % (len(lab), len(added)))

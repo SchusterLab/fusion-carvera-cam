@@ -558,336 +558,6 @@
   },
   {
    "BMC": "carbide",
-   "GRADE": "generic",
-   "description": "2.6*8.2mm Drill",
-   "expressions": {
-    "tool_description": "'2.6*8.2mm Drill'",
-    "tool_diameter": "2.6 mm",
-    "tool_fluteLength": "8.2 mm",
-    "tool_number": "0",
-    "tool_productId": "'2841A166'",
-    "tool_productLink": "'https://www.mcmaster.com/2841A166/'",
-    "tool_shoulderLength": "8.2 mm",
-    "tool_tipAngle": "130 degrees",
-    "tool_vendor": "'McMaster-Carr'"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 2.6,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 8.2,
-    "NOF": 2,
-    "NT": 1,
-    "OAL": 38,
-    "RE": 0,
-    "SFDM": 3.175,
-    "SIG": 130,
-    "TP": 0,
-    "assemblyGaugeLength": 26.5,
-    "shoulder-length": 8.2,
-    "thread-profile-angle": 60,
-    "tip-diameter": 0,
-    "tip-length": 0,
-    "tip-offset": 0
-   },
-   "guid": "130e6b3a-bb48-5f97-afe0-4c5b3ac51c60",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 0.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 3.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "",
-    "diameter-offset": 0,
-    "length-offset": 0,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "2841A166",
-   "product-link": "https://www.mcmaster.com/2841A166/",
-   "shaft": {
-    "segments": [
-     {
-      "height": 4,
-      "lower-diameter": 2.6,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "",
-      "expressions": {
-       "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm",
-       "tool_spindleSpeed": "10000 rpm"
-      },
-      "f_z": 0,
-      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 10000,
-      "name": "Copper 101-H02",
-      "tool-coolant": "disabled",
-      "use-feed-per-revolution": false,
-      "v_c": 81.68140899333463,
-      "v_f": 0,
-      "v_f_leadIn": 0,
-      "v_f_leadOut": 0,
-      "v_f_plunge": 50,
-      "v_f_ramp": 0,
-      "v_f_retract": 500,
-      "v_f_transition": 0
-     }
-    ]
-   },
-   "type": "drill",
-   "unit": "millimeters",
-   "vendor": "McMaster-Carr"
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "generic",
-   "description": "1.6*9.7mm Drill",
-   "expressions": {
-    "tool_description": "'1.6*9.7mm Drill'",
-    "tool_diameter": "1.6 mm",
-    "tool_fluteLength": "9.7 mm",
-    "tool_number": "0",
-    "tool_productId": "'6415N185'",
-    "tool_productLink": "'https://www.mcmaster.com/6415N185/'",
-    "tool_shoulderLength": "9.7 mm",
-    "tool_tipAngle": "130 degrees",
-    "tool_vendor": "'McMaster-Carr'"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 1.6,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 9.7,
-    "NOF": 2,
-    "NT": 1,
-    "OAL": 38,
-    "RE": 0,
-    "SFDM": 3.175,
-    "SIG": 130,
-    "TP": 0,
-    "assemblyGaugeLength": 26.5,
-    "shoulder-length": 9.7,
-    "thread-profile-angle": 60,
-    "tip-diameter": 0,
-    "tip-length": 0,
-    "tip-offset": 0
-   },
-   "guid": "ddcad238-19f5-5fc0-8848-3e99c703fc14",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 0.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 3.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "",
-    "diameter-offset": 0,
-    "length-offset": 0,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "6415N185",
-   "product-link": "https://www.mcmaster.com/6415N185/",
-   "shaft": {
-    "segments": [
-     {
-      "height": 4,
-      "lower-diameter": 1.6,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "",
-      "expressions": {
-       "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm",
-       "tool_spindleSpeed": "10000 rpm"
-      },
-      "f_z": 0,
-      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 10000,
-      "name": "Copper 101-H02",
-      "tool-coolant": "disabled",
-      "use-feed-per-revolution": false,
-      "v_c": 50.26548245743669,
-      "v_f": 0,
-      "v_f_leadIn": 0,
-      "v_f_leadOut": 0,
-      "v_f_plunge": 50,
-      "v_f_ramp": 0,
-      "v_f_retract": 500,
-      "v_f_transition": 0
-     }
-    ]
-   },
-   "type": "drill",
-   "unit": "millimeters",
-   "vendor": "McMaster-Carr"
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "generic",
-   "description": "2.2*8.8mm Drill",
-   "expressions": {
-    "tool_description": "'2.2*8.8mm Drill'",
-    "tool_diameter": "2.2 mm",
-    "tool_fluteLength": "8.8 mm",
-    "tool_number": "0",
-    "tool_productId": "'2841A16'",
-    "tool_productLink": "'https://www.mcmaster.com/2841A16/'",
-    "tool_shoulderLength": "8.8 mm",
-    "tool_tipAngle": "130 degrees",
-    "tool_vendor": "'McMaster-Carr'"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 2.2,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 8.8,
-    "NOF": 2,
-    "NT": 1,
-    "OAL": 38,
-    "RE": 0,
-    "SFDM": 3.175,
-    "SIG": 130,
-    "TP": 0,
-    "assemblyGaugeLength": 26.5,
-    "shoulder-length": 8.8,
-    "thread-profile-angle": 60,
-    "tip-diameter": 0,
-    "tip-length": 0,
-    "tip-offset": 0
-   },
-   "guid": "d3d4cd58-a503-5999-bef4-dc31a5acc931",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 0.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 3.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "",
-    "diameter-offset": 0,
-    "length-offset": 0,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "2841A16",
-   "product-link": "https://www.mcmaster.com/2841A16/",
-   "shaft": {
-    "segments": [
-     {
-      "height": 4,
-      "lower-diameter": 2.2,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "",
-      "expressions": {
-       "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm",
-       "tool_spindleSpeed": "10000 rpm"
-      },
-      "f_z": 0,
-      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 10000,
-      "name": "Copper 101-H02",
-      "tool-coolant": "disabled",
-      "use-feed-per-revolution": false,
-      "v_c": 69.11503837897546,
-      "v_f": 0,
-      "v_f_leadIn": 0,
-      "v_f_leadOut": 0,
-      "v_f_plunge": 50,
-      "v_f_ramp": 0,
-      "v_f_retract": 500,
-      "v_f_transition": 0
-     }
-    ]
-   },
-   "type": "drill",
-   "unit": "millimeters",
-   "vendor": "McMaster-Carr"
-  },
-  {
-   "BMC": "carbide",
    "GRADE": "Mill Generic",
    "description": "Spiral O Metal 4*17mm",
    "expressions": {
@@ -1158,116 +828,6 @@
    "type": "thread mill",
    "unit": "millimeters",
    "vendor": ""
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "generic",
-   "description": "2.7*8.1mm Drill",
-   "expressions": {
-    "tool_description": "'2.7*8.1mm Drill'",
-    "tool_diameter": "2.7 mm",
-    "tool_fluteLength": "8.1 mm",
-    "tool_number": "0",
-    "tool_productId": "'2841A168'",
-    "tool_productLink": "'https://www.mcmaster.com/2841A168/'",
-    "tool_shoulderLength": "8.1 mm",
-    "tool_tipAngle": "130 degrees",
-    "tool_vendor": "'McMaster-Carr'"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 2.7,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 8.1,
-    "NOF": 2,
-    "NT": 1,
-    "OAL": 38,
-    "RE": 0,
-    "SFDM": 3.175,
-    "SIG": 130,
-    "TP": 0,
-    "assemblyGaugeLength": 26.5,
-    "shoulder-length": 8.1,
-    "thread-profile-angle": 60,
-    "tip-diameter": 0,
-    "tip-length": 0,
-    "tip-offset": 0
-   },
-   "guid": "e63e1dfc-1ff7-5a42-8012-2747ed05547f",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 0.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 3.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "",
-    "diameter-offset": 0,
-    "length-offset": 0,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "2841A168",
-   "product-link": "https://www.mcmaster.com/2841A168/",
-   "shaft": {
-    "segments": [
-     {
-      "height": 4,
-      "lower-diameter": 2.7,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "",
-      "expressions": {
-       "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm",
-       "tool_spindleSpeed": "10000 rpm"
-      },
-      "f_z": 0,
-      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 10000,
-      "name": "Copper 101-H02",
-      "tool-coolant": "disabled",
-      "use-feed-per-revolution": false,
-      "v_c": 84.82300164692441,
-      "v_f": 0,
-      "v_f_leadIn": 0,
-      "v_f_leadOut": 0,
-      "v_f_plunge": 50,
-      "v_f_ramp": 0,
-      "v_f_retract": 500,
-      "v_f_transition": 0
-     }
-    ]
-   },
-   "type": "drill",
-   "unit": "millimeters",
-   "vendor": "McMaster-Carr"
   },
   {
    "description": "Carvera ToolHolder 4 mm",
@@ -1857,446 +1417,6 @@
   },
   {
    "BMC": "carbide",
-   "GRADE": "generic",
-   "description": "2.1*9mm Drill",
-   "expressions": {
-    "tool_description": "'2.1*9mm Drill'",
-    "tool_diameter": "2.1 mm",
-    "tool_fluteLength": "9 mm",
-    "tool_number": "0",
-    "tool_productId": "'6415N189'",
-    "tool_productLink": "'https://www.mcmaster.com/6415N189/'",
-    "tool_shoulderLength": "9 mm",
-    "tool_tipAngle": "130 degrees",
-    "tool_vendor": "'McMaster-Carr'"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 2.1,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 9.0,
-    "NOF": 2,
-    "NT": 1,
-    "OAL": 38,
-    "RE": 0,
-    "SFDM": 3.175,
-    "SIG": 130,
-    "TP": 0,
-    "assemblyGaugeLength": 26.5,
-    "shoulder-length": 9.0,
-    "thread-profile-angle": 60,
-    "tip-diameter": 0,
-    "tip-length": 0,
-    "tip-offset": 0
-   },
-   "guid": "4489913b-8e5c-5e48-8820-2368ed695ee3",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 0.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 3.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "",
-    "diameter-offset": 0,
-    "length-offset": 0,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "6415N189",
-   "product-link": "https://www.mcmaster.com/6415N189/",
-   "shaft": {
-    "segments": [
-     {
-      "height": 4,
-      "lower-diameter": 2.1,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "",
-      "expressions": {
-       "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm",
-       "tool_spindleSpeed": "10000 rpm"
-      },
-      "f_z": 0,
-      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 10000,
-      "name": "Copper 101-H02",
-      "tool-coolant": "disabled",
-      "use-feed-per-revolution": false,
-      "v_c": 65.97344572538566,
-      "v_f": 0,
-      "v_f_leadIn": 0,
-      "v_f_leadOut": 0,
-      "v_f_plunge": 50,
-      "v_f_ramp": 0,
-      "v_f_retract": 500,
-      "v_f_transition": 0
-     }
-    ]
-   },
-   "type": "drill",
-   "unit": "millimeters",
-   "vendor": "McMaster-Carr"
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "generic",
-   "description": "2*9.1mm Drill",
-   "expressions": {
-    "tool_description": "'2*9.1mm Drill'",
-    "tool_diameter": "2 mm",
-    "tool_fluteLength": "9.1 mm",
-    "tool_number": "0",
-    "tool_productId": "'6415N188'",
-    "tool_productLink": "'https://www.mcmaster.com/6415N188/'",
-    "tool_shoulderLength": "9.1 mm",
-    "tool_tipAngle": "130 degrees",
-    "tool_vendor": "'McMaster-Carr'"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 2.0,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 9.1,
-    "NOF": 2,
-    "NT": 1,
-    "OAL": 38,
-    "RE": 0,
-    "SFDM": 3.175,
-    "SIG": 130,
-    "TP": 0,
-    "assemblyGaugeLength": 26.5,
-    "shoulder-length": 9.1,
-    "thread-profile-angle": 60,
-    "tip-diameter": 0,
-    "tip-length": 0,
-    "tip-offset": 0
-   },
-   "guid": "0fef5422-7e5f-58e3-9912-6e0b42268ced",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 0.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 3.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "",
-    "diameter-offset": 0,
-    "length-offset": 0,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "6415N188",
-   "product-link": "https://www.mcmaster.com/6415N188/",
-   "shaft": {
-    "segments": [
-     {
-      "height": 4,
-      "lower-diameter": 2.0,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "",
-      "expressions": {
-       "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm",
-       "tool_spindleSpeed": "10000 rpm"
-      },
-      "f_z": 0,
-      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 10000,
-      "name": "Copper 101-H02",
-      "tool-coolant": "disabled",
-      "use-feed-per-revolution": false,
-      "v_c": 62.83185307179586,
-      "v_f": 0,
-      "v_f_leadIn": 0,
-      "v_f_leadOut": 0,
-      "v_f_plunge": 50,
-      "v_f_ramp": 0,
-      "v_f_retract": 500,
-      "v_f_transition": 0
-     }
-    ]
-   },
-   "type": "drill",
-   "unit": "millimeters",
-   "vendor": "McMaster-Carr"
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "generic",
-   "description": "3.175*7.4mm Drill (1/8\")",
-   "expressions": {
-    "tool_description": "'3.175*7.4mm Drill (1/8\")'",
-    "tool_diameter": "3.175 mm",
-    "tool_fluteLength": "7.4 mm",
-    "tool_number": "0",
-    "tool_productId": "'6415N117'",
-    "tool_productLink": "'https://www.mcmaster.com/6415N117/'",
-    "tool_shoulderLength": "7.4 mm",
-    "tool_tipAngle": "130 degrees",
-    "tool_vendor": "'McMaster-Carr'"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 3.175,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 7.4,
-    "NOF": 2,
-    "NT": 1,
-    "OAL": 38,
-    "RE": 0,
-    "SFDM": 3.175,
-    "SIG": 130,
-    "TP": 0,
-    "assemblyGaugeLength": 26.5,
-    "shoulder-length": 7.4,
-    "thread-profile-angle": 60,
-    "tip-diameter": 0,
-    "tip-length": 0,
-    "tip-offset": 0
-   },
-   "guid": "d8e4b44c-d377-5f34-9213-69014b0fc59d",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 0.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 3.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "",
-    "diameter-offset": 0,
-    "length-offset": 0,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "6415N117",
-   "product-link": "https://www.mcmaster.com/6415N117/",
-   "shaft": {
-    "segments": [
-     {
-      "height": 4,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "",
-      "expressions": {
-       "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm",
-       "tool_spindleSpeed": "10000 rpm"
-      },
-      "f_z": 0,
-      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 10000,
-      "name": "Copper 101-H02",
-      "tool-coolant": "disabled",
-      "use-feed-per-revolution": false,
-      "v_c": 99.74556675147592,
-      "v_f": 0,
-      "v_f_leadIn": 0,
-      "v_f_leadOut": 0,
-      "v_f_plunge": 50,
-      "v_f_ramp": 0,
-      "v_f_retract": 500,
-      "v_f_transition": 0
-     }
-    ]
-   },
-   "type": "drill",
-   "unit": "millimeters",
-   "vendor": "McMaster-Carr"
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "generic",
-   "description": "2.5*8.4mm Drill",
-   "expressions": {
-    "tool_description": "'2.5*8.4mm Drill'",
-    "tool_diameter": "2.5 mm",
-    "tool_fluteLength": "8.4 mm",
-    "tool_number": "0",
-    "tool_productId": "'2841A137'",
-    "tool_productLink": "'https://www.mcmaster.com/2841A137/'",
-    "tool_shoulderLength": "8.4 mm",
-    "tool_tipAngle": "130 degrees",
-    "tool_vendor": "'McMaster-Carr'"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 2.5,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 8.4,
-    "NOF": 2,
-    "NT": 1,
-    "OAL": 38,
-    "RE": 0,
-    "SFDM": 3.175,
-    "SIG": 130,
-    "TP": 0,
-    "assemblyGaugeLength": 26.5,
-    "shoulder-length": 8.4,
-    "thread-profile-angle": 60,
-    "tip-diameter": 0,
-    "tip-length": 0,
-    "tip-offset": 0
-   },
-   "guid": "f39f15bb-0b50-5973-8cf8-29fbf8cddc61",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 0.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 3.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "",
-    "diameter-offset": 0,
-    "length-offset": 0,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "2841A137",
-   "product-link": "https://www.mcmaster.com/2841A137/",
-   "shaft": {
-    "segments": [
-     {
-      "height": 4,
-      "lower-diameter": 2.5,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "",
-      "expressions": {
-       "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm",
-       "tool_spindleSpeed": "10000 rpm"
-      },
-      "f_z": 0,
-      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 10000,
-      "name": "Copper 101-H02",
-      "tool-coolant": "disabled",
-      "use-feed-per-revolution": false,
-      "v_c": 78.53981633974482,
-      "v_f": 0,
-      "v_f_leadIn": 0,
-      "v_f_leadOut": 0,
-      "v_f_plunge": 50,
-      "v_f_ramp": 0,
-      "v_f_retract": 500,
-      "v_f_transition": 0
-     }
-    ]
-   },
-   "type": "drill",
-   "unit": "millimeters",
-   "vendor": "McMaster-Carr"
-  },
-  {
-   "BMC": "carbide",
    "GRADE": "Mill Generic",
    "description": "Single Flute Engraving Metal 30 deg*.2mm",
    "expressions": {
@@ -2611,142 +1731,6 @@
   },
   {
    "BMC": "carbide",
-   "GRADE": "generic",
-   "description": "3*7.6mm Drill",
-   "expressions": {
-    "tool_description": "'3*7.6mm Drill'",
-    "tool_diameter": "3 mm",
-    "tool_fluteLength": "7.6 mm",
-    "tool_number": "0",
-    "tool_productId": "'2841A138'",
-    "tool_productLink": "'https://www.mcmaster.com/2841A138/'",
-    "tool_shoulderLength": "7.6 mm",
-    "tool_tipAngle": "130 degrees",
-    "tool_vendor": "'McMaster-Carr'"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 3.0,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 7.6,
-    "NOF": 2,
-    "NT": 1,
-    "OAL": 38,
-    "RE": 0,
-    "SFDM": 3.175,
-    "SIG": 130,
-    "TP": 0,
-    "assemblyGaugeLength": 26.5,
-    "shoulder-length": 7.6,
-    "thread-profile-angle": 60,
-    "tip-diameter": 0,
-    "tip-length": 0,
-    "tip-offset": 0
-   },
-   "guid": "c5b94789-ad7f-5e47-b1c3-b2da00f5c74a",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 0.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 3.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "",
-    "diameter-offset": 0,
-    "length-offset": 0,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "2841A138",
-   "product-link": "https://www.mcmaster.com/2841A138/",
-   "shaft": {
-    "segments": [
-     {
-      "height": 4,
-      "lower-diameter": 3.0,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "",
-      "expressions": {
-       "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm",
-       "tool_spindleSpeed": "10000 rpm"
-      },
-      "f_z": 0,
-      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 10000,
-      "name": "Copper 101-H02",
-      "tool-coolant": "disabled",
-      "use-feed-per-revolution": false,
-      "v_c": 94.2477796076938,
-      "v_f": 0,
-      "v_f_leadIn": 0,
-      "v_f_leadOut": 0,
-      "v_f_plunge": 50,
-      "v_f_ramp": 0,
-      "v_f_retract": 500,
-      "v_f_transition": 0
-     },
-     {
-      "description": "",
-      "expressions": {
-       "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm"
-      },
-      "f_z": 0,
-      "guid": "b89ee6d8-081d-4c5f-ac17-58dc77a8b598",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 10000,
-      "name": "Aluminum 6063-T5",
-      "tool-coolant": "disabled",
-      "use-feed-per-revolution": false,
-      "v_c": 94.2477796076938,
-      "v_f": 0,
-      "v_f_leadIn": 0,
-      "v_f_leadOut": 0,
-      "v_f_plunge": 50,
-      "v_f_ramp": 0,
-      "v_f_retract": 500,
-      "v_f_transition": 0
-     }
-    ]
-   },
-   "type": "drill",
-   "unit": "millimeters",
-   "vendor": "McMaster-Carr"
-  },
-  {
-   "BMC": "carbide",
    "GRADE": "Mill Generic",
    "description": "Carvera M3 Threadmill",
    "expressions": {
@@ -2889,226 +1873,6 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "1.7*9.6mm Drill",
-   "expressions": {
-    "tool_description": "'1.7*9.6mm Drill'",
-    "tool_diameter": "1.7 mm",
-    "tool_fluteLength": "9.6 mm",
-    "tool_number": "0",
-    "tool_productId": "'2841A155'",
-    "tool_productLink": "'https://www.mcmaster.com/2841A155/'",
-    "tool_shoulderLength": "9.6 mm",
-    "tool_tipAngle": "130 degrees",
-    "tool_vendor": "'McMaster-Carr'"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 1.7,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 9.6,
-    "NOF": 2,
-    "NT": 1,
-    "OAL": 38,
-    "RE": 0,
-    "SFDM": 3.175,
-    "SIG": 130,
-    "TP": 0,
-    "assemblyGaugeLength": 26.5,
-    "shoulder-length": 9.6,
-    "thread-profile-angle": 60,
-    "tip-diameter": 0,
-    "tip-length": 0,
-    "tip-offset": 0
-   },
-   "guid": "2df77e6e-d00f-5a4f-9a2c-a1419ae16926",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 0.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 3.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "",
-    "diameter-offset": 0,
-    "length-offset": 0,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "2841A155",
-   "product-link": "https://www.mcmaster.com/2841A155/",
-   "shaft": {
-    "segments": [
-     {
-      "height": 4,
-      "lower-diameter": 1.7,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "",
-      "expressions": {
-       "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm",
-       "tool_spindleSpeed": "10000 rpm"
-      },
-      "f_z": 0,
-      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 10000,
-      "name": "Copper 101-H02",
-      "tool-coolant": "disabled",
-      "use-feed-per-revolution": false,
-      "v_c": 53.40707511102648,
-      "v_f": 0,
-      "v_f_leadIn": 0,
-      "v_f_leadOut": 0,
-      "v_f_plunge": 50,
-      "v_f_ramp": 0,
-      "v_f_retract": 500,
-      "v_f_transition": 0
-     }
-    ]
-   },
-   "type": "drill",
-   "unit": "millimeters",
-   "vendor": "McMaster-Carr"
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "generic",
-   "description": "0.7*9.1mm Drill",
-   "expressions": {
-    "tool_description": "'0.7*9.1mm Drill'",
-    "tool_diameter": "0.7 mm",
-    "tool_fluteLength": "9.1 mm",
-    "tool_number": "0",
-    "tool_productId": "'6415N172'",
-    "tool_productLink": "'https://www.mcmaster.com/6415N172/'",
-    "tool_shoulderLength": "9.1 mm",
-    "tool_tipAngle": "130 degrees",
-    "tool_vendor": "'McMaster-Carr'"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 0.7,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 9.1,
-    "NOF": 2,
-    "NT": 1,
-    "OAL": 38,
-    "RE": 0,
-    "SFDM": 3.175,
-    "SIG": 130,
-    "TP": 0,
-    "assemblyGaugeLength": 26.5,
-    "shoulder-length": 9.1,
-    "thread-profile-angle": 60,
-    "tip-diameter": 0,
-    "tip-length": 0,
-    "tip-offset": 0
-   },
-   "guid": "3a0486f3-86e5-5c81-8843-1c8aab5ab192",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 0.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 3.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "",
-    "diameter-offset": 0,
-    "length-offset": 0,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "6415N172",
-   "product-link": "https://www.mcmaster.com/6415N172/",
-   "shaft": {
-    "segments": [
-     {
-      "height": 4,
-      "lower-diameter": 0.7,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "",
-      "expressions": {
-       "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm",
-       "tool_spindleSpeed": "10000 rpm"
-      },
-      "f_z": 0,
-      "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 10000,
-      "name": "Copper 101-H02",
-      "tool-coolant": "disabled",
-      "use-feed-per-revolution": false,
-      "v_c": 21.991148575128552,
-      "v_f": 0,
-      "v_f_leadIn": 0,
-      "v_f_leadOut": 0,
-      "v_f_plunge": 50,
-      "v_f_ramp": 0,
-      "v_f_retract": 500,
-      "v_f_transition": 0
-     }
-    ]
-   },
-   "type": "drill",
-   "unit": "millimeters",
-   "vendor": "McMaster-Carr"
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "generic",
    "description": "0.152*2.3mm Drill (0.0060\")",
    "expressions": {
     "tool_description": "'0.152*2.3mm Drill (0.0060\")'",
@@ -3184,7 +1948,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -3294,7 +2058,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -3404,7 +2168,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -3514,7 +2278,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -3624,7 +2388,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -3734,7 +2498,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -3844,7 +2608,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -3954,7 +2718,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -4064,7 +2828,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -4174,7 +2938,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -4284,7 +3048,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -4394,7 +3158,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -4504,7 +3268,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -4614,7 +3378,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -4724,7 +3488,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -4834,7 +3598,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -4944,7 +3708,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -5054,7 +3818,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -5164,7 +3928,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -5274,7 +4038,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -5384,7 +4148,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -5494,7 +4258,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -5604,7 +4368,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -5714,7 +4478,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -5824,7 +4588,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -5859,9 +4623,9 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "0.7*9.1mm Drill 2841A12",
+   "description": "0.7*9.1mm Drill",
    "expressions": {
-    "tool_description": "'0.7*9.1mm Drill 2841A12'",
+    "tool_description": "'0.7*9.1mm Drill'",
     "tool_diameter": "0.7 mm",
     "tool_fluteLength": "9.1 mm",
     "tool_number": "0",
@@ -5934,7 +4698,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -6044,7 +4808,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -6154,7 +4918,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -6264,7 +5028,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -6374,7 +5138,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -6484,7 +5248,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -6594,7 +5358,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -6704,7 +5468,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -6814,7 +5578,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -6924,7 +5688,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -7034,7 +5798,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -7144,7 +5908,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -7254,7 +6018,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -7364,7 +6128,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -7474,7 +6238,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -7584,7 +6348,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -7694,7 +6458,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -7804,7 +6568,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -7914,7 +6678,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -8024,7 +6788,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -8134,7 +6898,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -8244,7 +7008,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -8354,7 +7118,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -8464,7 +7228,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -8574,7 +7338,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -8684,7 +7448,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -8794,7 +7558,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -8904,7 +7668,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -9014,7 +7778,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -9124,7 +7888,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -9234,7 +7998,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -9344,7 +8108,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -9454,7 +8218,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -9564,7 +8328,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -9674,7 +8438,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -9784,7 +8548,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -9894,7 +8658,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -10004,7 +8768,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -10114,7 +8878,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -10149,9 +8913,9 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "1.6*9.7mm Drill 2841A129",
+   "description": "1.6*9.7mm Drill",
    "expressions": {
-    "tool_description": "'1.6*9.7mm Drill 2841A129'",
+    "tool_description": "'1.6*9.7mm Drill'",
     "tool_diameter": "1.6 mm",
     "tool_fluteLength": "9.7 mm",
     "tool_number": "0",
@@ -10224,7 +8988,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -10334,7 +9098,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -10444,7 +9208,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -10479,9 +9243,9 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "1.7*9.6mm Drill 2841A155",
+   "description": "1.7*9.6mm Drill",
    "expressions": {
-    "tool_description": "'1.7*9.6mm Drill 2841A155'",
+    "tool_description": "'1.7*9.6mm Drill'",
     "tool_diameter": "1.7 mm",
     "tool_fluteLength": "9.6 mm",
     "tool_number": "0",
@@ -10511,7 +9275,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "eb180547-80f7-5d15-8001-1dd3fb9038fa",
+   "guid": "2df77e6e-d00f-5a4f-9a2c-a1419ae16926",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -10554,14 +9318,14 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
        "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
-      "guid": "abd52077-44fd-576b-adc4-6a1582cc6a80",
+      "guid": "59ed1505-0825-5f5c-82ad-df051f85a7a5",
       "material": {
        "category": "all",
        "query": "",
@@ -10664,7 +9428,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -10774,7 +9538,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -10884,7 +9648,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -10994,7 +9758,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -11104,7 +9868,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -11214,7 +9978,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -11324,7 +10088,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -11434,7 +10198,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -11544,7 +10308,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -11654,7 +10418,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -11764,7 +10528,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -11799,9 +10563,9 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "2*9.1mm Drill 2841A134",
+   "description": "2*9.1mm Drill",
    "expressions": {
-    "tool_description": "'2*9.1mm Drill 2841A134'",
+    "tool_description": "'2*9.1mm Drill'",
     "tool_diameter": "2 mm",
     "tool_fluteLength": "9.1 mm",
     "tool_number": "0",
@@ -11874,7 +10638,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -11984,7 +10748,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -12094,7 +10858,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -12204,7 +10968,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -12239,9 +11003,9 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "2.1*9mm Drill 2841A159",
+   "description": "2.1*9mm Drill",
    "expressions": {
-    "tool_description": "'2.1*9mm Drill 2841A159'",
+    "tool_description": "'2.1*9mm Drill'",
     "tool_diameter": "2.1 mm",
     "tool_fluteLength": "9 mm",
     "tool_number": "0",
@@ -12314,7 +11078,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -12424,7 +11188,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -12534,7 +11298,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -12569,9 +11333,9 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "2.2*8.8mm Drill 2841A16",
+   "description": "2.2*8.8mm Drill",
    "expressions": {
-    "tool_description": "'2.2*8.8mm Drill 2841A16'",
+    "tool_description": "'2.2*8.8mm Drill'",
     "tool_diameter": "2.2 mm",
     "tool_fluteLength": "8.8 mm",
     "tool_number": "0",
@@ -12601,7 +11365,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "c03873dd-f763-5392-98d2-ebea593b0b01",
+   "guid": "d3d4cd58-a503-5999-bef4-dc31a5acc931",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -12644,14 +11408,14 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
        "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
-      "guid": "8a85e363-fe49-56e7-9a6b-35eecdf8ba1f",
+      "guid": "a2d2f679-f2fd-51b8-aafb-5c54ea2ba91e",
       "material": {
        "category": "all",
        "query": "",
@@ -12754,7 +11518,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -12864,7 +11628,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -12974,7 +11738,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -13084,7 +11848,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -13194,7 +11958,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -13304,7 +12068,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -13414,7 +12178,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -13524,7 +12288,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -13634,7 +12398,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -13744,7 +12508,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -13779,9 +12543,9 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "2.5*8.4mm Drill 2841A137",
+   "description": "2.5*8.4mm Drill",
    "expressions": {
-    "tool_description": "'2.5*8.4mm Drill 2841A137'",
+    "tool_description": "'2.5*8.4mm Drill'",
     "tool_diameter": "2.5 mm",
     "tool_fluteLength": "8.4 mm",
     "tool_number": "0",
@@ -13811,7 +12575,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "7c264393-663e-5966-990d-0a83b1ce1b49",
+   "guid": "f39f15bb-0b50-5973-8cf8-29fbf8cddc61",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -13854,14 +12618,14 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
        "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
-      "guid": "74faca3d-bca0-5f3b-9c76-9b1c78208f35",
+      "guid": "6e86c094-4b31-51c4-9ce2-56497fa8dc09",
       "material": {
        "category": "all",
        "query": "",
@@ -13964,7 +12728,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -14074,7 +12838,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -14184,7 +12948,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -14219,9 +12983,9 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "2.6*8.2mm Drill 2841A166",
+   "description": "2.6*8.2mm Drill",
    "expressions": {
-    "tool_description": "'2.6*8.2mm Drill 2841A166'",
+    "tool_description": "'2.6*8.2mm Drill'",
     "tool_diameter": "2.6 mm",
     "tool_fluteLength": "8.2 mm",
     "tool_number": "0",
@@ -14251,7 +13015,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "3a0692f3-8081-5454-94a6-f091b07d4781",
+   "guid": "130e6b3a-bb48-5f97-afe0-4c5b3ac51c60",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -14294,14 +13058,14 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
        "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
-      "guid": "c1ae537a-137f-5630-afda-ee68691401c9",
+      "guid": "db33c151-3e0e-5e09-99db-441b339d77ca",
       "material": {
        "category": "all",
        "query": "",
@@ -14404,7 +13168,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -14514,7 +13278,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -14549,9 +13313,9 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "2.7*8.1mm Drill 2841A168",
+   "description": "2.7*8.1mm Drill",
    "expressions": {
-    "tool_description": "'2.7*8.1mm Drill 2841A168'",
+    "tool_description": "'2.7*8.1mm Drill'",
     "tool_diameter": "2.7 mm",
     "tool_fluteLength": "8.1 mm",
     "tool_number": "0",
@@ -14581,7 +13345,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "c344bd5d-b968-5ea3-a6fe-fd7c3a04a6c0",
+   "guid": "e63e1dfc-1ff7-5a42-8012-2747ed05547f",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -14624,14 +13388,14 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
        "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
-      "guid": "f350b0d9-dc6e-5181-9a64-7d790b988998",
+      "guid": "d8da6f82-b357-57d1-9952-7b111bd3ba5e",
       "material": {
        "category": "all",
        "query": "",
@@ -14734,7 +13498,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -14844,7 +13608,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -14954,7 +13718,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -15064,7 +13828,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -15174,7 +13938,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -15284,7 +14048,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -15394,7 +14158,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -15504,7 +14268,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -15614,7 +14378,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -15724,7 +14488,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -15834,7 +14598,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -15869,9 +14633,9 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "3*7.6mm Drill 2841A138",
+   "description": "3*7.6mm Drill",
    "expressions": {
-    "tool_description": "'3*7.6mm Drill 2841A138'",
+    "tool_description": "'3*7.6mm Drill'",
     "tool_diameter": "3 mm",
     "tool_fluteLength": "7.6 mm",
     "tool_number": "0",
@@ -15901,7 +14665,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "b4001d7c-4c79-5c78-a1d4-0c16ab11e57d",
+   "guid": "c5b94789-ad7f-5e47-b1c3-b2da00f5c74a",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -15944,14 +14708,14 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
        "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
-      "guid": "08a30436-52e0-5b22-8b59-ef5659e21804",
+      "guid": "29c42299-4ec4-5f18-ae76-54cfc4d00d29",
       "material": {
        "category": "all",
        "query": "",
@@ -16054,7 +14818,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -16164,7 +14928,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -16274,7 +15038,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -16384,7 +15148,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
@@ -16419,9 +15183,9 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "3.175*7.4mm Drill (1/8\") 2841A98",
+   "description": "3.175*7.4mm Drill (1/8\")",
    "expressions": {
-    "tool_description": "'3.175*7.4mm Drill (1/8\") 2841A98'",
+    "tool_description": "'3.175*7.4mm Drill (1/8\")'",
     "tool_diameter": "3.175 mm",
     "tool_fluteLength": "7.4 mm",
     "tool_number": "0",
@@ -16494,7 +15258,7 @@
    "start-values": {
     "presets": [
      {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "description": "The lab's Copper 101-H02 preset for every drill (set 2026-10-13): 10000 rpm, plunge 50 mm/min, retract 500 mm/min.",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
        "tool_feedRetract": "500 mmpm",
