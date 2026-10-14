@@ -5,8 +5,8 @@ assets/carvera-tools.json holds two kinds of tools:
   - the lab's own, exported from the Fusion library "Carvera Tools/My Tools"
     (carvera_cam.export_tools), each with the lab's "Copper 101-H02" preset;
     its drills from McMaster-Carr's expanded-shank series are rebuilt from the
-    catalogue's table as the added ones are (lab_drills), and every drill's
-    preset follows the lab's drill rule;
+    catalogue's table as the added ones are (lab_drills), its other drills are
+    left out, and every drill's preset follows the lab's drill rule;
   - added tools, marked in their post-processor comment (ADDED): a drill of
     each uncoated diameter of McMaster-Carr's expanded-shank carbide drills, the
     series most lab drills come from (read from MCMASTER_DRILLS, a copy of the
@@ -185,8 +185,9 @@ def _drill_template(lab):
 
 def lab_drills(lab, rows, templates):
     """The lab's tools with each of its McMaster-Carr expanded-shank carbide drills
-    rebuilt from its row of MCMASTER_DRILLS (as mcmaster_drills builds them), and
-    every drill's Copper 101-H02 preset set to the lab's drill rule (lab_preset)."""
+    rebuilt from its row of MCMASTER_DRILLS (as mcmaster_drills builds them), with
+    the Copper 101-H02 preset of the lab's drill rule (lab_preset). The lab's
+    other drills (the 4 and 3.175 mm long drills, the spot drills) are left out."""
     by_part = {r['part']: r for r in rows}
     template = _drill_template(lab)
     out = []
@@ -197,12 +198,11 @@ def lab_drills(lab, rows, templates):
         presets = t.get('start-values', {}).get('presets', [])
         old = next((p for p in presets if p['name'] == PRESET), templates['drill'])
         r = by_part.get(t.get('product-id'))
-        if r:
-            post = t['post-process']
-            t = _mcmaster_drill(r, template)
-            t['post-process'] = copy.deepcopy(post)
-        else:
-            t = copy.deepcopy(t)
+        if r is None:
+            continue
+        post = t['post-process']
+        t = _mcmaster_drill(r, template)
+        t['post-process'] = copy.deepcopy(post)
         presets = [p for p in presets if p['name'] != PRESET]
         p = make_preset(t, old, lab_preset(t, None), old.get('description', ''))
         p['guid'] = old['guid']

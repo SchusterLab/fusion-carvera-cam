@@ -9,7 +9,7 @@ They come from the lab's own Fusion setups: about 40 setups and 530 operations i
 |---|---|---|
 | Machine | Makera Carvera 3-axis Community Version, latest | [Carvera Community profiles](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles), `main` branch |
 | Post processor | Makera Carvera Community Post (`Carvera.cps`), latest | the same folder |
-| Tools | the lab's 29 tools, 111 more McMaster-Carr drills and 23 of Makera's tools for metal | [`assets/carvera-tools.json`](../assets/carvera-tools.json): the lab's exported from the Fusion library `Carvera Tools/My Tools`, the drills from McMaster-Carr's table of [expanded-shank carbide drill bits](https://www.mcmaster.com/products/drill-bits/expanded-shank-carbide-drill-bits~~/) (copied to [`assets/mcmaster-expanded-shank-carbide-drills.csv`](../assets/mcmaster-expanded-shank-carbide-drills.csv)), Makera's from the [community tool files](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files) |
+| Tools | the lab's 25 tools, 111 more McMaster-Carr drills and 23 of Makera's tools for metal | [`assets/carvera-tools.json`](../assets/carvera-tools.json): the lab's exported from the Fusion library `Carvera Tools/My Tools`, the drills from McMaster-Carr's table of [expanded-shank carbide drill bits](https://www.mcmaster.com/products/drill-bits/expanded-shank-carbide-drill-bits~~/) (copied to [`assets/mcmaster-expanded-shank-carbide-drills.csv`](../assets/mcmaster-expanded-shank-carbide-drills.csv)), Makera's from the [community tool files](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files) |
 
 `build` downloads the machine and post again whenever they change upstream, and keeps them in `%LOCALAPPDATA%\carvera-cam\community`; without network it uses the copies there.
 The community machine's 3D model links to a file in its author's Fusion account, which no one else can open, so `build` uploads the machine's `.f3d` once per upstream version to a Fusion project named `carvera-cam` in the user's hub and links the machine to that copy.
@@ -23,7 +23,8 @@ Before uploading the upstream model, `build` makes the same three changes to it 
 Every tool in `My Tools` has a feed preset named **Copper 101-H02** (C10100 oxygen-free copper, H02 half-hard temper), and the lab uses it for everything.
 Aluminum (6063-T5) runs the same programs at 200% feed and spindle override on the Carvera, so there is one set of toolpaths per part.
 No coolant.
-Every drill's preset, the spot drills and the drills from other series included, is the same: 10000 rpm, plunge 50 mm/min and retract 500 mm/min.
+The lab's drills are all McMaster-Carr expanded-shank drills; its 4 × 19 mm and 3.175 × 12.7 mm drills and its spot drills were removed on 2026-10-13.
+Every drill's preset is the same: 10000 rpm, plunge 50 mm/min and retract 500 mm/min.
 A preset cannot hold the drilling cycle, so `build` sets it in each drill operation (see "Operation parameters").
 After changing `My Tools` in Fusion, run `export_tools({})` from `carvera_cam.py` to rewrite the lab's tools in `assets/carvera-tools.json`, and commit it; the export rebuilds the McMaster-Carr drills and resets the drill presets as `tool_library.py` does.
 
@@ -66,7 +67,7 @@ T1, T2 and T3 are always the same three tools; every other tool takes the next s
 | T2 | Spiral O Metal 3.175 × 12 mm, one flute: roughing | 6000 rpm, 200 mm/min, ramp 300 mm/min, stepdown 0.3 mm |
 | T3 | the same end mill, a second one: finishing | as T2 |
 | T4 on, by first use | small end mills: Spiral O Metal 2.5, 2, 1.5 or 1 mm | 6000 rpm, 200 mm/min, stepdown 0.2 mm |
-| | other drills: tap drills and plain holes (0.7–4 mm) | as T1 |
+| | other drills: tap drills and plain holes (0.7–3.175 mm) | as T1 |
 | | Carvera thread mills, M2 to M4 | 15000 rpm; M2 100 mm/min, M2.5 150 mm/min, M3 and M4 200 mm/min |
 | | chamfering bit, 1/8″ shank | 6000 rpm, 200 mm/min |
 
@@ -107,7 +108,7 @@ The generator works in the part's design instead, and adds the fixture's bodies 
 
 Top setup:
 
-1. T1 drills the main entry hole (see "Entry holes"), through the stock.
+1. T1 drills the main entry hole through the stock, or in stages with the outline when the stock is deeper than T1 reaches (see "Entry holes").
 2. T2 faces the stock top down to 0.2 mm above the part's top face and cuts the outline down to the tab band, both entering through the main entry hole.
 3. T1 drills the other entry holes and pre-drills the holes the end mill will bore, each from where the end mill has left the stock: the corner-chain entries from the top of the tab band, the pocket entries and pre-drills from 0.2 mm above the face.
 4. T2 roughs the pockets, bores, through windows, and the outline between the tabs down through the band.
@@ -118,7 +119,7 @@ Top setup:
 9. T3 finishes the face, taking off the last 0.2 mm in one pass.
 10. The chamfering bit deburrs the edges of the top face.
 
-The bottom setup repeats steps 2–10 for the bottom-side features, with no main entry hole of its own (the top setup's goes through the stock) and no corner chains; its outline stops at the bottom of the tab band.
+The bottom setup repeats steps 2–10 for the bottom-side features, with no corner chains, and with no main entry hole of its own when the top setup's goes through the stock; its outline stops at the bottom of the tab band.
 
 A drill only cuts what the end mill cannot cut first: the main entry hole is drilled from the stock top because the first end mill cut enters through it, and every other hole waits until the end mill has cleared the stock above it.
 This saves wear on the drills, at the cost of two more tool changes in the top setup and one in the bottom.
@@ -142,6 +143,14 @@ It enters every cut through a hole the T1 drill (3.175 mm, the end mill's diamet
 - **A pocket open to the side** gets no hole: its entry sits just outside the opening, where the outline cut has already cleared the stock down to the pocket's floor, and the end mill enters sideways.
 
 The pockets use the `predrill` ramp with these points as their predrill positions, and the outline contours use the main entry as their entry position.
+
+T1 drills at most 6.9 mm (its 7.4 mm flute less 0.5 mm) into the material it starts in.
+A hole deeper than that goes down in stages with the cut that enters through it, as the lab does by hand (`eccosorb-clamp-6port`, Setup1): T1 drills as deep as it reaches, the end mill cuts down to there, T1 drills on from the milled floor, and so on.
+- The main entry and the outline's rough cut go down together; if T1 still cannot get through the stock once the outline reaches the tab band, the bottom setup drills its own main entry, staged with its outline.
+- The pocket entries and the pockets' rough cuts go down together in bands of 6.9 mm from the face; a pocket whose floor lies in a band is cut to its floor there.
+- A bore deeper than 6.9 mm, an M4 tap hole's included, is pre-drilled and rough-bored in stages at the bore.
+
+The finishing passes still cut each feature in one pass to full depth.
 
 ## Holding tabs
 
