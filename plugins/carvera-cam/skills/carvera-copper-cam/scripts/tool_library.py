@@ -1,12 +1,16 @@
-"""The lab's tool library, completed with the Makera tools that cut copper.
+"""The lab's tool library, completed with McMaster-Carr drills and the Makera
+tools that cut copper.
 
 assets/carvera-tools.json holds two kinds of tools:
   - the lab's own, exported from the Fusion library "Carvera Tools/My Tools"
     (carvera_cam.export_tools), each with the lab's "Copper 101-H02" preset;
-  - tools added from the Carvera Community's copies of Makera's tool
-    libraries, marked in their post-processor comment (ADDED). The lab has not
-    cut with these, so their Copper 101-H02 preset is derived from the lab's
-    presets for the same kind of tool (lab_preset), and says so.
+  - added tools, marked in their post-processor comment (ADDED): a drill of
+    each diameter of McMaster-Carr's expanded-shank carbide drills, the series
+    most lab drills come from (read from MCMASTER_DRILLS, a copy of the
+    catalogue's table), and the end mills, engravers and thread mills for
+    metal from the Carvera Community's copies of Makera's tool libraries. The lab has not cut with these, so their
+    Copper 101-H02 preset is derived from the lab's presets for the same kind
+    of tool (lab_preset), and says so.
 
 Run it with plain Python to fetch the community tool files again and rewrite
 the added tools:
@@ -15,6 +19,7 @@ the added tools:
 """
 
 import copy
+import csv
 import io
 import json
 import os
@@ -28,6 +33,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 TOOLS_FILE = os.path.join(os.path.dirname(HERE), 'assets', 'carvera-tools.json')
 COMMUNITY_TOOLS = ('https://raw.githubusercontent.com/Carvera-Community/Carvera_Community_Profiles/'
                    'main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files/')
+MCMASTER_DRILLS = os.path.join(os.path.dirname(HERE), 'assets', 'mcmaster-expanded-shank-carbide-drills.csv')
+MCMASTER_SERIES = ('6415N', '2841A', '2598N')  # TiN, uncoated, TiAlN
 PRESET = 'Copper 101-H02'
 ADDED = 'carvera-cam: added from '
 DERIVED = ('Derived by carvera-cam from the lab\'s Copper 101-H02 presets for this kind of '
@@ -35,11 +42,11 @@ DERIVED = ('Derived by carvera-cam from the lab\'s Copper 101-H02 presets for th
 
 # Makera's libraries, and which of their tools are made for metal. The others
 # (wood and plastic O-flutes and engravers, corn bits for PCB and carbon fibre,
-# the solder mask tool, lasers) do not cut copper.
+# the solder mask tool, lasers) do not cut copper. Makera's drills are left out:
+# the McMaster-Carr drills cover their diameters.
 COMMUNITY_PICKS = {
     'Makera O Flute Bits': lambda t: t['description'].startswith('Spiral O Metal'),
     'Makera Ball Endmills': lambda t: 'Metal' in t['description'],
-    'Makera Drill Bits': lambda t: True,
     'Makera Engraving Bits': lambda t: 'Metal' in t['description'],
     'Makera Thread Mills': lambda t: True,
     'Makera Other Tools': lambda t: t['description'].startswith('Chamfering Bit'),
@@ -165,12 +172,65 @@ def fetch_community():
     return out
 
 
-def complete(lab, community):
-    """The lab's tools, then the community tools for metal that the lab lacks."""
+def read_mcmaster(path=MCMASTER_DRILLS):
+    with open(path, encoding='utf-8', newline='') as f:
+        return list(csv.DictReader(f))
+
+
+def mcmaster_drills(lab, rows, templates):
+    """One drill per diameter of McMaster-Carr's expanded-shank carbide drills
+    (rows of MCMASTER_DRILLS), for the diameters the lab has no drill of.
+
+    The series comes coated (TiN, TiAlN) and uncoated, and the coatings of one
+    diameter differ in their maximum drilling depth. The drill takes the least
+    of those depths as its flute length, and the part number of the variant
+    with it, preferring the TiN series 6415N, which most lab drills are."""
+    have = [t['geometry']['DC'] for t in lab if t['type'] == 'drill']
+    by_d = {}
+    for r in rows:
+        by_d.setdefault(round(float(r['diameter_mm']), 4), []).append(r)
+    template = next(t for t in lab if t['description'] == TEMPLATES['drill'])
+    out = []
+    for d, variants in sorted(by_d.items()):
+        if any(abs(d - h) < 0.005 for h in have):
+            continue
+        r = min(variants, key=lambda r: (float(r['max_drilling_depth_mm']),
+                                         MCMASTER_SERIES.index(r['part'][:5])))
+        depth = round(float(r['max_drilling_depth_mm']), 1)
+        tip = 130 if r['point'] == 'four facet' else 118
+        t = copy.deepcopy(template)
+        desc = '%s*%smm Drill' % (_fmt(round(d, 3)), _fmt(depth))
+        if not r['size'].endswith(' mm'):  # an inch or wire-gauge size
+            desc += ' (%s)' % r['size']
+        g = t['geometry']
+        g.update({'DC': d, 'LCF': depth, 'shoulder-length': depth, 'SIG': tip, 'SFDM': 3.175,
+                  'OAL': round(float(r['overall_length_mm']))})
+        t['description'] = desc
+        t['guid'] = str(uuid.uuid5(uuid.NAMESPACE_URL, 'https://www.mcmaster.com/' + r['part']))
+        t['product-id'] = r['part']
+        t['product-link'] = 'https://www.mcmaster.com/%s/' % r['part']
+        e = t['expressions']
+        e.update({'tool_description': "'%s'" % desc.replace("'", "\\'"),
+                  'tool_diameter': '%s mm' % _fmt(d), 'tool_fluteLength': '%s mm' % _fmt(depth),
+                  'tool_shoulderLength': '%s mm' % _fmt(depth),
+                  'tool_tipAngle': '%d degrees' % tip, 'tool_productId': "'%s'" % r['part'],
+                  'tool_productLink': "'%s'" % t['product-link']})
+        others = sorted(v['part'] for v in variants if v is not r)
+        t['post-process']['comment'] = ADDED + 'McMaster-Carr "Expanded-Shank Carbide Drill Bits"' + (
+            ' (other coatings: %s)' % ', '.join(others) if others else '')
+        t['start-values'] = {'presets': []}
+        out.append(_with_preset(t, templates))
+    return out
+
+
+def complete(lab, community, mcmaster=()):
+    """The lab's tools, then the McMaster-Carr drills and the community tools for
+    metal that the lab lacks."""
     templates = _templates(lab)
     lab = [_with_preset(copy.deepcopy(t), templates) for t in lab]
     seen = {_key(t) for t in lab} | {_name(t) for t in lab}
-    added = []
+    added = mcmaster_drills(lab, mcmaster, templates)
+    seen |= {_key(t) for t in added} | {_name(t) for t in added}
     for name, tools in community.items():
         for t in tools:
             if not COMMUNITY_PICKS[name](t) or _key(t) in seen or _name(t) in seen:
@@ -210,7 +270,7 @@ def main():
     sys.stdout.reconfigure(encoding='utf-8')
     data = read()
     lab = [t for t in data['data'] if not is_added(t)]
-    data['data'] = complete(lab, fetch_community())
+    data['data'] = complete(lab, fetch_community(), read_mcmaster())
     write(data)
     added = [t for t in data['data'] if is_added(t)]
     print('%d lab tools, %d added:' % (len(lab), len(added)))

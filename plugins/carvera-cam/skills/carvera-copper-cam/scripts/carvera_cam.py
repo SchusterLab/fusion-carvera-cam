@@ -579,14 +579,14 @@ class Tools:
         return desc in self.by_desc
 
     def drills(self):
+        """(description, diameter, flute length, added) of each drill, by diameter."""
         out = []
         for d, t in self.by_desc.items():
             p = t.parameters
             if p.itemByName('tool_type').value.value == 'drill' and 'Spot' not in d:
                 out.append((d, mm(p.itemByName('tool_diameter').value.value),
-                            mm(p.itemByName('tool_fluteLength').value.value)))
-        # the lab's own drills before added ones of the same size
-        return sorted(out, key=lambda x: (x[1], x[0] in self.added))
+                            mm(p.itemByName('tool_fluteLength').value.value), d in self.added))
+        return sorted(out, key=lambda x: (x[1], x[3]))
 
     def get(self, desc, key=None):
         """Return (tool, preset) for a slot; `key` lets one tool fill two slots (T2/T3)."""
@@ -1764,7 +1764,9 @@ def _side_ops(b, setup, a, side, plan, warnings):
         match = [d for d in drills if h['dia'] - 0.02 <= d[1] <= h['dia'] + 0.05
                  and d[2] >= h['depth'] + 0.5]
         if match:
-            drilled.append((h, match[0][0]))
+            # a lab drill if one fits, else the added drill closest in diameter
+            best = min(match, key=lambda d: (d[3], d[3] and abs(d[1] - h['dia'])))
+            drilled.append((h, best[0]))
         elif h['dia'] > ENDMILL_D + 0.1:
             bored.append((h, (ENDMILL, 'rough'), (ENDMILL, 'finish')))
         else:

@@ -17,7 +17,7 @@ In Claude Code:
 
 The skill drives Fusion through the Fusion MCP server, so Claude Code needs that server connected, and Fusion must be running and signed in.
 
-- **Tools** come with the skill, in `assets/carvera-tools.json`: the lab's 29 tools and 53 of Makera's tools for metal, from the [Carvera Community tool files](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files), each with a `Copper 101-H02` feed preset (for Makera's tools, derived from the lab's presets).
+- **Tools** come with the skill, in `assets/carvera-tools.json`: the lab's 29 tools; 110 more drills from McMaster-Carr's [expanded-shank carbide drill bits](https://www.mcmaster.com/products/drill-bits/expanded-shank-carbide-drill-bits~~/), the series most lab drills come from; and 23 of Makera's end mills, engraving bits and thread mills for metal, from the [Carvera Community tool files](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files). Each has a `Copper 101-H02` feed preset; for the added tools it is derived from the lab's presets.
 - **The machine and post processor** are the latest Carvera 3-axis machine and `Carvera.cps` in the [Carvera Community profiles](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles), which the skill downloads. The first build uploads the machine's 3D model to a Fusion project named `carvera-cam` in your hub, so that simulation shows the machine.
 - **The fixture plate and vise** are Saunders Machine Works' published models of the Carvera fixture plate, the Gen3 hobby mod vise and its smooth insert bars, which the skill downloads from saundersmachineworks.com and assembles as the lab mounts them.
 
@@ -38,10 +38,11 @@ The skill lists every finding with its rule, from out-of-date toolpaths and cuts
 | `.../references/conventions.md` | the lab's CAM conventions the generator applies |
 | `.../references/rules.md` | the rules the toolpath check applies, with their thresholds and evidence |
 | `.../references/threads.toml` | how the lab pre-drills and thread-mills M2 to M4 tapped holes |
-| `.../assets/carvera-tools.json` | the tool library: the lab's tools exported from Fusion, and Makera's tools for metal |
+| `.../assets/carvera-tools.json` | the tool library: the lab's tools exported from Fusion, McMaster-Carr drills, and Makera's tools for metal |
+| `.../assets/mcmaster-expanded-shank-carbide-drills.csv` | McMaster-Carr's table of expanded-shank carbide drills, which the added drills are made from |
 | `.../scripts/carvera_cam.py` | the generator, run inside Fusion's Python: `analyze`, `build`, `generate`, `export_tools` |
 | `.../scripts/check_cam.py` | the toolpath check, run inside Fusion's Python: `check` |
-| `.../scripts/tool_library.py` | adds Makera's tools for metal to the tool library, with derived presets; run with plain Python |
+| `.../scripts/tool_library.py` | adds the McMaster-Carr drills and Makera's tools for metal to the tool library, with derived presets; run with plain Python |
 | `.../scripts/dump_cam.py` | dumps a project's existing CAM setups to JSON, for re-learning the conventions |
 | `.../scripts/make_test_part.py` | builds a test part with one of each feature, for testing changes |
 
