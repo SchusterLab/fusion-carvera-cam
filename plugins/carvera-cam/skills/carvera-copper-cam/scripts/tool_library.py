@@ -54,8 +54,9 @@ def copper_values(tool, makera_copper):
     Spiral O end mills run at 6000 rpm and 200 mm/min with 200 mm/min plunge,
     stepping down 0.3 mm (ramp 300 mm/min) from 3.175 mm diameter up and
     0.2 mm (ramp 200 mm/min) below; drills at 10000 rpm, plunge 50 mm/min,
-    retract 500 mm/min; thread mills at 15000 rpm and Makera's own copper feed
-    (M2 100, M2.5 150, M3 and M4 200 mm/min), 0.1 mm stepover; the chamfering
+    retract 500 mm/min; thread mills at 10000 rpm and 0.1 mm stepover, with
+    the rest of Makera's own Copper preset (feed M2 100, M2.5 150, M3 and
+    M4 200 mm/min; stepdown the thread's pitch); the chamfering
     bit at 6000 rpm and 200 mm/min, 0.1 mm steps.
     """
     kind = tool['type']
@@ -67,8 +68,8 @@ def copper_values(tool, makera_copper):
     if kind == 'drill':
         return {'n': 10000, 'v_f_plunge': 50, 'v_f_retract': 500}
     if kind == 'thread mill':
-        return {'n': 15000, 'v_f': makera_copper['v_f'], 'v_f_plunge': makera_copper['v_f'],
-                'v_f_ramp': 333.333333333333, 'stepover': 0.1, 'ramp-angle': 2}
+        keep = ('v_f', 'v_f_plunge', 'v_f_ramp', 'stepdown', 'ramp-angle')
+        return dict({k: makera_copper[k] for k in keep}, n=10000, stepover=0.1)
     if kind == 'chamfer mill':
         return {'n': 6000, 'v_f': 200, 'v_f_plunge': 200, 'v_f_ramp': 300,
                 'stepdown': 0.1, 'stepover': 0.1, 'ramp-angle': 2}

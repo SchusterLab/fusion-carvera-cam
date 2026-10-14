@@ -13469,19 +13469,20 @@
        "tool_feedPlunge": "100 mmpm",
        "tool_feedRamp": "333.333333 mmpm",
        "tool_rampAngle": "2 degrees",
-       "tool_spindleSpeed": "15000 rpm",
+       "tool_spindleSpeed": "10000 rpm",
+       "tool_stepdown": "0.4 mm",
        "tool_stepover": "0.1 mm"
       },
-      "f_n": 0.006666666666666667,
-      "f_z": 0.0022222222222222222,
+      "f_n": 0.01,
+      "f_z": 0.0033333333333333335,
       "guid": "8d78228e-12b8-511b-ade9-0dd33a22f08c",
       "material": {
        "category": "all",
        "query": "",
        "use-hardness": false
       },
-      "n": 15000,
-      "n_ramp": 15000,
+      "n": 10000,
+      "n_ramp": 10000,
       "name": "Copper 101-H02",
       "ramp-angle": 2,
       "stepdown": 0.4,
@@ -13489,12 +13490,12 @@
       "tool-coolant": "disabled",
       "use-stepdown": true,
       "use-stepover": true,
-      "v_c": 72.57079029792422,
+      "v_c": 48.38052686528282,
       "v_f": 100,
       "v_f_leadIn": 100,
       "v_f_leadOut": 100,
       "v_f_plunge": 100,
-      "v_f_ramp": 333.333333333333,
+      "v_f_ramp": 333.3333333333333,
       "v_f_transition": 100
      }
     ]
@@ -13607,19 +13608,20 @@
        "tool_feedPlunge": "150 mmpm",
        "tool_feedRamp": "333.333333 mmpm",
        "tool_rampAngle": "2 degrees",
-       "tool_spindleSpeed": "15000 rpm",
+       "tool_spindleSpeed": "10000 rpm",
+       "tool_stepdown": "0.45 mm",
        "tool_stepover": "0.1 mm"
       },
-      "f_n": 0.01,
-      "f_z": 0.0033333333333333335,
+      "f_n": 0.015,
+      "f_z": 0.005,
       "guid": "5edd6164-0dfa-5955-be73-b5f191d348a9",
       "material": {
        "category": "all",
        "query": "",
        "use-hardness": false
       },
-      "n": 15000,
-      "n_ramp": 15000,
+      "n": 10000,
+      "n_ramp": 10000,
       "name": "Copper 101-H02",
       "ramp-angle": 2,
       "stepdown": 0.45,
@@ -13627,12 +13629,12 @@
       "tool-coolant": "disabled",
       "use-stepdown": true,
       "use-stepover": true,
-      "v_c": 92.36282401553991,
+      "v_c": 61.575216010359945,
       "v_f": 150,
       "v_f_leadIn": 150,
       "v_f_leadOut": 150,
       "v_f_plunge": 150,
-      "v_f_ramp": 333.333333333333,
+      "v_f_ramp": 333.3333333333333,
       "v_f_transition": 150
      }
     ]
@@ -13745,19 +13747,20 @@
        "tool_feedPlunge": "200 mmpm",
        "tool_feedRamp": "333.333333 mmpm",
        "tool_rampAngle": "2 degrees",
-       "tool_spindleSpeed": "15000 rpm",
+       "tool_spindleSpeed": "10000 rpm",
+       "tool_stepdown": "0.5 mm",
        "tool_stepover": "0.1 mm"
       },
-      "f_n": 0.013333333333333334,
-      "f_z": 0.0044444444444444444,
+      "f_n": 0.02,
+      "f_z": 0.006666666666666667,
       "guid": "3f8a349d-f0b1-57b1-b836-592b8ff128ab",
       "material": {
        "category": "all",
        "query": "",
        "use-hardness": false
       },
-      "n": 15000,
-      "n_ramp": 15000,
+      "n": 10000,
+      "n_ramp": 10000,
       "name": "Copper 101-H02",
       "ramp-angle": 2,
       "stepdown": 0.5,
@@ -13765,12 +13768,12 @@
       "tool-coolant": "disabled",
       "use-stepdown": true,
       "use-stepover": true,
-      "v_c": 114.03981332530948,
+      "v_c": 76.02654221687298,
       "v_f": 200,
       "v_f_leadIn": 200,
       "v_f_leadOut": 200,
       "v_f_plunge": 200,
-      "v_f_ramp": 333.333333333333,
+      "v_f_ramp": 333.3333333333333,
       "v_f_transition": 200
      }
     ]
@@ -13883,19 +13886,20 @@
        "tool_feedPlunge": "200 mmpm",
        "tool_feedRamp": "333.333333 mmpm",
        "tool_rampAngle": "2 degrees",
-       "tool_spindleSpeed": "15000 rpm",
+       "tool_spindleSpeed": "10000 rpm",
+       "tool_stepdown": "0.7 mm",
        "tool_stepover": "0.1 mm"
       },
-      "f_n": 0.013333333333333334,
-      "f_z": 0.0044444444444444444,
+      "f_n": 0.02,
+      "f_z": 0.006666666666666667,
       "guid": "b12b6a64-440e-5e00-a975-3016160b4f02",
       "material": {
        "category": "all",
        "query": "",
        "use-hardness": false
       },
-      "n": 15000,
-      "n_ramp": 15000,
+      "n": 10000,
+      "n_ramp": 10000,
       "name": "Copper 101-H02",
       "ramp-angle": 2,
       "stepdown": 0.7,
@@ -13903,12 +13907,12 @@
       "tool-coolant": "disabled",
       "use-stepdown": true,
       "use-stepover": true,
-      "v_c": 148.44025288211773,
+      "v_c": 98.96016858807847,
       "v_f": 200,
       "v_f_leadIn": 200,
       "v_f_leadOut": 200,
       "v_f_plunge": 200,
-      "v_f_ramp": 333.333333333333,
+      "v_f_ramp": 333.3333333333333,
       "v_f_transition": 200
      }
     ]

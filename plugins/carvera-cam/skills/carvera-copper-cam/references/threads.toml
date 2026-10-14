@@ -12,7 +12,7 @@
 # tool's "Copper 101-H02" preset, not from here:
 #   drills          10000 rpm, plunge 50 mm/min, retract 500 mm/min
 #   end mill        6000 rpm, 200 mm/min
-#   thread mills    15000 rpm; M2 100, M2.5 150, M3 200, M4 200 mm/min
+#   thread mills    10000 rpm; M2 100, M2.5 150, M3 200, M4 200 mm/min
 #
 # Sources (Fusion projects; the newest settings win where they differ):
 #   M2    2026-01-06_smpm-sample-package-6port: sample pucks, lids, hangers,
