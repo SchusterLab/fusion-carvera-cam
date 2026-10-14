@@ -10,7 +10,7 @@
 # Each hole is pre-drilled slightly oversize (M4: drilled, then bored to size
 # with the end mill), then thread-milled. Feeds and speeds come from each
 # tool's "Copper 101-H02" preset, not from here:
-#   drills          10000 rpm, plunge 50 mm/min
+#   drills          10000 rpm, plunge 50 mm/min, retract 500 mm/min
 #   end mill        6000 rpm, 200 mm/min
 #   thread mills    15000 rpm; M2 100, M2.5 150, M3 200, M4 200 mm/min
 #
@@ -29,7 +29,8 @@
 [drill]
 # Fusion's "chip breaking - partial retract" cycle
 cycle = "chip-breaking"
-peck = 2.0                # incremental depth per peck
+peck = 0.1                # pecking depth
+accumulated_peck = 1.0    # accumulated pecking depth, after which the drill retracts fully
 chip_break = 0.1          # retract between pecks
 # Through holes: the tip goes 0.5 mm past the bottom. Blind holes stop at the
 # hole bottom.
@@ -89,7 +90,7 @@ stepover = "tool"
 # 3.175 mm end mill bores it to size before thread milling.
 pitch = 0.7
 modelled_hole = 3.332
-drill = "3.175*7.4mm Drill"
+drill = "3.175*7.4mm Drill (1/8\")"
 thread_mill = "Carvera M4 Threadmill"
 pitch_diameter_offset = 0.8
 

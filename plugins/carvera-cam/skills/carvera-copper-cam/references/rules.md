@@ -104,7 +104,7 @@ A tool's stick-out is its length below the holder, Fusion's body length: 28 mm f
 
 | Id | Finding when | Severity | Evidence | Guards against |
 |---|---|---|---|---|
-| K1 | a drill does not peck, or pecks deeper than 2 mm | warning | all 218 drill operations break chips every 2 mm | chips packing in the hole and breaking the drill |
+| K1 | a drill's cycle is not chip breaking (partial retract), its pecking depth is over 0.1 mm, or its accumulated pecking depth, after which it retracts fully, is over 1 mm | warning | all 224 drill operations chip-break; 222 peck 0.1 mm, and 193 retract fully every 1 mm, the rest at Fusion's default of 2.5 × the diameter | chips packing in the hole and breaking the drill |
 | TH1 | a thread mill cuts conventional rather than climb | warning | all 27 thread operations climb | thread mill wear |
 | TH2 | a thread mill (error), or a bore or circular cut (warning), runs with no drill before it in its setup | as given | every thread and all 72 bores follow a drill in their setup | the tool cutting a hole into solid copper |
 

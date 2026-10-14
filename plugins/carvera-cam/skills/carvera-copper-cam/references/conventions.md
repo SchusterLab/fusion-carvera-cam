@@ -9,7 +9,7 @@ They come from the lab's own Fusion setups: about 40 setups and 530 operations i
 |---|---|---|
 | Machine | Makera Carvera 3-axis Community Version, latest | [Carvera Community profiles](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles), `main` branch |
 | Post processor | Makera Carvera Community Post (`Carvera.cps`), latest | the same folder |
-| Tools | the lab's 29 tools, 113 more McMaster-Carr drills and 23 of Makera's tools for metal | [`assets/carvera-tools.json`](../assets/carvera-tools.json): the lab's exported from the Fusion library `Carvera Tools/My Tools`, the drills from McMaster-Carr's table of [expanded-shank carbide drill bits](https://www.mcmaster.com/products/drill-bits/expanded-shank-carbide-drill-bits~~/) (copied to [`assets/mcmaster-expanded-shank-carbide-drills.csv`](../assets/mcmaster-expanded-shank-carbide-drills.csv)), Makera's from the [community tool files](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files) |
+| Tools | the lab's 29 tools, 111 more McMaster-Carr drills and 23 of Makera's tools for metal | [`assets/carvera-tools.json`](../assets/carvera-tools.json): the lab's exported from the Fusion library `Carvera Tools/My Tools`, the drills from McMaster-Carr's table of [expanded-shank carbide drill bits](https://www.mcmaster.com/products/drill-bits/expanded-shank-carbide-drill-bits~~/) (copied to [`assets/mcmaster-expanded-shank-carbide-drills.csv`](../assets/mcmaster-expanded-shank-carbide-drills.csv)), Makera's from the [community tool files](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files) |
 
 `build` downloads the machine and post again whenever they change upstream, and keeps them in `%LOCALAPPDATA%\carvera-cam\community`; without network it uses the copies there.
 The community machine's 3D model links to a file in its author's Fusion account, which no one else can open, so `build` uploads the machine's `.f3d` once per upstream version to a Fusion project named `carvera-cam` in the user's hub and links the machine to that copy.
@@ -23,14 +23,18 @@ Before uploading the upstream model, `build` makes the same three changes to it 
 Every tool in `My Tools` has a feed preset named **Copper 101-H02** (C10100 oxygen-free copper, H02 half-hard temper), and the lab uses it for everything.
 Aluminum (6063-T5) runs the same programs at 200% feed and spindle override on the Carvera, so there is one set of toolpaths per part.
 No coolant.
-After changing `My Tools` in Fusion, run `export_tools({})` from `carvera_cam.py` to rewrite the lab's tools in `assets/carvera-tools.json`, and commit it.
+Every drill's preset, the spot drills and the drills from other series included, is the same: 10000 rpm, plunge 50 mm/min and retract 500 mm/min.
+A preset cannot hold the drilling cycle, so `build` sets it in each drill operation (see "Operation parameters").
+After changing `My Tools` in Fusion, run `export_tools({})` from `carvera_cam.py` to rewrite the lab's tools in `assets/carvera-tools.json`, and commit it; the export rebuilds the McMaster-Carr drills and resets the drill presets as `tool_library.py` does.
 
 The library also holds tools the lab lacks: drills from McMaster-Carr, and tools from Makera.
 
 Most of the lab's drills are McMaster-Carr's expanded-shank carbide drills, which have a 1/8″ (3.175 mm) shank for the Carvera's collet whatever their diameter.
-The series comes coated with TiN (part numbers 6415N…) or TiAlN (2598N…) or uncoated (2841A…), and every diameter comes uncoated, so the library adds only uncoated drills: 113 of them, from 0.152 mm (0.006″) to 3.175 mm, in metric, fractional-inch and wire-gauge sizes.
-Each has its maximum drilling depth as its flute length, for example `1.613*9.7mm Drill (No. 52)`, and a 130° point, whether the catalogue calls the point four-facet or standard (checked on product pages).
-The library skips an uncoated drill when the lab already has one of the same diameter and depth in another coating, such as `2*9.1mm Drill`; the lab's own drills keep their coatings.
+The library builds each drill of that series from its row in McMaster-Carr's table: the diameter, the maximum drilling depth as its flute length, a 38 mm overall length, the shank's taper from the drill's diameter up to 3.175 mm, and a name such as `1.613*9.7mm Drill (No. 52)`.
+The drills have a 130° point, whether the catalogue calls it four-facet or standard (checked on product pages).
+The lab's own drills of the series, 11 of them in TiN or uncoated, are rebuilt this way too, so `3.175*7.4mm Drill` is now `3.175*7.4mm Drill (1/8")`, and `3.0*7.6mm Drill` and `2.1*9.0mm Drill` lose their trailing zeros.
+The series also comes in TiN (part numbers 6415N…) and TiAlN (2598N…), but every diameter comes uncoated (2841A…), so the library adds only uncoated drills: 111 of them, from 0.152 mm (0.006″) to 3.175 mm, in metric, fractional-inch and wire-gauge sizes.
+It skips an uncoated drill that would have the same name as a lab drill in another coating, such as `2*9.1mm Drill`.
 
 The 23 tools from Makera are its tools for metal: Spiral O end mills of 4 and 6 mm, ball end mills of 1 to 6 mm, engraving bits, and thread mills for M1, M5, M6 and M8.
 Makera's drills are left out, because the McMaster-Carr drills cover their diameters.
@@ -40,7 +44,7 @@ So each added tool, from either source, gets a Copper 101-H02 preset made by the
 | Kind | Copper 101-H02, as in the lab's own presets |
 |---|---|
 | end mills, flat or ball | 6000 rpm, 200 mm/min, plunge 200 mm/min; stepdown 0.3 mm and ramp 300 mm/min from 3.175 mm diameter up, 0.2 mm and 200 mm/min below |
-| drills | 10000 rpm, plunge 50 mm/min |
+| drills | 10000 rpm, plunge 50 mm/min, retract 500 mm/min |
 | thread mills | 15000 rpm, and Makera's copper feed: M1 50 mm/min, M5 to M8 200 mm/min |
 | engraving bits | as the chamfering bit: 6000 rpm, 200 mm/min, 0.1 mm steps |
 
@@ -58,11 +62,11 @@ T1, T2 and T3 are always the same three tools; every other tool takes the next s
 
 | Slot | Tool | Copper 101-H02 preset |
 |---|---|---|
-| T1 | 3.175 × 7.4 mm drill (McMaster 6415N117) | 10000 rpm, plunge 50 mm/min |
+| T1 | 3.175 × 7.4 mm drill (McMaster 6415N117) | 10000 rpm, plunge 50 mm/min, retract 500 mm/min |
 | T2 | Spiral O Metal 3.175 × 12 mm, one flute: roughing | 6000 rpm, 200 mm/min, ramp 300 mm/min, stepdown 0.3 mm |
 | T3 | the same end mill, a second one: finishing | as T2 |
 | T4 on, by first use | small end mills: Spiral O Metal 2.5, 2, 1.5 or 1 mm | 6000 rpm, 200 mm/min, stepdown 0.2 mm |
-| | other drills: tap drills and plain holes (0.7–4 mm) | 10000 rpm, plunge 50 mm/min |
+| | other drills: tap drills and plain holes (0.7–4 mm) | as T1 |
 | | Carvera thread mills, M2 to M4 | 15000 rpm; M2 100 mm/min, M2.5 150 mm/min, M3 and M4 200 mm/min |
 | | chamfering bit, 1/8″ shank | 6000 rpm, 200 mm/min |
 
@@ -162,7 +166,7 @@ Feeds, speeds and stepdowns come from the tool preset; the operations set only t
 |---|---|
 | 2D pocket | tolerance 0.1 mm, stepover 0.6 × tool diameter, compensation left, no stock to leave, `predrill` ramp at the entry holes; floors selected as pocket faces, shelves as the closed opening above them (one counter-clockwise chain per opening); the facing pocket starts at the stock top, and its roughing pass leaves 0.2 mm on the face (axial stock to leave 0.2 mm, radial 0) |
 | 2D contour | tolerance 0.01 mm, compensation left, two finishing stepovers, no ramp, no stock to leave |
-| Drill | chip-breaking cycle, 2 mm pecks, 0.1 mm chip break; through holes break through 0.5 mm with the drill tip past the bottom |
+| Drill | chip breaking - partial retract cycle, 0.1 mm pecking depth, 1 mm accumulated pecking depth, 0.1 mm chip break; through holes break through 0.5 mm with the drill tip past the bottom |
 | Bore | climb, tolerance 0.01 mm, stepover 0.3 mm with enough passes to reach the wall; through holes go 0.5 mm past the bottom |
 | Thread | per thread size, from [threads.toml](threads.toml); the top offset there is from the finished face, and 0.2 mm is added while the face still carries its finishing allowance |
 | 2D chamfer | 0.1 mm chamfer width, 0.5 mm tip offset, 0.1 mm clearance, lead-in and lead-out |

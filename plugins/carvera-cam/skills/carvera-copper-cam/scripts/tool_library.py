@@ -4,6 +4,9 @@ tools that cut copper.
 assets/carvera-tools.json holds two kinds of tools:
   - the lab's own, exported from the Fusion library "Carvera Tools/My Tools"
     (carvera_cam.export_tools), each with the lab's "Copper 101-H02" preset;
+    its drills from McMaster-Carr's expanded-shank series are rebuilt from the
+    catalogue's table as the added ones are (lab_drills), and every drill's
+    preset follows the lab's drill rule;
   - added tools, marked in their post-processor comment (ADDED): a drill of
     each uncoated diameter of McMaster-Carr's expanded-shank carbide drills, the
     series most lab drills come from (read from MCMASTER_DRILLS, a copy of the
@@ -55,7 +58,7 @@ COMMUNITY_PICKS = {
 TEMPLATES = {
     'flat end mill': 'Spiral O Metal 3.175*12mm',
     'ball end mill': 'Spiral O Metal 3.175*12mm',
-    'drill': '3.175*7.4mm Drill',
+    'drill': '3.175*7.4mm Drill',  # 6415N117, '3.175*7.4mm Drill (1/8")' once rebuilt
     'thread mill': 'Carvera M3 Threadmill',
     'chamfer mill': 'Chamfering Bit - 1/8',  # the lab's name has a garbled inch sign
 }
@@ -95,7 +98,7 @@ def _fmt(v):
     return ('%.6f' % v).rstrip('0').rstrip('.')
 
 
-def make_preset(tool, template, values):
+def make_preset(tool, template, values, description=DERIVED):
     """A Copper 101-H02 preset for `tool`: the template preset with `values`."""
     p = copy.deepcopy(template)
     p.update(values)
@@ -109,7 +112,7 @@ def make_preset(tool, template, values):
         p['n_ramp'] = n
     p['v_c'] = 3.141592653589793 * d * n / 1000
     p['name'] = PRESET
-    p['description'] = DERIVED
+    p['description'] = description
     p['guid'] = str(uuid.uuid5(uuid.NAMESPACE_URL, tool['guid'] + '/' + PRESET))
     e = p.setdefault('expressions', {})
     names = {'n': ('tool_spindleSpeed', '%s rpm'), 'v_f': ('tool_feedCutting', '%s mmpm'),
@@ -176,50 +179,90 @@ def read_mcmaster(path=MCMASTER_DRILLS):
         return list(csv.DictReader(f))
 
 
+def _drill_template(lab):
+    return next(t for t in lab if t['type'] == 'drill' and t['description'].startswith(TEMPLATES['drill']))
+
+
+def lab_drills(lab, rows, templates):
+    """The lab's tools with each of its McMaster-Carr expanded-shank carbide drills
+    rebuilt from its row of MCMASTER_DRILLS (as mcmaster_drills builds them), and
+    every drill's Copper 101-H02 preset set to the lab's drill rule (lab_preset)."""
+    by_part = {r['part']: r for r in rows}
+    template = _drill_template(lab)
+    out = []
+    for t in lab:
+        if t['type'] != 'drill':
+            out.append(t)
+            continue
+        presets = t.get('start-values', {}).get('presets', [])
+        old = next((p for p in presets if p['name'] == PRESET), templates['drill'])
+        r = by_part.get(t.get('product-id'))
+        if r:
+            post = t['post-process']
+            t = _mcmaster_drill(r, template)
+            t['post-process'] = copy.deepcopy(post)
+        else:
+            t = copy.deepcopy(t)
+        presets = [p for p in presets if p['name'] != PRESET]
+        p = make_preset(t, old, lab_preset(t, None), old.get('description', ''))
+        p['guid'] = old['guid']
+        t['start-values'] = {'presets': [p] + presets}
+        out.append(t)
+    return out
+
+
 def mcmaster_drills(lab, rows, templates):
     """A drill for each of McMaster-Carr's uncoated expanded-shank carbide drills
     (rows of MCMASTER_DRILLS) that is not already a lab drill, with its maximum
     drilling depth as its flute length. The TiN and TiAlN drills are left out."""
     have = {t.get('product-id') for t in lab if t['type'] == 'drill'}
     names = {t['description'] for t in lab}
-    template = next(t for t in lab if t['description'] == TEMPLATES['drill'])
+    template = _drill_template(lab)
     out = []
     for r in sorted(rows, key=lambda r: float(r['diameter_mm'])):
         if r['coating'] != 'uncoated' or r['part'] in have:
             continue
-        d = round(float(r['diameter_mm']), 4)
-        depth = round(float(r['max_drilling_depth_mm']), 1)
-        tip = int(r['point_angle_deg'])
-        t = copy.deepcopy(template)
-        desc = '%s*%smm Drill' % (_fmt(round(d, 3)), _fmt(depth))
-        if not r['size'].endswith(' mm'):  # an inch or wire-gauge size
-            desc += ' (%s)' % r['size']
-        if desc in names:  # a lab drill of the same size, in another coating
+        t = _mcmaster_drill(r, template)
+        if t['description'] in names:  # a lab drill of the same size, in another coating
             continue
-        g = t['geometry']
-        g.update({'DC': d, 'LCF': depth, 'shoulder-length': depth, 'SIG': tip, 'SFDM': 3.175,
-                  'OAL': round(float(r['overall_length_mm']))})
-        t['description'] = desc
-        t['guid'] = str(uuid.uuid5(uuid.NAMESPACE_URL, 'https://www.mcmaster.com/' + r['part']))
-        t['product-id'] = r['part']
-        t['product-link'] = 'https://www.mcmaster.com/%s/' % r['part']
-        e = t['expressions']
-        e.update({'tool_description': "'%s'" % desc.replace("'", "\\'"),
-                  'tool_diameter': '%s mm' % _fmt(d), 'tool_fluteLength': '%s mm' % _fmt(depth),
-                  'tool_shoulderLength': '%s mm' % _fmt(depth),
-                  'tool_tipAngle': '%d degrees' % tip, 'tool_productId': "'%s'" % r['part'],
-                  'tool_productLink': "'%s'" % t['product-link']})
         t['post-process']['comment'] = ADDED + 'McMaster-Carr "Expanded-Shank Carbide Drill Bits"'
         t['start-values'] = {'presets': []}
         out.append(_with_preset(t, templates))
     return out
 
 
+def _mcmaster_drill(r, template):
+    """The drill of one row of MCMASTER_DRILLS, made from the lab drill `template`."""
+    d = round(float(r['diameter_mm']), 4)
+    depth = round(float(r['max_drilling_depth_mm']), 1)
+    tip = int(r['point_angle_deg'])
+    t = copy.deepcopy(template)
+    desc = '%s*%smm Drill' % (_fmt(round(d, 3)), _fmt(depth))
+    if not r['size'].endswith(' mm'):  # an inch or wire-gauge size
+        desc += ' (%s)' % r['size']
+    g = t['geometry']
+    g.update({'DC': d, 'LCF': depth, 'shoulder-length': depth, 'SIG': tip, 'SFDM': 3.175,
+              'OAL': round(float(r['overall_length_mm']))})
+    for seg in t.get('shaft', {}).get('segments', []):  # the taper up to the shank
+        seg['lower-diameter'] = d
+    t['description'] = desc
+    t['guid'] = str(uuid.uuid5(uuid.NAMESPACE_URL, 'https://www.mcmaster.com/' + r['part']))
+    t['product-id'] = r['part']
+    t['product-link'] = 'https://www.mcmaster.com/%s/' % r['part']
+    e = t['expressions']
+    e.update({'tool_description': "'%s'" % desc.replace("'", "\\'"),
+              'tool_diameter': '%s mm' % _fmt(d), 'tool_fluteLength': '%s mm' % _fmt(depth),
+              'tool_shoulderLength': '%s mm' % _fmt(depth),
+              'tool_tipAngle': '%d degrees' % tip, 'tool_productId': "'%s'" % r['part'],
+              'tool_productLink': "'%s'" % t['product-link']})
+    return t
+
+
 def complete(lab, community, mcmaster=()):
     """The lab's tools, then the McMaster-Carr drills and the community tools for
     metal that the lab lacks."""
     templates = _templates(lab)
-    lab = [_with_preset(copy.deepcopy(t), templates) for t in lab]
+    lab = [_with_preset(copy.deepcopy(t), templates) for t in lab_drills(lab, mcmaster, templates)]
     seen = {_key(t) for t in lab} | {_name(t) for t in lab}
     added = mcmaster_drills(lab, mcmaster, templates)
     seen |= {_key(t) for t in added} | {_name(t) for t in added}
@@ -239,10 +282,11 @@ def complete(lab, community, mcmaster=()):
 
 
 def merge(lab, current):
-    """After an export from Fusion: the lab's tools, plus the added tools already in
-    the library that do not duplicate one of them."""
+    """After an export from Fusion: the lab's tools, its drills rebuilt as
+    lab_drills does, plus the added tools already in the library that do not
+    duplicate one of them."""
     templates = _templates(lab)
-    lab = [_with_preset(copy.deepcopy(t), templates) for t in lab]
+    lab = [_with_preset(copy.deepcopy(t), templates) for t in lab_drills(lab, read_mcmaster(), templates)]
     seen = {_key(t) for t in lab} | {_name(t) for t in lab}
     return lab + [t for t in current if is_added(t) and _key(t) not in seen and _name(t) not in seen]
 

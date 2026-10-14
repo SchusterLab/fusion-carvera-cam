@@ -581,7 +581,7 @@
     "NT": 1,
     "OAL": 38,
     "RE": 0,
-    "SFDM": 6.5,
+    "SFDM": 3.175,
     "SIG": 130,
     "TP": 0,
     "assemblyGaugeLength": 26.5,
@@ -591,7 +591,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "b15d5c19-9954-4a48-a4c0-56b2bf86ab00",
+   "guid": "130e6b3a-bb48-5f97-afe0-4c5b3ac51c60",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -637,7 +637,8 @@
       "description": "",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm"
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
       "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
@@ -690,7 +691,7 @@
     "NT": 1,
     "OAL": 38,
     "RE": 0,
-    "SFDM": 6.5,
+    "SFDM": 3.175,
     "SIG": 130,
     "TP": 0,
     "assemblyGaugeLength": 26.5,
@@ -700,7 +701,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "9d9c9f1e-a2e9-4949-b02e-3a0dcef32d24",
+   "guid": "ddcad238-19f5-5fc0-8848-3e99c703fc14",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -746,7 +747,8 @@
       "description": "",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm"
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
       "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
@@ -799,7 +801,7 @@
     "NT": 1,
     "OAL": 38,
     "RE": 0,
-    "SFDM": 6.5,
+    "SFDM": 3.175,
     "SIG": 130,
     "TP": 0,
     "assemblyGaugeLength": 26.5,
@@ -809,7 +811,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "041d9e35-da80-453e-8e42-69264c86783f",
+   "guid": "d3d4cd58-a503-5999-bef4-dc31a5acc931",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -855,7 +857,8 @@
       "description": "",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm"
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
       "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
@@ -868,7 +871,7 @@
       "name": "Copper 101-H02",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
-      "v_c": 69.11503837897544,
+      "v_c": 69.11503837897546,
       "v_f": 0,
       "v_f_leadIn": 0,
       "v_f_leadOut": 0,
@@ -1293,7 +1296,7 @@
     "NT": 1,
     "OAL": 38,
     "RE": 0,
-    "SFDM": 6.5,
+    "SFDM": 3.175,
     "SIG": 130,
     "TP": 0,
     "assemblyGaugeLength": 26.5,
@@ -1303,7 +1306,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "db6f6646-e633-4c88-89fe-2d2367164491",
+   "guid": "e63e1dfc-1ff7-5a42-8012-2747ed05547f",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -1349,7 +1352,8 @@
       "description": "",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm"
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
       "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
@@ -1986,7 +1990,8 @@
       "description": "",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm"
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
       "guid": "6c6979c3-460d-84f0-6bb9-0bb7ec2c1292",
@@ -2156,9 +2161,9 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "2.1*9.0mm Drill",
+   "description": "2.1*9mm Drill",
    "expressions": {
-    "tool_description": "'2.1*9.0mm Drill'",
+    "tool_description": "'2.1*9mm Drill'",
     "tool_diameter": "2.1 mm",
     "tool_fluteLength": "9 mm",
     "tool_number": "0",
@@ -2173,22 +2178,22 @@
     "DC": 2.1,
     "HAND": true,
     "LB": 26,
-    "LCF": 9,
+    "LCF": 9.0,
     "NOF": 2,
     "NT": 1,
     "OAL": 38,
     "RE": 0,
-    "SFDM": 6.5,
+    "SFDM": 3.175,
     "SIG": 130,
     "TP": 0,
     "assemblyGaugeLength": 26.5,
-    "shoulder-length": 9,
+    "shoulder-length": 9.0,
     "thread-profile-angle": 60,
     "tip-diameter": 0,
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "030f546e-c083-45f0-88f5-08ffece793b3",
+   "guid": "4489913b-8e5c-5e48-8820-2368ed695ee3",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -2234,7 +2239,8 @@
       "description": "",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm"
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
       "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
@@ -2279,7 +2285,7 @@
    },
    "geometry": {
     "CSP": false,
-    "DC": 2,
+    "DC": 2.0,
     "HAND": true,
     "LB": 26,
     "LCF": 9.1,
@@ -2287,7 +2293,7 @@
     "NT": 1,
     "OAL": 38,
     "RE": 0,
-    "SFDM": 6.5,
+    "SFDM": 3.175,
     "SIG": 130,
     "TP": 0,
     "assemblyGaugeLength": 26.5,
@@ -2297,7 +2303,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "6eab8272-0018-44a0-80a2-c00862b5341b",
+   "guid": "0fef5422-7e5f-58e3-9912-6e0b42268ced",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -2331,7 +2337,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 2,
+      "lower-diameter": 2.0,
       "upper-diameter": 3.175
      }
     ],
@@ -2343,7 +2349,8 @@
       "description": "",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm"
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
       "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
@@ -2374,9 +2381,9 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "3.175*7.4mm Drill",
+   "description": "3.175*7.4mm Drill (1/8\")",
    "expressions": {
-    "tool_description": "'3.175*7.4mm Drill'",
+    "tool_description": "'3.175*7.4mm Drill (1/8\")'",
     "tool_diameter": "3.175 mm",
     "tool_fluteLength": "7.4 mm",
     "tool_number": "0",
@@ -2396,7 +2403,7 @@
     "NT": 1,
     "OAL": 38,
     "RE": 0,
-    "SFDM": 6.5,
+    "SFDM": 3.175,
     "SIG": 130,
     "TP": 0,
     "assemblyGaugeLength": 26.5,
@@ -2406,7 +2413,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "598a657a-fd9f-466e-b1d0-63b0c179863a",
+   "guid": "d8e4b44c-d377-5f34-9213-69014b0fc59d",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -2452,7 +2459,8 @@
       "description": "",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm"
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
       "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
@@ -2486,6 +2494,7 @@
    "description": "2.5*8.4mm Drill",
    "expressions": {
     "tool_description": "'2.5*8.4mm Drill'",
+    "tool_diameter": "2.5 mm",
     "tool_fluteLength": "8.4 mm",
     "tool_number": "0",
     "tool_productId": "'2841A137'",
@@ -2504,7 +2513,7 @@
     "NT": 1,
     "OAL": 38,
     "RE": 0,
-    "SFDM": 6.5,
+    "SFDM": 3.175,
     "SIG": 130,
     "TP": 0,
     "assemblyGaugeLength": 26.5,
@@ -2514,7 +2523,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "2275c68d-a9ff-4790-aa58-1bb548fe208f",
+   "guid": "f39f15bb-0b50-5973-8cf8-29fbf8cddc61",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -2560,7 +2569,8 @@
       "description": "",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm"
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
       "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
@@ -2905,10 +2915,10 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
-   "description": "3.0*7.6mm Drill",
+   "description": "3*7.6mm Drill",
    "expressions": {
-    "tool_description": "'3.0*7.6mm Drill'",
-    "tool_diameter": "3.0 mm",
+    "tool_description": "'3*7.6mm Drill'",
+    "tool_diameter": "3 mm",
     "tool_fluteLength": "7.6 mm",
     "tool_number": "0",
     "tool_productId": "'2841A138'",
@@ -2919,7 +2929,7 @@
    },
    "geometry": {
     "CSP": false,
-    "DC": 3,
+    "DC": 3.0,
     "HAND": true,
     "LB": 26,
     "LCF": 7.6,
@@ -2927,7 +2937,7 @@
     "NT": 1,
     "OAL": 38,
     "RE": 0,
-    "SFDM": 6.5,
+    "SFDM": 3.175,
     "SIG": 130,
     "TP": 0,
     "assemblyGaugeLength": 26.5,
@@ -2937,7 +2947,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "2def14a9-6594-4068-86b7-6e956a11acd3",
+   "guid": "c5b94789-ad7f-5e47-b1c3-b2da00f5c74a",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -2971,7 +2981,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3,
+      "lower-diameter": 3.0,
       "upper-diameter": 3.175
      }
     ],
@@ -2983,7 +2993,8 @@
       "description": "",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm"
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
       "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
@@ -3203,7 +3214,7 @@
     "NT": 1,
     "OAL": 38,
     "RE": 0,
-    "SFDM": 6.5,
+    "SFDM": 3.175,
     "SIG": 130,
     "TP": 0,
     "assemblyGaugeLength": 26.5,
@@ -3213,7 +3224,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "9ee611cc-3d1d-4349-afa7-d114b2479b0a",
+   "guid": "2df77e6e-d00f-5a4f-9a2c-a1419ae16926",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -3259,7 +3270,8 @@
       "description": "",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm"
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
       "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
@@ -3312,7 +3324,7 @@
     "NT": 1,
     "OAL": 38,
     "RE": 0,
-    "SFDM": 6.5,
+    "SFDM": 3.175,
     "SIG": 130,
     "TP": 0,
     "assemblyGaugeLength": 26.5,
@@ -3322,7 +3334,7 @@
     "tip-length": 0,
     "tip-offset": 0
    },
-   "guid": "6d92bede-370d-47d3-9871-6585bbfaaff0",
+   "guid": "3a0486f3-86e5-5c81-8843-1c8aab5ab192",
    "holder": {
     "description": "Carvera ToolHolder",
     "gaugeLength": 0.5,
@@ -3368,7 +3380,8 @@
       "description": "",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm"
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
       "guid": "1e77d42d-4792-a0ab-b1aa-85baac608c1a",
@@ -3476,7 +3489,8 @@
       "description": "",
       "expressions": {
        "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm"
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
       },
       "f_z": 0,
       "guid": "6c6979c3-460d-84f0-6bb9-0bb7ec2c1292",
@@ -8104,7 +8118,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.1524,
       "upper-diameter": 3.175
      }
     ],
@@ -8214,7 +8228,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.1778,
       "upper-diameter": 3.175
      }
     ],
@@ -8324,7 +8338,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.2,
       "upper-diameter": 3.175
      }
     ],
@@ -8434,7 +8448,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.2032,
       "upper-diameter": 3.175
      }
     ],
@@ -8544,7 +8558,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.2286,
       "upper-diameter": 3.175
      }
     ],
@@ -8654,7 +8668,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.25,
       "upper-diameter": 3.175
      }
     ],
@@ -8764,7 +8778,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.3,
       "upper-diameter": 3.175
      }
     ],
@@ -8874,7 +8888,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.3429,
       "upper-diameter": 3.175
      }
     ],
@@ -8984,7 +8998,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.35,
       "upper-diameter": 3.175
      }
     ],
@@ -9094,7 +9108,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.3683,
       "upper-diameter": 3.175
      }
     ],
@@ -9204,7 +9218,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.3962,
       "upper-diameter": 3.175
      }
     ],
@@ -9314,7 +9328,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.4,
       "upper-diameter": 3.175
      }
     ],
@@ -9424,7 +9438,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.4064,
       "upper-diameter": 3.175
      }
     ],
@@ -9534,7 +9548,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.45,
       "upper-diameter": 3.175
      }
     ],
@@ -9644,7 +9658,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.4572,
       "upper-diameter": 3.175
      }
     ],
@@ -9754,7 +9768,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.5,
       "upper-diameter": 3.175
      }
     ],
@@ -9864,7 +9878,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.508,
       "upper-diameter": 3.175
      }
     ],
@@ -9974,7 +9988,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.5334,
       "upper-diameter": 3.175
      }
     ],
@@ -10084,7 +10098,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.55,
       "upper-diameter": 3.175
      }
     ],
@@ -10194,7 +10208,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.5715,
       "upper-diameter": 3.175
      }
     ],
@@ -10304,7 +10318,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.6,
       "upper-diameter": 3.175
      }
     ],
@@ -10414,7 +10428,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.6096,
       "upper-diameter": 3.175
      }
     ],
@@ -10524,7 +10538,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.635,
       "upper-diameter": 3.175
      }
     ],
@@ -10634,7 +10648,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.65,
       "upper-diameter": 3.175
      }
     ],
@@ -10744,7 +10758,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.6604,
       "upper-diameter": 3.175
      }
     ],
@@ -10854,7 +10868,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.7112,
       "upper-diameter": 3.175
      }
     ],
@@ -10964,7 +10978,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.7417,
       "upper-diameter": 3.175
      }
     ],
@@ -11074,7 +11088,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.75,
       "upper-diameter": 3.175
      }
     ],
@@ -11184,7 +11198,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.7874,
       "upper-diameter": 3.175
      }
     ],
@@ -11294,7 +11308,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.795,
       "upper-diameter": 3.175
      }
     ],
@@ -11404,7 +11418,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.8,
       "upper-diameter": 3.175
      }
     ],
@@ -11514,7 +11528,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.8128,
       "upper-diameter": 3.175
      }
     ],
@@ -11624,7 +11638,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.8382,
       "upper-diameter": 3.175
      }
     ],
@@ -11734,7 +11748,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.85,
       "upper-diameter": 3.175
      }
     ],
@@ -11844,7 +11858,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.889,
       "upper-diameter": 3.175
      }
     ],
@@ -11954,7 +11968,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.9,
       "upper-diameter": 3.175
      }
     ],
@@ -12064,7 +12078,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.9144,
       "upper-diameter": 3.175
      }
     ],
@@ -12174,7 +12188,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.9398,
       "upper-diameter": 3.175
      }
     ],
@@ -12284,7 +12298,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.95,
       "upper-diameter": 3.175
      }
     ],
@@ -12394,7 +12408,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.9652,
       "upper-diameter": 3.175
      }
     ],
@@ -12504,7 +12518,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 0.9906,
       "upper-diameter": 3.175
      }
     ],
@@ -12614,7 +12628,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.0,
       "upper-diameter": 3.175
      }
     ],
@@ -12724,7 +12738,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.016,
       "upper-diameter": 3.175
      }
     ],
@@ -12834,7 +12848,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.0414,
       "upper-diameter": 3.175
      }
     ],
@@ -12944,7 +12958,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.05,
       "upper-diameter": 3.175
      }
     ],
@@ -13054,7 +13068,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.0668,
       "upper-diameter": 3.175
      }
     ],
@@ -13164,7 +13178,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.0922,
       "upper-diameter": 3.175
      }
     ],
@@ -13274,7 +13288,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.1,
       "upper-diameter": 3.175
      }
     ],
@@ -13384,7 +13398,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.15,
       "upper-diameter": 3.175
      }
     ],
@@ -13494,7 +13508,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.1811,
       "upper-diameter": 3.175
      }
     ],
@@ -13604,7 +13618,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.1913,
       "upper-diameter": 3.175
      }
     ],
@@ -13714,7 +13728,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.2,
       "upper-diameter": 3.175
      }
     ],
@@ -13824,7 +13838,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.25,
       "upper-diameter": 3.175
      }
     ],
@@ -13934,7 +13948,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.3,
       "upper-diameter": 3.175
      }
     ],
@@ -14044,7 +14058,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.3208,
       "upper-diameter": 3.175
      }
     ],
@@ -14154,7 +14168,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.35,
       "upper-diameter": 3.175
      }
     ],
@@ -14264,7 +14278,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.397,
       "upper-diameter": 3.175
      }
     ],
@@ -14374,7 +14388,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.4,
       "upper-diameter": 3.175
      }
     ],
@@ -14484,7 +14498,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.45,
       "upper-diameter": 3.175
      }
     ],
@@ -14594,7 +14608,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.5,
       "upper-diameter": 3.175
      }
     ],
@@ -14704,7 +14718,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.5113,
       "upper-diameter": 3.175
      }
     ],
@@ -14814,7 +14828,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.55,
       "upper-diameter": 3.175
      }
     ],
@@ -14924,7 +14938,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.5875,
       "upper-diameter": 3.175
      }
     ],
@@ -15034,7 +15048,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.6129,
       "upper-diameter": 3.175
      }
     ],
@@ -15144,7 +15158,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.65,
       "upper-diameter": 3.175
      }
     ],
@@ -15254,7 +15268,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.7018,
       "upper-diameter": 3.175
      }
     ],
@@ -15364,7 +15378,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.75,
       "upper-diameter": 3.175
      }
     ],
@@ -15474,7 +15488,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.778,
       "upper-diameter": 3.175
      }
     ],
@@ -15584,7 +15598,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.8,
       "upper-diameter": 3.175
      }
     ],
@@ -15694,7 +15708,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.85,
       "upper-diameter": 3.175
      }
     ],
@@ -15804,7 +15818,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.8542,
       "upper-diameter": 3.175
      }
     ],
@@ -15914,7 +15928,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.9,
       "upper-diameter": 3.175
      }
     ],
@@ -16024,7 +16038,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.9304,
       "upper-diameter": 3.175
      }
     ],
@@ -16134,7 +16148,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.95,
       "upper-diameter": 3.175
      }
     ],
@@ -16244,7 +16258,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.9837,
       "upper-diameter": 3.175
      }
     ],
@@ -16354,7 +16368,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 1.9939,
       "upper-diameter": 3.175
      }
     ],
@@ -16464,7 +16478,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.05,
       "upper-diameter": 3.175
      }
     ],
@@ -16574,7 +16588,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.0574,
       "upper-diameter": 3.175
      }
     ],
@@ -16684,7 +16698,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.0828,
       "upper-diameter": 3.175
      }
     ],
@@ -16711,116 +16725,6 @@
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 65.43309178896821,
-      "v_f": 0,
-      "v_f_leadIn": 0,
-      "v_f_leadOut": 0,
-      "v_f_plunge": 50,
-      "v_f_ramp": 0,
-      "v_f_retract": 500,
-      "v_f_transition": 0
-     }
-    ]
-   },
-   "type": "drill",
-   "unit": "millimeters",
-   "vendor": "McMaster-Carr"
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "generic",
-   "description": "2.1*9mm Drill",
-   "expressions": {
-    "tool_description": "'2.1*9mm Drill'",
-    "tool_diameter": "2.1 mm",
-    "tool_fluteLength": "9 mm",
-    "tool_number": "0",
-    "tool_productId": "'2841A159'",
-    "tool_productLink": "'https://www.mcmaster.com/2841A159/'",
-    "tool_shoulderLength": "9 mm",
-    "tool_tipAngle": "130 degrees",
-    "tool_vendor": "'McMaster-Carr'"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 2.1,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 9.0,
-    "NOF": 2,
-    "NT": 1,
-    "OAL": 38,
-    "RE": 0,
-    "SFDM": 3.175,
-    "SIG": 130,
-    "TP": 0,
-    "assemblyGaugeLength": 26.5,
-    "shoulder-length": 9.0,
-    "thread-profile-angle": 60,
-    "tip-diameter": 0,
-    "tip-length": 0,
-    "tip-offset": 0
-   },
-   "guid": "d89905ed-951f-5614-a9cd-db2978abc0e2",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 0.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 3.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from McMaster-Carr \"Expanded-Shank Carbide Drill Bits\"",
-    "diameter-offset": 0,
-    "length-offset": 0,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "2841A159",
-   "product-link": "https://www.mcmaster.com/2841A159/",
-   "shaft": {
-    "segments": [
-     {
-      "height": 4,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm",
-       "tool_spindleSpeed": "10000 rpm"
-      },
-      "f_z": 0,
-      "guid": "c64ee1f8-9acb-5d2e-b2ec-3149fedeeab5",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 10000,
-      "name": "Copper 101-H02",
-      "tool-coolant": "disabled",
-      "use-feed-per-revolution": false,
-      "v_c": 65.97344572538566,
       "v_f": 0,
       "v_f_leadIn": 0,
       "v_f_leadOut": 0,
@@ -16904,7 +16808,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.15,
       "upper-diameter": 3.175
      }
     ],
@@ -17014,7 +16918,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.1844,
       "upper-diameter": 3.175
      }
     ],
@@ -17124,7 +17028,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.25,
       "upper-diameter": 3.175
      }
     ],
@@ -17234,7 +17138,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.2606,
       "upper-diameter": 3.175
      }
     ],
@@ -17344,7 +17248,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.3,
       "upper-diameter": 3.175
      }
     ],
@@ -17454,7 +17358,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.35,
       "upper-diameter": 3.175
      }
     ],
@@ -17564,7 +17468,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.3749,
       "upper-diameter": 3.175
      }
     ],
@@ -17674,7 +17578,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.3825,
       "upper-diameter": 3.175
      }
     ],
@@ -17784,7 +17688,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.4,
       "upper-diameter": 3.175
      }
     ],
@@ -17894,7 +17798,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.4384,
       "upper-diameter": 3.175
      }
     ],
@@ -18004,7 +17908,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.45,
       "upper-diameter": 3.175
      }
     ],
@@ -18114,7 +18018,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.4892,
       "upper-diameter": 3.175
      }
     ],
@@ -18224,7 +18128,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.5273,
       "upper-diameter": 3.175
      }
     ],
@@ -18334,7 +18238,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.55,
       "upper-diameter": 3.175
      }
     ],
@@ -18444,7 +18348,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.5781,
       "upper-diameter": 3.175
      }
     ],
@@ -18554,7 +18458,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.6416,
       "upper-diameter": 3.175
      }
     ],
@@ -18664,7 +18568,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.65,
       "upper-diameter": 3.175
      }
     ],
@@ -18774,7 +18678,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.7051,
       "upper-diameter": 3.175
      }
     ],
@@ -18884,7 +18788,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.75,
       "upper-diameter": 3.175
      }
     ],
@@ -18994,7 +18898,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.7788,
       "upper-diameter": 3.175
      }
     ],
@@ -19104,7 +19008,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.794,
       "upper-diameter": 3.175
      }
     ],
@@ -19214,7 +19118,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.8,
       "upper-diameter": 3.175
      }
     ],
@@ -19324,7 +19228,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.8194,
       "upper-diameter": 3.175
      }
     ],
@@ -19434,7 +19338,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.85,
       "upper-diameter": 3.175
      }
     ],
@@ -19544,7 +19448,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.8702,
       "upper-diameter": 3.175
      }
     ],
@@ -19654,7 +19558,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.9,
       "upper-diameter": 3.175
      }
     ],
@@ -19764,7 +19668,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.9464,
       "upper-diameter": 3.175
      }
     ],
@@ -19874,7 +19778,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 2.95,
       "upper-diameter": 3.175
      }
     ],
@@ -19984,7 +19888,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 3.048,
       "upper-diameter": 3.175
      }
     ],
@@ -20094,7 +19998,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 3.05,
       "upper-diameter": 3.175
      }
     ],
@@ -20204,7 +20108,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 3.1,
       "upper-diameter": 3.175
      }
     ],
@@ -20314,7 +20218,7 @@
     "segments": [
      {
       "height": 4,
-      "lower-diameter": 3.175,
+      "lower-diameter": 3.15,
       "upper-diameter": 3.175
      }
     ],
@@ -20341,116 +20245,6 @@
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 98.96016858807847,
-      "v_f": 0,
-      "v_f_leadIn": 0,
-      "v_f_leadOut": 0,
-      "v_f_plunge": 50,
-      "v_f_ramp": 0,
-      "v_f_retract": 500,
-      "v_f_transition": 0
-     }
-    ]
-   },
-   "type": "drill",
-   "unit": "millimeters",
-   "vendor": "McMaster-Carr"
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "generic",
-   "description": "3.175*7.4mm Drill (1/8\")",
-   "expressions": {
-    "tool_description": "'3.175*7.4mm Drill (1/8\")'",
-    "tool_diameter": "3.175 mm",
-    "tool_fluteLength": "7.4 mm",
-    "tool_number": "0",
-    "tool_productId": "'2841A98'",
-    "tool_productLink": "'https://www.mcmaster.com/2841A98/'",
-    "tool_shoulderLength": "7.4 mm",
-    "tool_tipAngle": "130 degrees",
-    "tool_vendor": "'McMaster-Carr'"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 3.175,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 7.4,
-    "NOF": 2,
-    "NT": 1,
-    "OAL": 38,
-    "RE": 0,
-    "SFDM": 3.175,
-    "SIG": 130,
-    "TP": 0,
-    "assemblyGaugeLength": 26.5,
-    "shoulder-length": 7.4,
-    "thread-profile-angle": 60,
-    "tip-diameter": 0,
-    "tip-length": 0,
-    "tip-offset": 0
-   },
-   "guid": "c27adf05-43c5-5705-a142-203a828f14e5",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 0.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 3.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from McMaster-Carr \"Expanded-Shank Carbide Drill Bits\"",
-    "diameter-offset": 0,
-    "length-offset": 0,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "2841A98",
-   "product-link": "https://www.mcmaster.com/2841A98/",
-   "shaft": {
-    "segments": [
-     {
-      "height": 4,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_feedPlunge": "50 mmpm",
-       "tool_feedRetract": "500 mmpm",
-       "tool_spindleSpeed": "10000 rpm"
-      },
-      "f_z": 0,
-      "guid": "cf279002-979b-5b52-8623-3f01d83e85c4",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 10000,
-      "name": "Copper 101-H02",
-      "tool-coolant": "disabled",
-      "use-feed-per-revolution": false,
-      "v_c": 99.74556675147592,
       "v_f": 0,
       "v_f_leadIn": 0,
       "v_f_leadOut": 0,

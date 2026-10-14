@@ -39,7 +39,8 @@ STEPDOWN_LARGE = 0.3         # end mills of 3 mm and up
 STEPDOWN_SMALL = 0.2         # smaller end mills, at most 0.2 x diameter
 POCKET_STEPOVER = 0.6        # x diameter
 BORE_STEPOVER = 0.3
-PECK_MAX = 2.0
+PECK_MAX = 0.1
+ACCUMULATED_PECK_MAX = 1.0
 PLUNGE_MAX_D = 2.1           # end mills that may plunge into a cut, by diameter
 BELOW_STOCK_MAX = 0.5        # cuts below the stock bottom, besides a drill's tip
 STICKOUT_WARN = 0.75         # deepest cut below stock top / tool length below holder
@@ -217,12 +218,16 @@ def _check_op(rep, s, o, t, earlier, lab, through_before=False):
             rep.add('TH1', 'warning', sn, on, 'thread milling is not climb')
     if strat == 'drill':
         cycle = _v(p, 'cycleType', '')
-        peck = _mm(_v(p, 'incrementalDepth'))
-        if cycle not in ('chip-breaking', 'deep-drilling'):
-            rep.add('K1', 'warning', sn, on, 'drill cycle %r has no pecking; the lab always '
-                    'chip-breaks with 2 mm pecks' % cycle)
+        peck = _mm(_v(p, 'peckingDepth'))
+        acc = _mm(_v(p, 'accumulatedPeckingDepth'))
+        if cycle != 'chip-breaking':
+            rep.add('K1', 'warning', sn, on, 'drill cycle %r is not chip breaking; the lab always '
+                    'chip-breaks with 0.1 mm pecks and retracts fully every 1 mm' % cycle)
         elif peck and peck > PECK_MAX + 1e-6:
-            rep.add('K1', 'warning', sn, on, 'peck depth %.2f mm is above %.1f mm' % (peck, PECK_MAX))
+            rep.add('K1', 'warning', sn, on, 'pecking depth %.2f mm is above %.1f mm' % (peck, PECK_MAX))
+        elif acc and acc > ACCUMULATED_PECK_MAX + 1e-6:
+            rep.add('K1', 'warning', sn, on, 'accumulated pecking depth %.2f mm is above %.0f mm'
+                    % (acc, ACCUMULATED_PECK_MAX))
 
 
 # ------------------------------------------------------------- the G-code

@@ -52,7 +52,7 @@ MODEL_PROJECT = 'carvera-cam'
 PRESET_NAMES = ('Copper 101-H02', 'Copper')
 SETUP_TAG = '(carvera-cam)'
 
-DRILL_3175 = '3.175*7.4mm Drill'
+DRILL_3175 = '3.175*7.4mm Drill (1/8")'
 DRILL_3175_LONG = '3.175*12.7mm Drill'
 ENDMILL = 'Spiral O Metal 3.175*12mm'
 ENDMILL_D = 3.175
@@ -964,7 +964,8 @@ CONTOUR = {
 }
 DRILL = {  # every drill op, entry holes included, pecks as threads.toml says
     'cycleType': "'%s'" % THREAD_COMMON['drill']['cycle'],
-    'incrementalDepth': '%gmm' % THREAD_COMMON['drill']['peck'],
+    'peckingDepth': '%gmm' % THREAD_COMMON['drill']['peck'],
+    'accumulatedPeckingDepth': '%gmm' % THREAD_COMMON['drill']['accumulated_peck'],
     'chipBreakDistance': '%gmm' % THREAD_COMMON['drill']['chip_break'],
 }
 BORE = {
@@ -986,7 +987,8 @@ def _drill_ends(through):
     """Peck and breakthrough of a drill op, from threads.toml (the lab drills every hole alike)."""
     d = THREAD_COMMON['drill']
     brk = d['through_breakthrough'] if through else d['blind_breakthrough']
-    return {'cycleType': "'%s'" % d['cycle'], 'incrementalDepth': '%gmm' % d['peck'],
+    return {'cycleType': "'%s'" % d['cycle'], 'peckingDepth': '%gmm' % d['peck'],
+            'accumulatedPeckingDepth': '%gmm' % d['accumulated_peck'],
             'chipBreakDistance': '%gmm' % d['chip_break'], 'breakThroughDepth': '%gmm' % brk,
             'drillTipThroughBottom': 'true' if through else 'false'}
 
