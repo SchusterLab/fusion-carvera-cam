@@ -146,7 +146,6 @@ The check does not replace Fusion's simulation with collision checking, which th
 
 `scripts/dump_cam.py` dumps every CAM setup of a Fusion project to JSON (one document per few seconds; call `dump` repeatedly until it prints `ALL DONE`).
 Use it when the lab's practice changes, compare its output with [references/conventions.md](references/conventions.md), and update `carvera_cam.py` to match.
-When the lab changes its tool library `Carvera Tools/My Tools` in Fusion, call `export_tools({})` in `carvera_cam.py` to rewrite the lab's tools in [assets/carvera-tools.json](assets/carvera-tools.json), the tools `build` uses; it leaves out the drills in `My Tools` and keeps the added tools: the McMaster-Carr drills, which are the library's only drills, and Makera's tools.
-To rebuild the added tools, fetching Makera's again from the Carvera Community repository, run `python -I scripts/tool_library.py` outside Fusion (see [references/conventions.md](references/conventions.md), "Machine, post and material").
+To rebuild the tool library, [assets/carvera-tools.json](assets/carvera-tools.json), run `python -I scripts/tool_library.py` outside Fusion; it fetches Makera's tool files again and remakes the drills from McMaster-Carr's table (see [references/conventions.md](references/conventions.md), "Machine, post and material").
 When the lab's practice changes, update the thresholds at the top of `check_cam.py` and the evidence in [references/rules.md](references/rules.md) to match.
 `scripts/make_test_part.py` builds a 30 × 20 × 4 mm test part with one of each feature in a new, unsaved document, for testing changes.

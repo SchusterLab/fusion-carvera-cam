@@ -117,7 +117,6 @@ The Carvera's automatic tool changer holds six tools, numbered 1 to 6, and the o
 | N1 | one tool number names two different tools in a setup (error), or in two setups of the document (warning) | as given | never within one of the lab's 88 setups; across setups, in 3 documents | the wrong tool in the changer, and a crash at its first move |
 | N3 | a tool number is above 6 | warning | 12 current setups use tools 7 to 10 | a missed manual tool change |
 | N5 | the tool is not in the skill's tool library, or has no holder | warning | a few tools have no library entry, such as the 1/8″ two-flute end mill in `sample-clamp-6port7x7`, which also has no holder | feeds unchecked against a preset; holder collisions unchecked in simulation |
-| N6 | the tool is one the library added from Makera's tool libraries (see conventions.md, "Machine, post and material"); the McMaster-Carr drills, with the lab's drill preset, are not flagged | warning | — | unproven feeds: the lab has not cut with the tool, and its Copper 101-H02 preset is derived from the lab's presets for that kind of tool |
 | M1 | the setup has no machine | warning | 3 of the 88 setups have none | simulation not checking the machine |
 | M2 | the setup has no fixture | warning | only 10 of the 88 setups set one, all in older versions such as `2026-01-20_sample-puck-6port7x7`, whose fixture setup the skill copies | simulation, and rule X1, not checking the vise |
 | G0 | no posted G-code could be matched to the operation | warning | — | an operation left out of the depth and fixture checks |

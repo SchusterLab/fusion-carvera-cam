@@ -1,22 +1,18 @@
-"""The lab's tool library, completed with McMaster-Carr drills and the Makera
-tools that cut copper.
+"""The skill's tool library: the tools carvera_cam.py assigns, which a user buys
+from Makera and McMaster-Carr.
 
-assets/carvera-tools.json holds two kinds of tools:
-  - the lab's own, exported from the Fusion library "Carvera Tools/My Tools"
-    (carvera_cam.export_tools), each with the lab's "Copper 101-H02" preset;
-    its own drills are left out (the user's choice, 2026-10-14): the
-    McMaster-Carr drills below replace them;
-  - added tools, marked in their post-processor comment (ADDED): every
-    uncoated drill of McMaster-Carr's expanded-shank carbide drills, the series
-    the lab's drills came from (read from MCMASTER_DRILLS, a copy of the
-    catalogue's table), with the lab's drill preset (DRILL_PRESET); and the end
-    mills and thread mills for metal from the Carvera Community's copies of
-    Makera's tool libraries. The lab has not cut with Makera's tools, so their
-    Copper 101-H02 preset is derived from the lab's presets for the same kind
-    of tool (lab_preset), and says so.
+assets/carvera-tools.json is built from two public sources:
+  - Makera's tool libraries, as the Carvera Community repository copies them
+    (MAKERA_TOOLS): the Spiral O end mills for metal, the thread mills and the
+    chamfering bit that carvera_cam.py uses (MAKERA_PICKS);
+  - McMaster-Carr's uncoated expanded-shank carbide drills, part numbers
+    2841A..., from a copy of the catalogue's table (MCMASTER_DRILLS). Each is
+    Makera's 1/8" shank drill (DRILL_TEMPLATE) given the catalogue's diameter,
+    maximum drilling depth, overall length and point angle.
+Every tool gets one feed preset, Copper 101-H02, by the skill's rule for its
+kind of tool (copper_values).
 
-Run it with plain Python to fetch the community tool files again and rewrite
-the added tools:
+Run it with plain Python to rebuild the file:
 
     python -I tool_library.py
 """
@@ -26,7 +22,6 @@ import csv
 import io
 import json
 import os
-import re
 import sys
 import urllib.request
 import uuid
@@ -34,74 +29,63 @@ import zipfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOOLS_FILE = os.path.join(os.path.dirname(HERE), 'assets', 'carvera-tools.json')
-COMMUNITY_TOOLS = ('https://raw.githubusercontent.com/Carvera-Community/Carvera_Community_Profiles/'
-                   'main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files/')
+MAKERA_TOOLS = ('https://raw.githubusercontent.com/Carvera-Community/Carvera_Community_Profiles/'
+                'main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files/')
 MCMASTER_DRILLS = os.path.join(os.path.dirname(HERE), 'assets', 'mcmaster-expanded-shank-carbide-drills.csv')
 PRESET = 'Copper 101-H02'
-ADDED = 'carvera-cam: added from '
-DRILL_PRESET = ("The lab's Copper 101-H02 preset for every drill (set 2026-10-13): "
-                '10000 rpm, plunge 50 mm/min, retract 500 mm/min.')
-DERIVED = ('Derived by carvera-cam from the lab\'s Copper 101-H02 presets for this kind of '
-           'tool; the lab has not cut copper with this tool yet.')
+PRESET_NOTE = ('carvera-cam\'s settings for C10100 copper, half hard (H02); aluminum 6063-T5 '
+               'runs the same programs at 200% feed and spindle override.')
 
-# Makera's libraries, and which of their tools are made for metal. The others
-# (wood and plastic O-flutes and engravers, corn bits for PCB and carbon fibre,
-# the solder mask tool, lasers) do not cut copper. Makera's drills are left out:
-# the McMaster-Carr drills cover their diameters. So are its ball end mills and
-# engraving bits (the user's choice, 2026-10-14).
-COMMUNITY_PICKS = {
-    'Makera O Flute Bits': lambda t: t['description'].startswith('Spiral O Metal'),
-    'Makera Thread Mills': lambda t: True,
-    'Makera Other Tools': lambda t: t['description'].startswith('Chamfering Bit'),
+# The Makera tools carvera_cam.py assigns: its end mills (ENDMILL, SMALL_ENDMILLS),
+# thread mills (references/threads.toml) and chamfering bit (CHAMFER).
+MAKERA_PICKS = {
+    'Makera O Flute Bits': ('Spiral O Metal 1*3mm', 'Spiral O Metal 1.5*6mm', 'Spiral O Metal 2*8mm',
+                            'Spiral O Metal 2.5*12mm', 'Spiral O Metal 3.175*12mm'),
+    'Makera Thread Mills': ('Carvera M2 Threadmill', 'Carvera M2.5 Threadmill',
+                            'Carvera M3 Threadmill', 'Carvera M4 Threadmill'),
+    'Makera Other Tools': ('Chamfering Bit - 1/8″ Shank',),
 }
-
-# the lab tool whose Copper 101-H02 preset is the template for each kind
-TEMPLATES = {
-    'flat end mill': 'Spiral O Metal 3.175*12mm',
-    'ball end mill': 'Spiral O Metal 3.175*12mm',
-    'drill': '3.175*7.4mm Drill',  # 6415N117, '3.175*7.4mm Drill (1/8")' once rebuilt
-    'thread mill': 'Carvera M3 Threadmill',
-    'chamfer mill': 'Chamfering Bit - 1/8',  # the lab's name has a garbled inch sign
-}
+DRILL_TEMPLATE = ('Makera Drill Bits', '3.175*12mm Drill')
 
 
-def lab_preset(tool, makera_copper):
-    """The lab's Copper 101-H02 settings for a tool of this kind and size.
+def copper_values(tool, makera_copper):
+    """The skill's Copper 101-H02 settings for a tool of this kind and size.
 
-    From the lab's presets: every Spiral O end mill runs at 6000 rpm and
-    200 mm/min with 200 mm/min plunge, stepping down 0.3 mm (ramp 300 mm/min)
-    from 3.175 mm diameter up and 0.2 mm (ramp 200 mm/min) below; every drill
-    at 10000 rpm with 50 mm/min plunge; every thread mill at 15000 rpm and
-    Makera's copper feed (M2 100, M2.5 150, M3 and M4 200 mm/min), 0.1 mm
-    stepover; the chamfering bit at 6000 rpm and 200 mm/min, 0.1 mm steps.
-    Ball end mills get the end mill settings, engravers the chamfering bit's.
+    Spiral O end mills run at 6000 rpm and 200 mm/min with 200 mm/min plunge,
+    stepping down 0.3 mm (ramp 300 mm/min) from 3.175 mm diameter up and
+    0.2 mm (ramp 200 mm/min) below; drills at 10000 rpm, plunge 50 mm/min,
+    retract 500 mm/min; thread mills at 15000 rpm and Makera's own copper feed
+    (M2 100, M2.5 150, M3 and M4 200 mm/min), 0.1 mm stepover; the chamfering
+    bit at 6000 rpm and 200 mm/min, 0.1 mm steps.
     """
     kind = tool['type']
     d = tool['geometry']['DC']
-    if kind in ('flat end mill', 'ball end mill'):
+    if kind == 'flat end mill':
         big = d >= 3.175 - 1e-6
         return {'n': 6000, 'v_f': 200, 'v_f_plunge': 200, 'v_f_ramp': 300 if big else 200,
                 'stepdown': 0.3 if big else 0.2, 'ramp-angle': 1.2}
     if kind == 'drill':
         return {'n': 10000, 'v_f_plunge': 50, 'v_f_retract': 500}
     if kind == 'thread mill':
-        if not makera_copper:
-            raise ValueError('no Makera copper feed for %s' % tool['description'])
         return {'n': 15000, 'v_f': makera_copper['v_f'], 'v_f_plunge': makera_copper['v_f'],
                 'v_f_ramp': 333.333333333333, 'stepover': 0.1, 'ramp-angle': 2}
     if kind == 'chamfer mill':
         return {'n': 6000, 'v_f': 200, 'v_f_plunge': 200, 'v_f_ramp': 300,
                 'stepdown': 0.1, 'stepover': 0.1, 'ramp-angle': 2}
-    raise ValueError('no lab preset rule for a %s' % kind)
+    raise ValueError('no Copper 101-H02 rule for a %s' % kind)
 
 
 def _fmt(v):
     return ('%.6f' % v).rstrip('0').rstrip('.')
 
 
-def make_preset(tool, template, values, description=DERIVED):
-    """A Copper 101-H02 preset for `tool`: the template preset with `values`."""
-    p = copy.deepcopy(template)
+def with_preset(tool):
+    """`tool` with the Copper 101-H02 preset as its only preset, made from
+    Makera's own Copper preset with copper_values."""
+    presets = tool.get('start-values', {}).get('presets', [])
+    makera = next((p for p in presets if p['name'] == 'Copper'), presets[0])
+    values = copper_values(tool, makera)
+    p = copy.deepcopy(makera)
     p.update(values)
     n, z, d = p['n'], tool['geometry'].get('NOF') or 1, tool['geometry']['DC']
     if 'v_f' in values:
@@ -109,70 +93,32 @@ def make_preset(tool, template, values, description=DERIVED):
             p[k] = p['v_f']
         p['f_n'] = p['v_f'] / n
         p['f_z'] = p['v_f'] / n / z
+    else:
+        for k in ('v_f', 'v_f_leadIn', 'v_f_leadOut', 'v_f_transition', 'v_f_ramp', 'f_n', 'f_z'):
+            if k in p:
+                p[k] = 0
     if 'n_ramp' in p:
         p['n_ramp'] = n
     p['v_c'] = 3.141592653589793 * d * n / 1000
     p['name'] = PRESET
-    p['description'] = description
+    p['description'] = PRESET_NOTE
+    p['tool-coolant'] = 'disabled'
     p['guid'] = str(uuid.uuid5(uuid.NAMESPACE_URL, tool['guid'] + '/' + PRESET))
-    e = p.setdefault('expressions', {})
     names = {'n': ('tool_spindleSpeed', '%s rpm'), 'v_f': ('tool_feedCutting', '%s mmpm'),
              'v_f_plunge': ('tool_feedPlunge', '%s mmpm'), 'v_f_ramp': ('tool_feedRamp', '%s mmpm'),
              'v_f_retract': ('tool_feedRetract', '%s mmpm'), 'stepdown': ('tool_stepdown', '%s mm'),
              'stepover': ('tool_stepover', '%s mm'), 'ramp-angle': ('tool_rampAngle', '%s degrees')}
-    for k, (name, unit) in names.items():
-        if k in values or (name in e and k in p):
-            e[name] = unit % _fmt(p[k])
-    return p
+    p['expressions'] = {name: unit % _fmt(p[k]) for k, (name, unit) in names.items() if k in values}
+    p['expressions']['tool_coolant'] = "'disabled'"
+    tool['start-values'] = {'presets': [p]}
+    return tool
 
 
-def _key(t):
-    """Tools with the same kind and geometry are the same tool."""
-    g = t.get('geometry', {})
-    return (t['type'], t['description'] if t['type'] not in TEMPLATES else None,
-            round(g.get('DC', 0), 3), round(g.get('LCF', 0), 2), round(g.get('OAL', 0), 2),
-            round(g.get('SFDM', 0), 3), g.get('NOF'), round(g.get('tip-diameter', 0), 3),
-            round(g.get('TA', 0) or g.get('SIG', 0), 1))
-
-
-def _name(t):
-    # the community files spell some lengths "17m" for "17mm"
-    return re.sub(r'(\d)m\b', r'\1mm', ' '.join(t['description'].lower().split()))
-
-
-def is_added(t):
-    return t.get('post-process', {}).get('comment', '').startswith(ADDED)
-
-
-def is_proven(t):
-    """A lab tool, or a McMaster-Carr drill: their presets are the lab's own."""
-    return not is_added(t) or 'McMaster-Carr' in t['post-process']['comment']
-
-
-def _templates(lab):
-    out = {}
-    for kind, desc in TEMPLATES.items():
-        t = next(t for t in lab if t['description'].startswith(desc) and t['type'] == kind
-                 or t['description'] == desc)
-        out[kind] = next(p for p in t['start-values']['presets'] if p['name'] == PRESET)
-    return out
-
-
-def _with_preset(t, templates, makera_copper=None):
-    """`t` with a Copper 101-H02 preset added if it has none (holders get none)."""
-    if t['type'] not in TEMPLATES:
-        return t
-    presets = t.setdefault('start-values', {}).setdefault('presets', [])
-    if not any(p['name'] == PRESET for p in presets):
-        presets.insert(0, make_preset(t, templates[t['type']], lab_preset(t, makera_copper)))
-    return t
-
-
-def fetch_community():
+def fetch_makera(names=None):
     """{library name: [tools]} from the Carvera Community repository."""
     out = {}
-    for name in COMMUNITY_PICKS:
-        url = COMMUNITY_TOOLS + urllib.request.quote(name) + '.tools'
+    for name in names or list(MAKERA_PICKS) + [DRILL_TEMPLATE[0]]:
+        url = MAKERA_TOOLS + urllib.request.quote(name) + '.tools'
         req = urllib.request.Request(url, headers={'User-Agent': 'carvera-cam'})
         with urllib.request.urlopen(req, timeout=60) as r:
             data = r.read()
@@ -185,38 +131,8 @@ def read_mcmaster(path=MCMASTER_DRILLS):
         return list(csv.DictReader(f))
 
 
-def _drill_template(tools):
-    return next(t for t in tools if t['type'] == 'drill' and t['description'].startswith(TEMPLATES['drill']))
-
-
-def mcmaster_drills(lab, rows, templates, template):
-    """A drill for each of McMaster-Carr's uncoated expanded-shank carbide drills
-    (rows of MCMASTER_DRILLS), lab drills' sizes and parts included, with its
-    maximum drilling depth as its flute length. The TiN and TiAlN drills are
-    left out. A drill whose name a lab drill already has gets its part number
-    after the name, so every tool keeps a name of its own."""
-    have = {t.get('product-id') for t in lab if t['type'] == 'drill'}
-    names = {t['description'] for t in lab}
-    out = []
-    for r in sorted(rows, key=lambda r: float(r['diameter_mm'])):
-        if r['coating'] != 'uncoated':
-            continue
-        t = _mcmaster_drill(r, template)
-        if r['part'] in have:  # a copy of a lab drill: a guid of its own
-            t['guid'] = str(uuid.uuid5(uuid.NAMESPACE_URL, t['product-link'] + '#added'))
-        if t['description'] in names:
-            t['description'] += ' ' + r['part']
-            t['expressions']['tool_description'] = "'%s'" % t['description'].replace("'", "\\'")
-        t['post-process']['comment'] = ADDED + 'McMaster-Carr "Expanded-Shank Carbide Drill Bits"'
-        t['start-values'] = {'presets': []}
-        t = _with_preset(t, templates)
-        t['start-values']['presets'][0]['description'] = DRILL_PRESET
-        out.append(t)
-    return out
-
-
-def _mcmaster_drill(r, template):
-    """The drill of one row of MCMASTER_DRILLS, made from the lab drill `template`."""
+def mcmaster_drill(r, template):
+    """The drill of one row of MCMASTER_DRILLS, made from Makera's drill `template`."""
     d = round(float(r['diameter_mm']), 4)
     depth = round(float(r['max_drilling_depth_mm']), 1)
     tip = int(r['point_angle_deg'])
@@ -224,60 +140,41 @@ def _mcmaster_drill(r, template):
     desc = '%s*%smm Drill' % (_fmt(round(d, 3)), _fmt(depth))
     if not r['size'].endswith(' mm'):  # an inch or wire-gauge size
         desc += ' (%s)' % r['size']
-    g = t['geometry']
-    g.update({'DC': d, 'LCF': depth, 'shoulder-length': depth, 'SIG': tip, 'SFDM': 3.175,
-              'OAL': round(float(r['overall_length_mm']))})
+    t['geometry'].update({'DC': d, 'LCF': depth, 'shoulder-length': depth, 'SIG': tip,
+                          'SFDM': 3.175, 'OAL': round(float(r['overall_length_mm']))})
     for seg in t.get('shaft', {}).get('segments', []):  # the taper up to the shank
         seg['lower-diameter'] = d
     t['description'] = desc
+    t['vendor'] = 'McMaster-Carr'
     t['guid'] = str(uuid.uuid5(uuid.NAMESPACE_URL, 'https://www.mcmaster.com/' + r['part']))
     t['product-id'] = r['part']
     t['product-link'] = 'https://www.mcmaster.com/%s/' % r['part']
-    e = t['expressions']
-    e.update({'tool_description': "'%s'" % desc.replace("'", "\\'"),
-              'tool_diameter': '%s mm' % _fmt(d), 'tool_fluteLength': '%s mm' % _fmt(depth),
-              'tool_shoulderLength': '%s mm' % _fmt(depth),
-              'tool_tipAngle': '%d degrees' % tip, 'tool_productId': "'%s'" % r['part'],
-              'tool_productLink': "'%s'" % t['product-link']})
+    t['expressions'].update({
+        'tool_description': "'%s'" % desc.replace("'", "\\'"),
+        'tool_vendor': "'McMaster-Carr'",
+        'tool_diameter': '%s mm' % _fmt(d), 'tool_fluteLength': '%s mm' % _fmt(depth),
+        'tool_shoulderLength': '%s mm' % _fmt(depth), 'tool_tipAngle': '%d degrees' % tip,
+        'tool_productId': "'%s'" % r['part'], 'tool_productLink': "'%s'" % t['product-link']})
     return t
 
 
-def complete(lab, community, mcmaster=(), previous=()):
-    """The lab's tools but its drills, then the McMaster-Carr drills and the
-    community tools for metal that the lab lacks. The presets and the drill
-    the added tools are made from come from the lab's tools or, once the lab's
-    drills are gone, from `previous`, the library as it was."""
-    pool = list(lab) + list(previous)
-    templates = _templates(pool)
-    template = copy.deepcopy(_drill_template(pool))
-    lab = [_with_preset(copy.deepcopy(t), templates) for t in lab if t['type'] != 'drill']
-    seen = {_key(t) for t in lab} | {_name(t) for t in lab}
-    added = mcmaster_drills(lab, mcmaster, templates, template)
-    seen |= {_key(t) for t in added} | {_name(t) for t in added}
-    for name, tools in community.items():
-        for t in tools:
-            if not COMMUNITY_PICKS[name](t) or _key(t) in seen or _name(t) in seen:
-                continue
-            seen |= {_key(t), _name(t)}
-            t = copy.deepcopy(t)
-            t['post-process']['comment'] = ADDED + 'Carvera Community "%s"' % name
-            t['post-process']['number'] = 0
-            copper = next((p for p in t.get('start-values', {}).get('presets', [])
-                           if p['name'] == 'Copper'), None)
-            added.append(_with_preset(t, templates, copper))
-    added.sort(key=lambda t: (t['type'], t['geometry']['DC'], t['geometry'].get('LCF', 0)))
-    return lab + added
-
-
-def merge(lab, current):
-    """After an export from Fusion: the lab's tools but its drills, plus the
-    added tools already in the library: the McMaster-Carr drills, and the
-    others that do not duplicate a lab tool."""
-    templates = _templates(list(lab) + list(current))
-    lab = [_with_preset(copy.deepcopy(t), templates) for t in lab if t['type'] != 'drill']
-    seen = {_key(t) for t in lab} | {_name(t) for t in lab}
-    return lab + [t for t in current if is_added(t) and (
-        'McMaster-Carr' in t['post-process']['comment'] or _key(t) not in seen and _name(t) not in seen)]
+def build(makera, rows):
+    """The library's tools: Makera's picks, then a drill for each of McMaster-Carr's
+    uncoated expanded-shank carbide drills (the TiN and TiAlN ones add no size)."""
+    out = []
+    for name, picks in MAKERA_PICKS.items():
+        by_desc = {t['description']: t for t in makera[name]}
+        for desc in picks:
+            if desc not in by_desc:
+                raise RuntimeError('%r is no longer in Makera\'s "%s"' % (desc, name))
+            out.append(copy.deepcopy(by_desc[desc]))
+    template = next(t for t in makera[DRILL_TEMPLATE[0]] if t['description'] == DRILL_TEMPLATE[1])
+    out += [mcmaster_drill(r, template) for r in rows if r['coating'] == 'uncoated']
+    for t in out:
+        t['post-process'].update(number=0, comment='')
+        with_preset(t)
+    out.sort(key=lambda t: (t['type'], t['geometry']['DC'], t['geometry'].get('LCF', 0)))
+    return out
 
 
 def read(path=TOOLS_FILE):
@@ -293,15 +190,13 @@ def write(data, path=TOOLS_FILE):
 
 def main():
     sys.stdout.reconfigure(encoding='utf-8')
-    data = read()
-    lab = [t for t in data['data'] if not is_added(t)]
-    data['data'] = complete(lab, fetch_community(), read_mcmaster(), data['data'])
+    data = read() if os.path.exists(TOOLS_FILE) else {'version': 22}
+    data['data'] = build(fetch_makera(), read_mcmaster())
     write(data)
-    added = [t for t in data['data'] if is_added(t)]
-    print('%d lab tools, %d added:' % (len(lab), len(added)))
-    for t in added:
-        p = next(p for p in t['start-values']['presets'] if p['name'] == PRESET)
-        print('  %-46s %-13s n=%-5s feed=%-4s plunge=%s' % (
+    print('%d tools:' % len(data['data']))
+    for t in data['data']:
+        p = t['start-values']['presets'][0]
+        print('  %-36s %-13s n=%-5s feed=%-4s plunge=%s' % (
             t['description'], t['type'], p['n'], _fmt(p.get('v_f', 0)), _fmt(p['v_f_plunge'])))
 
 

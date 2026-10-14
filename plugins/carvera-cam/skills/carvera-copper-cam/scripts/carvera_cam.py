@@ -6,9 +6,10 @@ learned from the parts in the project 2026-01-06_smpm-sample-package-6port:
 
 - the Carvera 3-axis machine and the Carvera post, the latest versions in the
   Carvera Community's profiles repository on GitHub;
-- the lab's tools, exported from its Fusion library "Carvera Tools/My Tools"
-  to assets/carvera-tools.json, each with the feed preset "Copper 101-H02"
-  (aluminum runs the same program at 200% override);
+- the skill's tools, Makera's end mills, thread mills and chamfering bit and
+  McMaster-Carr's drills, in assets/carvera-tools.json (tool_library.py builds
+  it), each with the feed preset "Copper 101-H02" (aluminum runs the same
+  program at 200% override);
 - a top setup and a flipped bottom setup, the part held to the stock by four
   tabs that a separate "_tabs" program cuts last.
 
@@ -35,10 +36,8 @@ import adsk.core
 import adsk.fusion
 
 SKILL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-# The lab's tools; export_tools() rewrites this file from the Fusion library.
+# The skill's tools, from Makera and McMaster-Carr; tool_library.py builds this file.
 TOOLS_FILE = os.path.join(SKILL_DIR, 'assets', 'carvera-tools.json')
-TOOL_LIBRARY_URL = 'cloud://Carvera Tools/My Tools'
-ADDED_MARK = 'carvera-cam: added from '  # tool_library.ADDED
 # The machine and post: the newest files on the Carvera Community's main
 # branch, cached so that a build without network uses the last ones fetched.
 COMMUNITY_API = ('https://api.github.com/repos/Carvera-Community/Carvera_Community_Profiles'
@@ -62,7 +61,7 @@ SMALL_ENDMILLS = [
     ('Spiral O Metal 1.5*6mm', 1.5, 6.0),
     ('Spiral O Metal 1*3mm', 1.0, 3.0),
 ]
-# matched by prefix: the library stores this name with a mis-encoded inch mark
+# matched by prefix: Fusion reads the inch mark (″) in this name differently
 CHAMFER = 'Chamfering Bit - 1/8'
 # Tapped holes: the lab's pre-drilling and thread-milling recipe, per thread
 # size, lives in references/threads.toml, which is read on every run.
@@ -557,38 +556,29 @@ def analyze(args=None):
 # ------------------------------------------------------------- libraries
 
 class Tools:
-    """The lab's tools from TOOLS_FILE, numbered into Carvera ATC slots."""
+    """The skill's tools from TOOLS_FILE, numbered into Carvera ATC slots."""
 
     def __init__(self):
         with open(TOOLS_FILE, encoding='utf-8') as f:
             lib = adsk.cam.ToolLibrary.createFromJson(f.read())
         self.by_desc = {}
-        # tools the lab has not cut with (tool_library.ADDED), but the McMaster-Carr
-        # drills, whose preset is the lab's (tool_library.is_proven)
-        self.added = set()
         for t in lib:
-            d = t.parameters.itemByName('tool_description').value.value
-            self.by_desc.setdefault(d, t)
-            comment = t.parameters.itemByName('tool_comment')
-            if comment is not None and comment.value.value.startswith(ADDED_MARK) \
-                    and 'McMaster-Carr' not in comment.value.value:
-                self.added.add(d)
+            self.by_desc.setdefault(t.parameters.itemByName('tool_description').value.value, t)
         self.slots = {}   # key -> (tool, preset)
         self.order = []
-        self.unproven = []
 
     def has(self, desc):
         return desc in self.by_desc
 
     def drills(self):
-        """(description, diameter, flute length, added) of each drill, by diameter."""
+        """(description, diameter, flute length) of each drill, by diameter."""
         out = []
         for d, t in self.by_desc.items():
             p = t.parameters
-            if p.itemByName('tool_type').value.value == 'drill' and 'Spot' not in d:
+            if p.itemByName('tool_type').value.value == 'drill':
                 out.append((d, mm(p.itemByName('tool_diameter').value.value),
-                            mm(p.itemByName('tool_fluteLength').value.value), d in self.added))
-        return sorted(out, key=lambda x: (x[1], x[3]))
+                            mm(p.itemByName('tool_fluteLength').value.value)))
+        return sorted(out, key=lambda x: x[1])
 
     def get(self, desc, key=None):
         """Return (tool, preset) for a slot; `key` lets one tool fill two slots (T2/T3)."""
@@ -614,8 +604,6 @@ class Tools:
                 break
         self.slots[key] = (tool, preset)
         self.order.append((number, desc, preset.name if preset else None))
-        if desc in self.added:
-            self.unproven.append(desc)
         return self.slots[key]
 
 
@@ -785,22 +773,6 @@ def _machine(community, log, warnings):
 def _post(path):
     with open(path, encoding='utf-8') as f:
         return adsk.cam.PostConfiguration.createFromContent(f.read())
-
-
-def export_tools(args=None):
-    """Rewrite TOOLS_FILE from the lab's Fusion tool library, after it changes."""
-    libs = adsk.cam.CAMManager.get().libraryManager.toolLibraries
-    lib = libs.toolLibraryAtURL(adsk.core.URL.create(TOOL_LIBRARY_URL))
-    if lib is None:
-        raise RuntimeError('tool library not found: ' + TOOL_LIBRARY_URL)
-    data = json.loads(lib.toJson())
-    tl = runpy.run_path(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tool_library.py'))
-    current = tl['read'](TOOLS_FILE)['data'] if os.path.exists(TOOLS_FILE) else []
-    lab = len(data['data'])
-    data['data'] = tl['merge'](data['data'], current)
-    tl['write'](data, TOOLS_FILE)
-    print('wrote %d lab tools and kept %d added ones in %s'
-          % (lab, len(data['data']) - lab, TOOLS_FILE))
 
 
 # ------------------------------------------------------------ operations
@@ -1791,8 +1763,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
         match = [d for d in drills if h['dia'] - 0.02 <= d[1] <= h['dia'] + 0.05
                  and d[2] >= h['depth'] + 0.5]
         if match:
-            # the closest in diameter, a proven drill before an unproven one
-            best = min(match, key=lambda d: (d[3], round(abs(d[1] - h['dia']), 4)))
+            best = min(match, key=lambda d: abs(d[1] - h['dia']))  # the closest in diameter
             drilled.append((h, best[0]))
         elif h['dia'] > ENDMILL_D + 0.1:
             bored.append((h, (ENDMILL, 'rough'), (ENDMILL, 'finish')))
@@ -2295,9 +2266,6 @@ def build(args):
     for param, pt in REJECTED:
         warnings.append('Fusion refused the %s point at %s mm; that cut has no pre-drilled entry'
                         % (param, pt))
-    for desc in tools.unproven:
-        warnings.append('%s is not one of the lab tools: its Copper 101-H02 preset is '
-                        'derived (see tool_library.py); check the feeds before cutting' % desc)
     if len(tools.order) > 6:
         warnings.append('%d tools: the Carvera ATC holds 6, so T7+ need manual changes'
                         % len(tools.order))

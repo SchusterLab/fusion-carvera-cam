@@ -85,20 +85,19 @@ class Report:
 
 # ------------------------------------------------------------- the tools
 
-def _lab_tools():
-    """{description: (preset values, added)} from the skill's tool library; the
-    McMaster-Carr drills count as the lab's (tool_library.is_proven)."""
+def _library_presets():
+    """{description: Copper 101-H02 preset values} from the skill's tool library."""
     tl = runpy.run_path(os.path.join(HERE, 'tool_library.py'))
     out = {}
     for t in tl['read']()['data']:
         p = next((p for p in t.get('start-values', {}).get('presets', [])
                   if p['name'] == tl['PRESET']), None)
-        out[_ascii(t['description'])] = (p, not tl['is_proven'](t))
+        out[_ascii(t['description'])] = p
     return out
 
 
 def _ascii(name):
-    # the lab's chamfering bit has a garbled inch sign, garbled differently in places
+    # a chamfering bit's inch sign comes garbled in some exports
     return re.sub(r'[^ -~]+', '?', name)
 
 
@@ -151,14 +150,11 @@ def _check_op(rep, s, o, t, earlier, lab, through_before=False):
         if fz > THREAD_CHIP_LOAD:
             rep.add('F4', 'warning', sn, on, 'thread mill chip load %.4f mm/tooth is above the '
                     'lab\'s %.4f' % (fz, THREAD_CHIP_LOAD), feed=t['feed'], rpm=t['rpm'])
-    preset, added = lab.get(_ascii(t['desc']), (None, False))
+    preset = lab.get(_ascii(t['desc']))
     if preset is None:
-        rep.add('N5', 'warning', sn, on, '%s is not in the lab\'s tool library, so its feeds '
+        rep.add('N5', 'warning', sn, on, '%s is not in the skill\'s tool library, so its feeds '
                 'are unchecked against a Copper 101-H02 preset' % _ascii(t['desc']))
     else:
-        if added:
-            rep.add('N6', 'warning', sn, on, '%r is not one of the lab\'s own tools: its '
-                    'Copper 101-H02 preset is derived, not proven' % t['desc'])
         diffs = {}
         for key, val in (('n', t['rpm']), ('v_f', t['feed']), ('v_f_plunge', t['plunge'])):
             want = preset.get(key)
@@ -453,7 +449,7 @@ def check(args=None):
     cam = adsk.cam.CAM.cast(_app().activeDocument.products.itemByProductType('CAMProductType'))
     if cam is None:
         raise RuntimeError('the active document has no Manufacture data')
-    lab = _lab_tools()
+    lab = _library_presets()
     cc = runpy.run_path(os.path.join(HERE, 'carvera_cam.py'))
     post = cc['_post'](cc['_fetch_community']([])['post'])
     wanted = args.get('setups')

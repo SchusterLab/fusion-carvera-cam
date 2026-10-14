@@ -9,7 +9,7 @@ They come from the lab's own Fusion setups: about 40 setups and 530 operations i
 |---|---|---|
 | Machine | Makera Carvera 3-axis Community Version, latest | [Carvera Community profiles](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles), `main` branch |
 | Post processor | Makera Carvera Community Post (`Carvera.cps`), latest | the same folder |
-| Tools | the lab's 14 tools other than drills, 122 McMaster-Carr drills and 9 of Makera's tools for metal | [`assets/carvera-tools.json`](../assets/carvera-tools.json): the lab's exported from the Fusion library `Carvera Tools/My Tools`, the drills from McMaster-Carr's table of [expanded-shank carbide drill bits](https://www.mcmaster.com/products/drill-bits/expanded-shank-carbide-drill-bits~~/) (copied to [`assets/mcmaster-expanded-shank-carbide-drills.csv`](../assets/mcmaster-expanded-shank-carbide-drills.csv)), Makera's from the [community tool files](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files) |
+| Tools | 132 tools to buy from Makera and McMaster-Carr | [`assets/carvera-tools.json`](../assets/carvera-tools.json), which `scripts/tool_library.py` builds from Makera's [tool files](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files) and McMaster-Carr's table of [expanded-shank carbide drill bits](https://www.mcmaster.com/products/drill-bits/expanded-shank-carbide-drill-bits~~/) (copied to [`assets/mcmaster-expanded-shank-carbide-drills.csv`](../assets/mcmaster-expanded-shank-carbide-drills.csv)) |
 
 `build` downloads the machine and post again whenever they change upstream, and keeps them in `%LOCALAPPDATA%\carvera-cam\community`; without network it uses the copies there.
 The community machine's 3D model links to a file in its author's Fusion account, which no one else can open, so `build` uploads the machine's `.f3d` once per upstream version to a Fusion project named `carvera-cam` in the user's hub and links the machine to that copy.
@@ -20,39 +20,30 @@ That machine's settings differ from upstream 1.4.6 only in its tool change time 
 Its 3D model differs in the bed, where the fixture plate sits: the wasteboard and its anchors are gone, the bed is 18 mm lower (z = −21.175 mm) for x < 342 mm, and a construction point `Point1` at (−15, −15, −21.175) mm marks the corner of that recess.
 Before uploading the upstream model, `build` makes the same three changes to it (`_slab_model` in `carvera_cam.py`).
 
-Every tool in `My Tools` has a feed preset named **Copper 101-H02** (C10100 oxygen-free copper, H02 half-hard temper), and the lab uses it for everything.
+Every tool has one feed preset, **Copper 101-H02** (C10100 oxygen-free copper, H02 half-hard temper).
 Aluminum (6063-T5) runs the same programs at 200% feed and spindle override on the Carvera, so there is one set of toolpaths per part.
 No coolant.
-The library's drills are McMaster-Carr's, built from its catalogue (below); the lab's own drills in `My Tools` are left out (2026-10-14).
-Every drill's preset is the same: 10000 rpm, plunge 50 mm/min and retract 500 mm/min.
+
+The library holds only the tools `build` assigns, so a user can buy them all:
+
+| Tools | Source | Copper 101-H02 |
+|---|---|---|
+| Spiral O Metal end mills of 1, 1.5, 2, 2.5 and 3.175 mm | Makera | 6000 rpm, 200 mm/min, plunge 200 mm/min; stepdown 0.3 mm and ramp 300 mm/min for the 3.175 mm end mill, 0.2 mm and 200 mm/min for the smaller ones |
+| Carvera thread mills, M2, M2.5, M3 and M4 | Makera | 15000 rpm, and Makera's own copper feed: M2 100, M2.5 150, M3 and M4 200 mm/min |
+| Chamfering bit, 1/8″ shank | Makera | 6000 rpm, 200 mm/min, 0.1 mm steps |
+| 122 uncoated expanded-shank carbide drills, 0.152 to 3.175 mm (part numbers 2841A…) | McMaster-Carr | 10000 rpm, plunge 50 mm/min, retract 500 mm/min |
+
+The settings are the ones SchusterLab's parts use (see [rules.md](rules.md) for the evidence); Makera's own copper presets run its end mills faster, at 12000 rpm and 300 mm/min.
 A preset cannot hold the drilling cycle, so `build` sets it in each drill operation (see "Operation parameters").
-After changing `My Tools` in Fusion, run `export_tools({})` from `carvera_cam.py` to rewrite the lab's tools in `assets/carvera-tools.json`, and commit it; the export leaves out the drills in `My Tools` and keeps the McMaster-Carr drills.
 
-The library also holds tools from outside `My Tools`: drills from McMaster-Carr, and tools from Makera.
+Every drill has a 1/8″ (3.175 mm) shank for the Carvera's collet, whatever its diameter.
+`tool_library.py` makes each drill from Makera's 1/8″ drill, with the catalogue's diameter, maximum drilling depth (as the flute length), overall length and point angle (130°, checked on product pages), and names it like `1.613*9.7mm Drill (No. 52)`.
+The series also comes coated with TiN (6415N…) and TiAlN (2598N…), but every diameter comes uncoated, so the library holds only the uncoated drills.
+For a hole, `build` takes the drill closest in diameter of those that fit: within −0.02 to +0.05 mm of the hole's diameter, with a flute at least 0.5 mm longer than the hole's depth.
+The lab's smallest drill was 0.7 mm, so for smaller drills the feed of 0.005 mm per revolution has no evidence behind it.
 
-The lab's drills were McMaster-Carr's expanded-shank carbide drills, which have a 1/8″ (3.175 mm) shank for the Carvera's collet whatever their diameter.
-The library builds each drill of that series from its row in McMaster-Carr's table: the diameter, the maximum drilling depth as its flute length, a 38 mm overall length, the shank's taper from the drill's diameter up to 3.175 mm, and a name such as `1.613*9.7mm Drill (No. 52)`.
-The drills have a 130° point, whether the catalogue calls it four-facet or standard (checked on product pages).
-The series also comes in TiN (part numbers 6415N…) and TiAlN (2598N…), but every diameter comes uncoated (2841A…), so the library holds every uncoated drill: 122 of them, from 0.152 mm (0.006″) to 3.175 mm, in metric, fractional-inch and wire-gauge sizes.
-T1 is the uncoated 1/8″ drill, `3.175*7.4mm Drill (1/8")` (2841A98), in place of the lab's TiN one (6415N117).
-
-The 9 tools from Makera are its Spiral O end mills for metal, of 4 and 6 mm, and its thread mills for M1, M5, M6 and M8.
-Makera's drills are left out, because the McMaster-Carr drills cover their diameters, and so are its ball end mills and engraving bits (removed on 2026-10-14).
-Makera's own copper presets spin its end mills at 12000 rpm and 300 mm/min against the lab's 6000 rpm and 200 mm/min.
-So each tool from Makera gets a Copper 101-H02 preset made by the lab's rule for its kind of tool, and the preset's description says so; the McMaster-Carr drills get the lab's drill preset:
-
-| Kind | Copper 101-H02, as in the lab's own presets |
-|---|---|
-| end mills | 6000 rpm, 200 mm/min, plunge 200 mm/min; stepdown 0.3 mm and ramp 300 mm/min from 3.175 mm diameter up, 0.2 mm and 200 mm/min below |
-| drills | 10000 rpm, plunge 50 mm/min, retract 500 mm/min |
-| thread mills | 15000 rpm, and Makera's copper feed: M1 50 mm/min, M5 to M8 200 mm/min |
-
-The lab's smallest drill was 0.7 mm, so for smaller drills the drill preset's feed of 0.005 mm per revolution has no evidence behind it.
-
-The lab has not cut with Makera's tools, so `build` warns when it uses one, and the toolpath check flags them (N6 in [rules.md](rules.md)); the McMaster-Carr drills, with the lab's drill preset, are not flagged.
-For a hole, `build` takes the drill closest in diameter of those that fit (within −0.02 to +0.05 mm of the hole's diameter, and a flute at least 0.5 mm longer than the hole's depth).
-`scripts/tool_library.py` makes these additions; run it with plain Python (`python -I tool_library.py`) to fetch the community tool files again and rebuild the drills from the CSV file, which holds McMaster-Carr's whole table, coated drills included, with the point angle and coating of each part.
-It leaves out Makera's tools for wood, plastic and circuit boards.
+To rebuild the library, for example after Makera changes its tool files, run `python -I scripts/tool_library.py` with plain Python.
+It stops with an error if a tool it picks is no longer in Makera's files.
 
 ## Tool slots
 
@@ -65,7 +56,7 @@ T1, T2 and T3 are always the same three tools; every other tool takes the next s
 | T2 | Spiral O Metal 3.175 × 12 mm, one flute: roughing | 6000 rpm, 200 mm/min, ramp 300 mm/min, stepdown 0.3 mm |
 | T3 | the same end mill, a second one: finishing | as T2 |
 | T4 on, by first use | small end mills: Spiral O Metal 2.5, 2, 1.5 or 1 mm | 6000 rpm, 200 mm/min, stepdown 0.2 mm |
-| | other drills: tap drills and plain holes (0.7–3.175 mm) | as T1 |
+| | other drills: tap drills and plain holes (0.152–3.175 mm) | as T1 |
 | | Carvera thread mills, M2 to M4 | 15000 rpm; M2 100 mm/min, M2.5 150 mm/min, M3 and M4 200 mm/min |
 | | chamfering bit, 1/8″ shank | 6000 rpm, 200 mm/min |
 
