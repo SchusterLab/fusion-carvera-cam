@@ -39,6 +39,7 @@ SKILL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 TOOLS_FILE = os.path.join(SKILL_DIR, 'assets', 'carvera-tools.json')
 TOOL_LIBRARY_URL = 'cloud://Carvera Tools/My Tools'
 ADDED_MARK = 'carvera-cam: added from '  # tool_library.ADDED
+MCMASTER_SERIES = ('6415N', '2841A', '2598N')  # tool_library.MCMASTER_SERIES
 # The machine and post: the newest files on the Carvera Community's main
 # branch, cached so that a build without network uses the last ones fetched.
 COMMUNITY_API = ('https://api.github.com/repos/Carvera-Community/Carvera_Community_Profiles'
@@ -579,13 +580,21 @@ class Tools:
         return desc in self.by_desc
 
     def drills(self):
-        """(description, diameter, flute length, added) of each drill, by diameter."""
+        """(description, diameter, flute length, rank) of each drill, by diameter.
+        Rank 0 is a lab drill; an added one ranks 1 + its McMaster-Carr series'
+        place in MCMASTER_SERIES (TiN, uncoated, TiAlN), or after those."""
         out = []
         for d, t in self.by_desc.items():
             p = t.parameters
             if p.itemByName('tool_type').value.value == 'drill' and 'Spot' not in d:
+                rank = 0
+                if d in self.added:
+                    pid = p.itemByName('tool_productId')
+                    series = pid.value.value[:5] if pid is not None else ''
+                    rank = 1 + (MCMASTER_SERIES.index(series) if series in MCMASTER_SERIES
+                                else len(MCMASTER_SERIES))
                 out.append((d, mm(p.itemByName('tool_diameter').value.value),
-                            mm(p.itemByName('tool_fluteLength').value.value), d in self.added))
+                            mm(p.itemByName('tool_fluteLength').value.value), rank))
         return sorted(out, key=lambda x: (x[1], x[3]))
 
     def get(self, desc, key=None):
@@ -1764,8 +1773,9 @@ def _side_ops(b, setup, a, side, plan, warnings):
         match = [d for d in drills if h['dia'] - 0.02 <= d[1] <= h['dia'] + 0.05
                  and d[2] >= h['depth'] + 0.5]
         if match:
-            # a lab drill if one fits, else the added drill closest in diameter
-            best = min(match, key=lambda d: (d[3], d[3] and abs(d[1] - h['dia'])))
+            # a lab drill if one fits, else the added drill closest in diameter,
+            # and of those the first coating in MCMASTER_SERIES
+            best = min(match, key=lambda d: (d[3] > 0, d[3] and round(abs(d[1] - h['dia']), 4), d[3]))
             drilled.append((h, best[0]))
         elif h['dia'] > ENDMILL_D + 0.1:
             bored.append((h, (ENDMILL, 'rough'), (ENDMILL, 'finish')))

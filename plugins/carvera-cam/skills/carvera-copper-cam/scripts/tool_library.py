@@ -34,7 +34,7 @@ TOOLS_FILE = os.path.join(os.path.dirname(HERE), 'assets', 'carvera-tools.json')
 COMMUNITY_TOOLS = ('https://raw.githubusercontent.com/Carvera-Community/Carvera_Community_Profiles/'
                    'main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files/')
 MCMASTER_DRILLS = os.path.join(os.path.dirname(HERE), 'assets', 'mcmaster-expanded-shank-carbide-drills.csv')
-MCMASTER_SERIES = ('6415N', '2841A', '2598N')  # TiN, uncoated, TiAlN
+MCMASTER_SERIES = ('6415N', '2841A', '2598N')  # TiN, uncoated, TiAlN: the order build prefers them in
 PRESET = 'Copper 101-H02'
 ADDED = 'carvera-cam: added from '
 DERIVED = ('Derived by carvera-cam from the lab\'s Copper 101-H02 presets for this kind of '
@@ -178,30 +178,27 @@ def read_mcmaster(path=MCMASTER_DRILLS):
 
 
 def mcmaster_drills(lab, rows, templates):
-    """One drill per diameter of McMaster-Carr's expanded-shank carbide drills
-    (rows of MCMASTER_DRILLS), for the diameters the lab has no drill of.
+    """A drill for each of McMaster-Carr's expanded-shank carbide drills (rows of
+    MCMASTER_DRILLS) that is not already a lab drill.
 
-    The series comes coated (TiN, TiAlN) and uncoated, and the coatings of one
-    diameter differ in their maximum drilling depth. The drill takes the least
-    of those depths as its flute length, and the part number of the variant
-    with it, preferring the TiN series 6415N, which most lab drills are."""
-    have = [t['geometry']['DC'] for t in lab if t['type'] == 'drill']
-    by_d = {}
-    for r in rows:
-        by_d.setdefault(round(float(r['diameter_mm']), 4), []).append(r)
+    The series comes coated with TiN (6415N) or TiAlN (2598N) or uncoated
+    (2841A), and the coatings of one diameter differ in their maximum drilling
+    depth, so each part number is a drill of its own, with that depth as its
+    flute length and the coating in its name."""
+    have = {t.get('product-id') for t in lab if t['type'] == 'drill'}
     template = next(t for t in lab if t['description'] == TEMPLATES['drill'])
     out = []
-    for d, variants in sorted(by_d.items()):
-        if any(abs(d - h) < 0.005 for h in have):
+    for r in sorted(rows, key=lambda r: (float(r['diameter_mm']), MCMASTER_SERIES.index(r['part'][:5]))):
+        if r['part'] in have:
             continue
-        r = min(variants, key=lambda r: (float(r['max_drilling_depth_mm']),
-                                         MCMASTER_SERIES.index(r['part'][:5])))
+        d = round(float(r['diameter_mm']), 4)
         depth = round(float(r['max_drilling_depth_mm']), 1)
-        tip = 130 if r['point'] == 'four facet' else 118
+        tip = int(r['point_angle_deg'])
         t = copy.deepcopy(template)
         desc = '%s*%smm Drill' % (_fmt(round(d, 3)), _fmt(depth))
         if not r['size'].endswith(' mm'):  # an inch or wire-gauge size
             desc += ' (%s)' % r['size']
+        desc += ' ' + r['coating']
         g = t['geometry']
         g.update({'DC': d, 'LCF': depth, 'shoulder-length': depth, 'SIG': tip, 'SFDM': 3.175,
                   'OAL': round(float(r['overall_length_mm']))})
@@ -215,9 +212,7 @@ def mcmaster_drills(lab, rows, templates):
                   'tool_shoulderLength': '%s mm' % _fmt(depth),
                   'tool_tipAngle': '%d degrees' % tip, 'tool_productId': "'%s'" % r['part'],
                   'tool_productLink': "'%s'" % t['product-link']})
-        others = sorted(v['part'] for v in variants if v is not r)
-        t['post-process']['comment'] = ADDED + 'McMaster-Carr "Expanded-Shank Carbide Drill Bits"' + (
-            ' (other coatings: %s)' % ', '.join(others) if others else '')
+        t['post-process']['comment'] = ADDED + 'McMaster-Carr "Expanded-Shank Carbide Drill Bits"'
         t['start-values'] = {'presets': []}
         out.append(_with_preset(t, templates))
     return out
