@@ -1,12 +1,12 @@
 ---
 name: carvera-copper-cam
-description: Generate CAM toolpaths in Autodesk Fusion for machining a copper part on SchusterLab's Makera Carvera, following the lab's conventions (the lab's tools with the "Copper 101-H02" preset, the Carvera Community machine and post, top and flipped bottom setups, pre-drilled entry holes, four holding tabs cut by a separate program), and check existing Carvera toolpaths for crash, spindle-stall and tool-wear risks against the lab's rules. Use when the user asks to program, CAM, toolpath or machine a part on the Carvera or Makera, in copper or aluminum, or to check, review or verify Carvera toolpaths. Needs the Fusion MCP server.
+description: Generate CAM toolpaths in Autodesk Fusion for machining a copper part on SchusterLab's Makera Carvera, following the lab's conventions (Makera and McMaster-Carr tools with the "Copper 101-H02" preset, the Carvera Community machine and post, top and flipped bottom setups, pre-drilled entry holes, four holding tabs cut by a separate program), and check existing Carvera toolpaths for crash, spindle-stall and tool-wear risks against the lab's rules. Use when the user asks to program, CAM, toolpath or machine a part on the Carvera or Makera, in copper or aluminum, or to check, review or verify Carvera toolpaths. Needs the Fusion MCP server.
 ---
 
 # Carvera copper toolpaths
 
 This skill turns a Fusion design of a 2.5-axis part into a ready-to-post Carvera program, in the lab's style.
-It makes two setups (top, then the part flipped), every operation with the lab's tools and feeds, and three NC programs: `<part>_top`, `<part>_bottom` and `<part>_tabs`.
+It makes two setups (top, then the part flipped), every operation with tools from Makera and McMaster-Carr and the lab's feeds, and three NC programs: `<part>_top`, `<part>_bottom` and `<part>_tabs`.
 The same programs machine aluminum: run them with the Carvera's feed and spindle overrides at 200%.
 It also checks existing toolpaths, the lab's own as well as those it generates, against the lab's rules for avoiding crashes, spindle stalls and tool wear (see "Checking existing toolpaths").
 

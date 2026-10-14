@@ -2,7 +2,7 @@
 
 This repository is a Claude Code plugin marketplace with one plugin, `carvera-cam`.
 Its skill, `carvera-copper-cam`, generates Autodesk Fusion CAM toolpaths for machining copper parts on the lab's Makera Carvera.
-Given a part, it creates the top and flipped bottom setups with the lab's vise modelled for collision checks, every operation with the lab's tools and feeds, and three NC programs: `<part>_top`, `<part>_bottom` and `<part>_tabs`.
+Given a part, it creates the top and flipped bottom setups with the lab's vise modelled for collision checks, every operation with tools from Makera and McMaster-Carr and the lab's feeds, and three NC programs: `<part>_top`, `<part>_bottom` and `<part>_tabs`.
 The same programs machine aluminum at 200% feed and spindle override.
 The skill also checks existing Carvera toolpaths, the lab's own as well as those it generates, against rules mined from the lab's toolpaths for avoiding crashes, spindle stalls and tool wear.
 

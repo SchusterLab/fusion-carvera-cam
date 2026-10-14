@@ -52,8 +52,8 @@ def copper_values(tool, makera_copper):
     """The skill's Copper 101-H02 settings for a tool of this kind and size.
 
     Spiral O end mills run at 6000 rpm and 200 mm/min with 200 mm/min plunge,
-    stepping down 0.3 mm (ramp 300 mm/min) from 3.175 mm diameter up and
-    0.2 mm (ramp 200 mm/min) below; drills at 10000 rpm, plunge 50 mm/min,
+    stepping down 0.3 mm (ramp 300 mm/min) for the 3.175 mm one and
+    0.2 mm (ramp 200 mm/min) for the smaller ones; drills at 10000 rpm, plunge 50 mm/min,
     retract 500 mm/min; thread mills at 10000 rpm and 0.1 mm stepover, with
     the rest of Makera's own Copper preset (feed M2 100, M2.5 150, M3 and
     M4 200 mm/min; stepdown the thread's pitch); the chamfering
@@ -62,7 +62,7 @@ def copper_values(tool, makera_copper):
     kind = tool['type']
     d = tool['geometry']['DC']
     if kind == 'flat end mill':
-        big = d >= 3.175 - 1e-6
+        big = tool['description'] == 'Spiral O Metal 3.175*12mm'
         return {'n': 6000, 'v_f': 200, 'v_f_plunge': 200, 'v_f_ramp': 300 if big else 200,
                 'stepdown': 0.3 if big else 0.2, 'ramp-angle': 1.2}
     if kind == 'drill':

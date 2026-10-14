@@ -50,7 +50,7 @@ Fix these findings first: other findings on a stale toolpath mean nothing.
 
 ### Feeds and speeds
 
-The lab runs every end mill at 6000 rpm and 200 mm/min, every drill at 10000 rpm with a 50 mm/min plunge, and every thread mill at 15000 rpm and 100 (M2) to 200 mm/min (M3 and M4).
+The lab runs every end mill at 6000 rpm and 200 mm/min, every drill at 10000 rpm with a 50 mm/min plunge, and every thread mill at 100 (M2) to 200 mm/min (M3 and M4); the skill runs the thread mills at 10000 rpm, where the lab's parts ran them at 15000 rpm.
 These settings are the feed presets named "Copper 101-H02", after the copper the lab machines (C10100, H02 half-hard temper), which every tool in the skill's tool library (`assets/carvera-tools.json`) carries.
 The lab cuts aluminum with the same programs, at 200% feed and spindle override.
 Chip load is the feed per cutting edge per revolution: feed ÷ (rpm × flutes).
@@ -58,7 +58,7 @@ Chip load is the feed per cutting edge per revolution: feed ÷ (rpm × flutes).
 | Id | Finding when | Severity | Evidence | Guards against |
 |---|---|---|---|---|
 | F0 | the spindle speed is 0 | error | — | feeding a stopped tool into the stock |
-| F1 | the spindle speed, cutting feed or plunge feed differs from the tool's Copper 101-H02 preset | warning | the feeds match the preset in all 916 operations whose tool is in the library; the other 88 use tools outside it (rule N5) | settings the lab has not used with that tool |
+| F1 | the spindle speed, cutting feed or plunge feed differs from the tool's Copper 101-H02 preset | warning | the feeds match the tool's Copper 101-H02 preset in all 916 operations whose tool had one; the other 88 use tools without one (rule N5) | settings the lab has not used with that tool |
 | F2 | an end mill or chamfering bit cuts at more than 0.034 mm chip load, or its plunge feed exceeds 0.034 mm per revolution | warning | all 647 end-mill operations cut at 0.033 mm (one flute) or 0.017 mm (two flutes), and all 112 chamfering operations at 0.017 mm | stall and broken small end mills |
 | F3 | a drill feeds more than 0.0051 mm per revolution | warning | 217 of 218 drill operations feed 0.005 mm per revolution | broken drills |
 | F4 | a three-flute thread mill cuts at more than 0.0045 mm chip load | warning | all 27 thread operations: 0.0022 (M2, 100 mm/min) to 0.0044 mm (M4, 200 mm/min) | broken thread mills |
@@ -116,7 +116,7 @@ The Carvera's automatic tool changer holds six tools, numbered 1 to 6, and the o
 |---|---|---|---|---|
 | N1 | one tool number names two different tools in a setup (error), or in two setups of the document (warning) | as given | never within one of the lab's 88 setups; across setups, in 3 documents | the wrong tool in the changer, and a crash at its first move |
 | N3 | a tool number is above 6 | warning | 12 current setups use tools 7 to 10 | a missed manual tool change |
-| N5 | the tool is not in the skill's tool library, or has no holder | warning | a few tools have no library entry, such as the 1/8″ two-flute end mill in `sample-clamp-6port7x7`, which also has no holder | feeds unchecked against a preset; holder collisions unchecked in simulation |
+| N5 | the tool is not in the skill's tool library, or has no holder | warning | a few of the lab's tools have no preset, such as the 1/8″ two-flute end mill in `sample-clamp-6port7x7`, which also has no holder | feeds unchecked against a preset; holder collisions unchecked in simulation |
 | M1 | the setup has no machine | warning | 3 of the 88 setups have none | simulation not checking the machine |
 | M2 | the setup has no fixture | warning | only 10 of the 88 setups set one, all in older versions such as `2026-01-20_sample-puck-6port7x7`, whose fixture setup the skill copies | simulation, and rule X1, not checking the vise |
 | G0 | no posted G-code could be matched to the operation | warning | — | an operation left out of the depth and fixture checks |
