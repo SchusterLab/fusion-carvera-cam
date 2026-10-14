@@ -9,7 +9,7 @@ They come from the lab's own Fusion setups: about 40 setups and 530 operations i
 |---|---|---|
 | Machine | Makera Carvera 3-axis Community Version, latest | [Carvera Community profiles](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles), `main` branch |
 | Post processor | Makera Carvera Community Post (`Carvera.cps`), latest | the same folder |
-| Tools | the lab's 25 tools, 111 more McMaster-Carr drills and 23 of Makera's tools for metal | [`assets/carvera-tools.json`](../assets/carvera-tools.json): the lab's exported from the Fusion library `Carvera Tools/My Tools`, the drills from McMaster-Carr's table of [expanded-shank carbide drill bits](https://www.mcmaster.com/products/drill-bits/expanded-shank-carbide-drill-bits~~/) (copied to [`assets/mcmaster-expanded-shank-carbide-drills.csv`](../assets/mcmaster-expanded-shank-carbide-drills.csv)), Makera's from the [community tool files](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files) |
+| Tools | the lab's 25 tools, 122 McMaster-Carr drills and 9 of Makera's tools for metal | [`assets/carvera-tools.json`](../assets/carvera-tools.json): the lab's exported from the Fusion library `Carvera Tools/My Tools`, the drills from McMaster-Carr's table of [expanded-shank carbide drill bits](https://www.mcmaster.com/products/drill-bits/expanded-shank-carbide-drill-bits~~/) (copied to [`assets/mcmaster-expanded-shank-carbide-drills.csv`](../assets/mcmaster-expanded-shank-carbide-drills.csv)), Makera's from the [community tool files](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files) |
 
 `build` downloads the machine and post again whenever they change upstream, and keeps them in `%LOCALAPPDATA%\carvera-cam\community`; without network it uses the copies there.
 The community machine's 3D model links to a file in its author's Fusion account, which no one else can open, so `build` uploads the machine's `.f3d` once per upstream version to a Fusion project named `carvera-cam` in the user's hub and links the machine to that copy.
@@ -34,20 +34,20 @@ Most of the lab's drills are McMaster-Carr's expanded-shank carbide drills, whic
 The library builds each drill of that series from its row in McMaster-Carr's table: the diameter, the maximum drilling depth as its flute length, a 38 mm overall length, the shank's taper from the drill's diameter up to 3.175 mm, and a name such as `1.613*9.7mm Drill (No. 52)`.
 The drills have a 130° point, whether the catalogue calls it four-facet or standard (checked on product pages).
 The lab's own drills of the series, 11 of them in TiN or uncoated, are rebuilt this way too, so `3.175*7.4mm Drill` is now `3.175*7.4mm Drill (1/8")`, and `3.0*7.6mm Drill` and `2.1*9.0mm Drill` lose their trailing zeros.
-The series also comes in TiN (part numbers 6415N…) and TiAlN (2598N…), but every diameter comes uncoated (2841A…), so the library adds only uncoated drills: 111 of them, from 0.152 mm (0.006″) to 3.175 mm, in metric, fractional-inch and wire-gauge sizes.
-It skips an uncoated drill that would have the same name as a lab drill in another coating, such as `2*9.1mm Drill`.
+The series also comes in TiN (part numbers 6415N…) and TiAlN (2598N…), but every diameter comes uncoated (2841A…), so the library adds every uncoated drill: 122 of them, from 0.152 mm (0.006″) to 3.175 mm, in metric, fractional-inch and wire-gauge sizes.
+They include the six uncoated drills the lab has and the uncoated sizes of its TiN drills; such a drill has its part number after its name, such as `2*9.1mm Drill 2841A134`, so that no two tools share a name.
+`build` takes the lab's own drill of a size first, so it uses these copies only where the lab's drill does not fit.
 
-The 23 tools from Makera are its tools for metal: Spiral O end mills of 4 and 6 mm, ball end mills of 1 to 6 mm, engraving bits, and thread mills for M1, M5, M6 and M8.
-Makera's drills are left out, because the McMaster-Carr drills cover their diameters.
+The 9 tools from Makera are its Spiral O end mills for metal, of 4 and 6 mm, and its thread mills for M1, M5, M6 and M8.
+Makera's drills are left out, because the McMaster-Carr drills cover their diameters, and so are its ball end mills and engraving bits (removed on 2026-10-14).
 Makera's own copper presets spin its end mills at 12000 rpm and 300 mm/min against the lab's 6000 rpm and 200 mm/min.
 So each added tool, from either source, gets a Copper 101-H02 preset made by the lab's rule for its kind of tool, and the preset's description says so:
 
 | Kind | Copper 101-H02, as in the lab's own presets |
 |---|---|
-| end mills, flat or ball | 6000 rpm, 200 mm/min, plunge 200 mm/min; stepdown 0.3 mm and ramp 300 mm/min from 3.175 mm diameter up, 0.2 mm and 200 mm/min below |
+| end mills | 6000 rpm, 200 mm/min, plunge 200 mm/min; stepdown 0.3 mm and ramp 300 mm/min from 3.175 mm diameter up, 0.2 mm and 200 mm/min below |
 | drills | 10000 rpm, plunge 50 mm/min, retract 500 mm/min |
 | thread mills | 15000 rpm, and Makera's copper feed: M1 50 mm/min, M5 to M8 200 mm/min |
-| engraving bits | as the chamfering bit: 6000 rpm, 200 mm/min, 0.1 mm steps |
 
 The lab's smallest drill is 0.7 mm, so for smaller drills the drill preset's feed of 0.005 mm per revolution has no evidence behind it.
 

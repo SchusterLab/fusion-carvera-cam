@@ -3108,4537 +3108,6 @@
   },
   {
    "BMC": "carbide",
-   "description": "Makera Metal - 1*3mm",
-   "expressions": {
-    "tool_bodyLength": "max(tool_shoulderLength, (tool_overallLength - tool_holderGaugeLength -12.5 ))",
-    "tool_description": "'Makera Metal - 1*3mm'",
-    "tool_diameter": "1 mm",
-    "tool_fluteLength": "3 mm",
-    "tool_material": "'carbide'",
-    "tool_numberOfFlutes": "2",
-    "tool_overallLength": "38 mm",
-    "tool_productLink": "'https://www.makera.com/products/two-flute-ball-nose-bit-for-metal-1-8-shank?variant=43974826918113'",
-    "tool_shaftDiameter": "3.175 mm",
-    "tool_shoulderLength": "3 mm"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 1,
-    "HAND": true,
-    "LB": 19,
-    "LCF": 3,
-    "NOF": 2,
-    "OAL": 38,
-    "SFDM": 3.175,
-    "assemblyGaugeLength": 25.5,
-    "shoulder-diameter": 1,
-    "shoulder-length": 3
-   },
-   "guid": "7df9f03d-55a3-459f-bf67-7f6d96834829",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "expressions": {
-     "tool_holderGaugeLength": "segment_3_height"
-    },
-    "gaugeLength": 6.5,
-    "guid": "5b6015ee-44cf-4a27-a549-a582f82fc88e",
-    "last_modified": 1763719656379,
-    "product-id": "",
-    "product-link": "",
-    "reference_guid": "22f27f10-4008-4840-8085-ebf47d806921",
-    "segments": [
-     {
-      "height": 6.5,
-      "lower-diameter": 7.5,
-      "upper-diameter": 7.5
-     },
-     {
-      "height": 0.5,
-      "lower-diameter": 9,
-      "upper-diameter": 10
-     },
-     {
-      "height": 0.01,
-      "lower-diameter": 16.6,
-      "upper-diameter": 16.6
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from Carvera Community \"Makera Ball Endmills\"",
-    "diameter-offset": 1,
-    "length-offset": 1,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "",
-   "product-link": "https://www.makera.com/products/two-flute-ball-nose-bit-for-metal-1-8-shank?variant=43974826918113",
-   "shaft": {
-    "segments": [
-     {
-      "height": 4,
-      "lower-diameter": 1,
-      "upper-diameter": 3.175
-     },
-     {
-      "height": 10.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "200 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_feedRamp": "200 mmpm",
-       "tool_rampAngle": "1.2 degrees",
-       "tool_spindleSpeed": "6000 rpm",
-       "tool_stepdown": "0.2 mm",
-       "tool_stepover": "tool_diameter * 0.1",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "false"
-      },
-      "f_n": 0.03333333333333333,
-      "f_z": 0.016666666666666666,
-      "guid": "bf4acfaa-06ad-5244-bf73-be7e4542fa55",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 6000,
-      "n_ramp": 6000,
-      "name": "Copper 101-H02",
-      "ramp-angle": 1.2,
-      "stepdown": 0.2,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": false,
-      "v_c": 18.84955592153876,
-      "v_f": 200,
-      "v_f_leadIn": 200,
-      "v_f_leadOut": 200,
-      "v_f_plunge": 200,
-      "v_f_ramp": 200,
-      "v_f_transition": 200
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.6 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".2 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "92c3a7bd-c382-4be8-ac3f-38977299c5bb",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Aluminum",
-      "ramp-angle": 1.6,
-      "stepdown": 0.2,
-      "stepover": 0.14285714285714288,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 37.69911184307752,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.6 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "f1219953-648c-48ad-839f-39a61c02bfeb",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Brass",
-      "ramp-angle": 1.6,
-      "stepdown": 0.1,
-      "stepover": 0.14285714285714288,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 37.69911184307752,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.6 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "fbcb8a32-1456-4ba7-bdf6-ed817cb576d6",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Copper",
-      "ramp-angle": 1.6,
-      "stepdown": 0.1,
-      "stepover": 0.14285714285714288,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 37.69911184307752,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.6 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "8d4b5fda-c197-460e-9085-a3e8c6dfe8b9",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Hardwood",
-      "ramp-angle": 1.6,
-      "stepdown": 1,
-      "stepover": 0.14285714285714288,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 37.69911184307752,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.6 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "2 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "77e4ae0b-bce9-4c31-bda0-478c961473e2",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Softwood",
-      "ramp-angle": 1.6,
-      "stepdown": 2,
-      "stepover": 0.14285714285714288,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 37.69911184307752,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.6 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "e324823a-e018-431a-9efd-6d0fb991416e",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Plastic",
-      "ramp-angle": 1.6,
-      "stepdown": 1,
-      "stepover": 0.14285714285714288,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 37.69911184307752,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     }
-    ]
-   },
-   "type": "ball end mill",
-   "unit": "millimeters",
-   "vendor": ""
-  },
-  {
-   "BMC": "carbide",
-   "description": "Makera Metal - 1.5*4.5mm",
-   "expressions": {
-    "tool_bodyLength": "max(tool_shoulderLength, (tool_overallLength - tool_holderGaugeLength -12.5 ))",
-    "tool_description": "'Makera Metal - 1.5*4.5mm'",
-    "tool_diameter": "1.5 mm",
-    "tool_fluteLength": "4 mm",
-    "tool_material": "'carbide'",
-    "tool_numberOfFlutes": "2",
-    "tool_overallLength": "38 mm",
-    "tool_productLink": "'https://www.makera.com/products/two-flute-ball-nose-bit-for-metal-1-8-shank?variant=43974826950881'",
-    "tool_shaftDiameter": "3.175 mm",
-    "tool_shoulderLength": "4 mm"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 1.5,
-    "HAND": true,
-    "LB": 19,
-    "LCF": 4,
-    "NOF": 2,
-    "OAL": 38,
-    "SFDM": 3.175,
-    "assemblyGaugeLength": 25.5,
-    "shoulder-diameter": 1.5,
-    "shoulder-length": 4
-   },
-   "guid": "cf0b7848-7784-4ef7-a7d5-b6202c7c6d4d",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "expressions": {
-     "tool_holderGaugeLength": "segment_3_height"
-    },
-    "gaugeLength": 6.5,
-    "guid": "5b6015ee-44cf-4a27-a549-a582f82fc88e",
-    "last_modified": 1763719656379,
-    "product-id": "",
-    "product-link": "",
-    "reference_guid": "22f27f10-4008-4840-8085-ebf47d806921",
-    "segments": [
-     {
-      "height": 6.5,
-      "lower-diameter": 7.5,
-      "upper-diameter": 7.5
-     },
-     {
-      "height": 0.5,
-      "lower-diameter": 9,
-      "upper-diameter": 10
-     },
-     {
-      "height": 0.01,
-      "lower-diameter": 16.6,
-      "upper-diameter": 16.6
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from Carvera Community \"Makera Ball Endmills\"",
-    "diameter-offset": 1,
-    "length-offset": 1,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "",
-   "product-link": "https://www.makera.com/products/two-flute-ball-nose-bit-for-metal-1-8-shank?variant=43974826950881",
-   "shaft": {
-    "segments": [
-     {
-      "height": 3,
-      "lower-diameter": 1.5,
-      "upper-diameter": 3.175
-     },
-     {
-      "height": 10.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "200 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_feedRamp": "200 mmpm",
-       "tool_rampAngle": "1.2 degrees",
-       "tool_spindleSpeed": "6000 rpm",
-       "tool_stepdown": "0.2 mm",
-       "tool_stepover": "tool_diameter * 0.1",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "false"
-      },
-      "f_n": 0.03333333333333333,
-      "f_z": 0.016666666666666666,
-      "guid": "1ed92c07-a18d-504a-80bb-e1b73d02955d",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 6000,
-      "n_ramp": 6000,
-      "name": "Copper 101-H02",
-      "ramp-angle": 1.2,
-      "stepdown": 0.2,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": false,
-      "v_c": 28.274333882308138,
-      "v_f": 200,
-      "v_f_leadIn": 200,
-      "v_f_leadOut": 200,
-      "v_f_plunge": 200,
-      "v_f_ramp": 200,
-      "v_f_transition": 200
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".2 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "92c3a7bd-c382-4be8-ac3f-38977299c5bb",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Aluminum",
-      "ramp-angle": 1.8,
-      "stepdown": 0.2,
-      "stepover": 0.2142857142857143,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 56.54866776461627,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "d35c80ff-bdc5-47f4-938f-c3f3b194e8c9",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Brass",
-      "ramp-angle": 1.8,
-      "stepdown": 0.1,
-      "stepover": 0.2142857142857143,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 56.54866776461627,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "fd91137d-e6a3-4c5a-8968-bb2bf95a1fb7",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Copper",
-      "ramp-angle": 1.8,
-      "stepdown": 0.1,
-      "stepover": 0.2142857142857143,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 56.54866776461627,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "921a0382-5764-4a2d-b000-42c0f5b71b73",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Hardwood",
-      "ramp-angle": 1.8,
-      "stepdown": 1,
-      "stepover": 0.2142857142857143,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 56.54866776461627,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "2 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "5558cd71-6a99-4c26-ba53-ac1fb1db9aaa",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Softwood",
-      "ramp-angle": 1.8,
-      "stepdown": 2,
-      "stepover": 0.2142857142857143,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 56.54866776461627,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "1302bbb9-7d85-4536-a35e-0dd49c8d7093",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Plastic",
-      "ramp-angle": 1.8,
-      "stepdown": 1,
-      "stepover": 0.2142857142857143,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 56.54866776461627,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     }
-    ]
-   },
-   "type": "ball end mill",
-   "unit": "millimeters",
-   "vendor": ""
-  },
-  {
-   "BMC": "carbide",
-   "description": "Makera Metal - 2*6mm",
-   "expressions": {
-    "tool_bodyLength": "max(tool_shoulderLength, (tool_overallLength - tool_holderGaugeLength -12.5 ))",
-    "tool_description": "'Makera Metal - 2*6mm'",
-    "tool_diameter": "2 mm",
-    "tool_fluteLength": "6 mm",
-    "tool_material": "'carbide'",
-    "tool_numberOfFlutes": "2",
-    "tool_overallLength": "38 mm",
-    "tool_productLink": "'https://www.makera.com/products/two-flute-ball-nose-bit-for-metal-1-8-shank?variant=43974826983649'",
-    "tool_shaftDiameter": "3.175 mm",
-    "tool_shoulderLength": "6 mm"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 2,
-    "HAND": true,
-    "LB": 19,
-    "LCF": 6,
-    "NOF": 2,
-    "OAL": 38,
-    "SFDM": 3.175,
-    "assemblyGaugeLength": 25.5,
-    "shoulder-diameter": 2,
-    "shoulder-length": 6
-   },
-   "guid": "130c3e36-3c3a-4cb0-a7c1-c7fe465f81eb",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "expressions": {
-     "tool_holderGaugeLength": "segment_3_height"
-    },
-    "gaugeLength": 6.5,
-    "guid": "5b6015ee-44cf-4a27-a549-a582f82fc88e",
-    "last_modified": 1763719656379,
-    "product-id": "",
-    "product-link": "",
-    "reference_guid": "22f27f10-4008-4840-8085-ebf47d806921",
-    "segments": [
-     {
-      "height": 6.5,
-      "lower-diameter": 7.5,
-      "upper-diameter": 7.5
-     },
-     {
-      "height": 0.5,
-      "lower-diameter": 9,
-      "upper-diameter": 10
-     },
-     {
-      "height": 0.01,
-      "lower-diameter": 16.6,
-      "upper-diameter": 16.6
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from Carvera Community \"Makera Ball Endmills\"",
-    "diameter-offset": 1,
-    "length-offset": 1,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "",
-   "product-link": "https://www.makera.com/products/two-flute-ball-nose-bit-for-metal-1-8-shank?variant=43974826983649",
-   "shaft": {
-    "segments": [
-     {
-      "height": 3,
-      "lower-diameter": 2,
-      "upper-diameter": 3.175
-     },
-     {
-      "height": 8.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "200 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_feedRamp": "200 mmpm",
-       "tool_rampAngle": "1.2 degrees",
-       "tool_spindleSpeed": "6000 rpm",
-       "tool_stepdown": "0.2 mm",
-       "tool_stepover": "tool_diameter * 0.1",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "false"
-      },
-      "f_n": 0.03333333333333333,
-      "f_z": 0.016666666666666666,
-      "guid": "c63411f9-bde5-55de-8e0b-bb7029db2d96",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 6000,
-      "n_ramp": 6000,
-      "name": "Copper 101-H02",
-      "ramp-angle": 1.2,
-      "stepdown": 0.2,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": false,
-      "v_c": 37.69911184307752,
-      "v_f": 200,
-      "v_f_leadIn": 200,
-      "v_f_leadOut": 200,
-      "v_f_plunge": 200,
-      "v_f_ramp": 200,
-      "v_f_transition": 200
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".2 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "92c3a7bd-c382-4be8-ac3f-38977299c5bb",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Aluminum",
-      "ramp-angle": 1.8,
-      "stepdown": 0.2,
-      "stepover": 0.28571428571428575,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 75.39822368615503,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "d2bce7c1-d0d1-4030-8180-9f096f58e85c",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Brass",
-      "ramp-angle": 1.8,
-      "stepdown": 0.1,
-      "stepover": 0.28571428571428575,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 75.39822368615503,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "2ea4ac7c-2ca3-494e-8352-63f8c2a4a37f",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Copper",
-      "ramp-angle": 1.8,
-      "stepdown": 0.1,
-      "stepover": 0.28571428571428575,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 75.39822368615503,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "c66cac22-1c33-49e6-960f-a41747d00310",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Hardwood",
-      "ramp-angle": 1.8,
-      "stepdown": 1,
-      "stepover": 0.28571428571428575,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 75.39822368615503,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "2 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "1e00ced9-eefc-47bd-8812-1a406c4514af",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Softwood",
-      "ramp-angle": 1.8,
-      "stepdown": 2,
-      "stepover": 0.28571428571428575,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 75.39822368615503,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "0588b62a-4f48-40a4-aae9-46957587a99c",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Plastic",
-      "ramp-angle": 1.8,
-      "stepdown": 1,
-      "stepover": 0.28571428571428575,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 75.39822368615503,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     }
-    ]
-   },
-   "type": "ball end mill",
-   "unit": "millimeters",
-   "vendor": ""
-  },
-  {
-   "BMC": "carbide",
-   "description": "Makera Metal - 2.5*7.5mm",
-   "expressions": {
-    "tool_bodyLength": "max(tool_shoulderLength, (tool_overallLength - tool_holderGaugeLength -12.5 ))",
-    "tool_description": "'Makera Metal - 2.5*7.5mm'",
-    "tool_diameter": "2.5 mm",
-    "tool_fluteLength": "7.5 mm",
-    "tool_material": "'carbide'",
-    "tool_numberOfFlutes": "2",
-    "tool_overallLength": "38 mm",
-    "tool_productLink": "'https://www.makera.com/products/two-flute-ball-nose-bit-for-metal-1-8-shank?variant=43974827016417'",
-    "tool_shaftDiameter": "3.175 mm",
-    "tool_shoulderLength": "7.5 mm"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 2.5,
-    "HAND": true,
-    "LB": 19,
-    "LCF": 7.5,
-    "NOF": 2,
-    "OAL": 38,
-    "SFDM": 3.175,
-    "assemblyGaugeLength": 25.5,
-    "shoulder-diameter": 2.5,
-    "shoulder-length": 7.5
-   },
-   "guid": "5df54177-49b1-45ab-830f-9eaac4504e4e",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "expressions": {
-     "tool_holderGaugeLength": "segment_3_height"
-    },
-    "gaugeLength": 6.5,
-    "guid": "5b6015ee-44cf-4a27-a549-a582f82fc88e",
-    "last_modified": 1763719656379,
-    "product-id": "",
-    "product-link": "",
-    "reference_guid": "22f27f10-4008-4840-8085-ebf47d806921",
-    "segments": [
-     {
-      "height": 6.5,
-      "lower-diameter": 7.5,
-      "upper-diameter": 7.5
-     },
-     {
-      "height": 0.5,
-      "lower-diameter": 9,
-      "upper-diameter": 10
-     },
-     {
-      "height": 0.01,
-      "lower-diameter": 16.6,
-      "upper-diameter": 16.6
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from Carvera Community \"Makera Ball Endmills\"",
-    "diameter-offset": 1,
-    "length-offset": 1,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "",
-   "product-link": "https://www.makera.com/products/two-flute-ball-nose-bit-for-metal-1-8-shank?variant=43974827016417",
-   "shaft": {
-    "segments": [
-     {
-      "height": 2.5,
-      "lower-diameter": 2.5,
-      "upper-diameter": 3.175
-     },
-     {
-      "height": 7.5,
-      "lower-diameter": 3.175,
-      "upper-diameter": 3.175
-     }
-    ],
-    "type": "shaft"
-   },
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "200 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_feedRamp": "200 mmpm",
-       "tool_rampAngle": "1.2 degrees",
-       "tool_spindleSpeed": "6000 rpm",
-       "tool_stepdown": "0.2 mm",
-       "tool_stepover": "tool_diameter * 0.1",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "false"
-      },
-      "f_n": 0.03333333333333333,
-      "f_z": 0.016666666666666666,
-      "guid": "e4ec70ce-4e12-5c2d-8cf6-e0f4e7a90902",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 6000,
-      "n_ramp": 6000,
-      "name": "Copper 101-H02",
-      "ramp-angle": 1.2,
-      "stepdown": 0.2,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": false,
-      "v_c": 47.1238898038469,
-      "v_f": 200,
-      "v_f_leadIn": 200,
-      "v_f_leadOut": 200,
-      "v_f_plunge": 200,
-      "v_f_ramp": 200,
-      "v_f_transition": 200
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".2 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "92c3a7bd-c382-4be8-ac3f-38977299c5bb",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Aluminum",
-      "ramp-angle": 1.8,
-      "stepdown": 0.2,
-      "stepover": 0.35714285714285715,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 94.2477796076938,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "5d144d93-548a-4336-a2ab-c190284a8245",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Brass",
-      "ramp-angle": 1.8,
-      "stepdown": 0.1,
-      "stepover": 0.35714285714285715,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 94.2477796076938,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "c35a9402-5394-48f8-8b23-7974fa59080c",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Copper",
-      "ramp-angle": 1.8,
-      "stepdown": 0.1,
-      "stepover": 0.35714285714285715,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 94.2477796076938,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "10d18bc9-b725-4e79-ba66-01e28c5ae9e8",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Hardwood",
-      "ramp-angle": 1.8,
-      "stepdown": 1,
-      "stepover": 0.35714285714285715,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 94.2477796076938,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "7ac215ed-9391-4ca3-9be9-820708261e05",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Plastic",
-      "ramp-angle": 1.8,
-      "stepdown": 1,
-      "stepover": 0.35714285714285715,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 94.2477796076938,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "2 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.016666666666666666,
-      "f_z": 0.020833333333333332,
-      "guid": "9836726f-c2fc-4437-b183-cdee0fa0ce13",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Softwood",
-      "ramp-angle": 1.8,
-      "stepdown": 2,
-      "stepover": 0.35714285714285715,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 94.2477796076938,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     }
-    ]
-   },
-   "type": "ball end mill",
-   "unit": "millimeters",
-   "vendor": ""
-  },
-  {
-   "BMC": "carbide",
-   "description": "Makera Metal - 3.175*10mm",
-   "expressions": {
-    "tool_bodyLength": "max(tool_shoulderLength, (tool_overallLength - tool_holderGaugeLength -12.5 ))",
-    "tool_description": "'Makera Metal - 3.175*10mm'",
-    "tool_diameter": "3.175 mm",
-    "tool_fluteLength": "10 mm",
-    "tool_material": "'carbide'",
-    "tool_numberOfFlutes": "2",
-    "tool_overallLength": "38 mm",
-    "tool_productLink": "'https://www.makera.com/products/two-flute-ball-nose-bit-for-metal-1-8-shank?variant=43974827049185'",
-    "tool_shaftDiameter": "3.175 mm",
-    "tool_shoulderLength": "10 mm"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 3.175,
-    "HAND": true,
-    "LB": 19,
-    "LCF": 10,
-    "NOF": 2,
-    "OAL": 38,
-    "SFDM": 3.175,
-    "assemblyGaugeLength": 25.5,
-    "shoulder-diameter": 3.175,
-    "shoulder-length": 10
-   },
-   "guid": "d7525bf2-4ab6-4337-9fab-0d405d7456b6",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "expressions": {
-     "tool_holderGaugeLength": "segment_3_height"
-    },
-    "gaugeLength": 6.5,
-    "guid": "5b6015ee-44cf-4a27-a549-a582f82fc88e",
-    "last_modified": 1763719656379,
-    "product-id": "",
-    "product-link": "",
-    "reference_guid": "22f27f10-4008-4840-8085-ebf47d806921",
-    "segments": [
-     {
-      "height": 6.5,
-      "lower-diameter": 7.5,
-      "upper-diameter": 7.5
-     },
-     {
-      "height": 0.5,
-      "lower-diameter": 9,
-      "upper-diameter": 10
-     },
-     {
-      "height": 0.01,
-      "lower-diameter": 16.6,
-      "upper-diameter": 16.6
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from Carvera Community \"Makera Ball Endmills\"",
-    "diameter-offset": 1,
-    "length-offset": 1,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "",
-   "product-link": "https://www.makera.com/products/two-flute-ball-nose-bit-for-metal-1-8-shank?variant=43974827049185",
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "200 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_feedRamp": "300 mmpm",
-       "tool_rampAngle": "1.2 degrees",
-       "tool_spindleSpeed": "6000 rpm",
-       "tool_stepdown": "0.3 mm",
-       "tool_stepover": "tool_diameter * 0.1",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "false"
-      },
-      "f_n": 0.03333333333333333,
-      "f_z": 0.016666666666666666,
-      "guid": "561f312a-6ef7-5c66-9b00-418126eeafaf",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 6000,
-      "n_ramp": 6000,
-      "name": "Copper 101-H02",
-      "ramp-angle": 1.2,
-      "stepdown": 0.3,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": false,
-      "v_c": 59.847340050885556,
-      "v_f": 200,
-      "v_f_leadIn": 200,
-      "v_f_leadOut": 200,
-      "v_f_plunge": 200,
-      "v_f_ramp": 300,
-      "v_f_transition": 200
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".2 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "92c3a7bd-c382-4be8-ac3f-38977299c5bb",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Aluminum",
-      "ramp-angle": 1.8,
-      "stepdown": 0.2,
-      "stepover": 0.45357142857142857,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.69468010177113,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "a997d866-bb50-469a-afee-9f87c4db165f",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Brass",
-      "ramp-angle": 1.8,
-      "stepdown": 0.1,
-      "stepover": 0.45357142857142857,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.69468010177113,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "5927a0fb-30df-43f3-bd19-7adf48879244",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Copper",
-      "ramp-angle": 1.8,
-      "stepdown": 0.1,
-      "stepover": 0.45357142857142857,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.69468010177113,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "8f691e39-7c19-4354-8a86-1f14ae47ab26",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Hardwood",
-      "ramp-angle": 1.8,
-      "stepdown": 1,
-      "stepover": 0.45357142857142857,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.69468010177113,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "ec23012e-0337-4518-85f3-d90569a63c0b",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Plastic",
-      "ramp-angle": 1.8,
-      "stepdown": 1,
-      "stepover": 0.45357142857142857,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.69468010177113,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "2 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "0aff56b7-fd8b-427a-82bd-109ccbc16c2e",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Softwood",
-      "ramp-angle": 1.8,
-      "stepdown": 2,
-      "stepover": 0.45357142857142857,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.69468010177113,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     }
-    ]
-   },
-   "type": "ball end mill",
-   "unit": "millimeters",
-   "vendor": ""
-  },
-  {
-   "BMC": "carbide",
-   "description": "Makera Ball Endmill Metal  - 4*12mm",
-   "expressions": {
-    "tool_bodyLength": "max(tool_shoulderLength, (tool_overallLength - tool_holderGaugeLength -12.5 ))",
-    "tool_description": "'Makera Ball Endmill Metal  - 4*12mm'",
-    "tool_diameter": "4 mm",
-    "tool_fluteLength": "12 mm",
-    "tool_material": "'carbide'",
-    "tool_numberOfFlutes": "2",
-    "tool_overallLength": "50 mm",
-    "tool_productLink": "'https://global.makera.com/products/two-flute-ball-nose-bit-for-metal-4mm-shank'",
-    "tool_shaftDiameter": "4 mm",
-    "tool_shoulderLength": "12 mm"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 4,
-    "HAND": true,
-    "LB": 31,
-    "LCF": 12,
-    "NOF": 2,
-    "OAL": 50,
-    "SFDM": 4,
-    "assemblyGaugeLength": 37.5,
-    "shoulder-diameter": 4,
-    "shoulder-length": 12
-   },
-   "guid": "1229552c-9582-4dd6-8eaa-0be217e9dea2",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "expressions": {
-     "tool_holderGaugeLength": "segment_3_height"
-    },
-    "gaugeLength": 6.5,
-    "guid": "22f27f10-4008-4840-8085-ebf47d806921",
-    "last_modified": 1763719042964,
-    "product-id": "",
-    "product-link": "",
-    "reference_guid": "80ca9288-a206-47a1-81de-3eeb0cc3cf68",
-    "segments": [
-     {
-      "height": 6.5,
-      "lower-diameter": 7.5,
-      "upper-diameter": 7.5
-     },
-     {
-      "height": 0.5,
-      "lower-diameter": 9,
-      "upper-diameter": 10
-     },
-     {
-      "height": 0.01,
-      "lower-diameter": 16.6,
-      "upper-diameter": 16.6
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from Carvera Community \"Makera Ball Endmills\"",
-    "diameter-offset": 1,
-    "length-offset": 1,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "",
-   "product-link": "https://global.makera.com/products/two-flute-ball-nose-bit-for-metal-4mm-shank",
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "200 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_feedRamp": "300 mmpm",
-       "tool_rampAngle": "1.2 degrees",
-       "tool_spindleSpeed": "6000 rpm",
-       "tool_stepdown": "0.3 mm",
-       "tool_stepover": "tool_diameter * 0.1",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "false"
-      },
-      "f_n": 0.03333333333333333,
-      "f_z": 0.016666666666666666,
-      "guid": "a46163a9-7cfc-514b-9faf-fe25f65e5b18",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 6000,
-      "n_ramp": 6000,
-      "name": "Copper 101-H02",
-      "ramp-angle": 1.2,
-      "stepdown": 0.3,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": false,
-      "v_c": 75.39822368615503,
-      "v_f": 200,
-      "v_f_leadIn": 200,
-      "v_f_leadOut": 200,
-      "v_f_plunge": 200,
-      "v_f_ramp": 300,
-      "v_f_transition": 200
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".2 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "92c3a7bd-c382-4be8-ac3f-38977299c5bb",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Aluminum",
-      "ramp-angle": 1.8,
-      "stepdown": 0.2,
-      "stepover": 0.5714285714285715,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.79644737231007,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "a997d866-bb50-469a-afee-9f87c4db165f",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Brass",
-      "ramp-angle": 1.8,
-      "stepdown": 0.1,
-      "stepover": 0.5714285714285715,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.79644737231007,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "5927a0fb-30df-43f3-bd19-7adf48879244",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Copper",
-      "ramp-angle": 1.8,
-      "stepdown": 0.1,
-      "stepover": 0.5714285714285715,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.79644737231007,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "8f691e39-7c19-4354-8a86-1f14ae47ab26",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Hardwood",
-      "ramp-angle": 1.8,
-      "stepdown": 1,
-      "stepover": 0.5714285714285715,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.79644737231007,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "ec23012e-0337-4518-85f3-d90569a63c0b",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Plastic",
-      "ramp-angle": 1.8,
-      "stepdown": 1,
-      "stepover": 0.5714285714285715,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.79644737231007,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "2 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "0aff56b7-fd8b-427a-82bd-109ccbc16c2e",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Softwood",
-      "ramp-angle": 1.8,
-      "stepdown": 2,
-      "stepover": 0.5714285714285715,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.79644737231007,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     }
-    ]
-   },
-   "type": "ball end mill",
-   "unit": "millimeters",
-   "vendor": ""
-  },
-  {
-   "BMC": "carbide",
-   "description": "Makera Ball Endmill Metal - 6*18mm",
-   "expressions": {
-    "tool_bodyLength": "max(tool_shoulderLength, (tool_overallLength - tool_holderGaugeLength -12.5 ))",
-    "tool_description": "'Makera Ball Endmill Metal - 6*18mm'",
-    "tool_diameter": "6 mm",
-    "tool_fluteLength": "18 mm",
-    "tool_material": "'carbide'",
-    "tool_numberOfFlutes": "2",
-    "tool_overallLength": "50 mm",
-    "tool_productLink": "'https://global.makera.com/products/two-flute-ball-nose-bit-for-metal-6mm-shank'",
-    "tool_shaftDiameter": "6 mm",
-    "tool_shoulderLength": "18 mm"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 6,
-    "HAND": true,
-    "LB": 31,
-    "LCF": 18,
-    "NOF": 2,
-    "OAL": 50,
-    "SFDM": 6,
-    "assemblyGaugeLength": 37.5,
-    "shoulder-diameter": 6,
-    "shoulder-length": 18
-   },
-   "guid": "f1935cf7-c059-43d7-a0ae-92c1b7c1c793",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "expressions": {
-     "tool_holderGaugeLength": "segment_3_height"
-    },
-    "gaugeLength": 6.5,
-    "guid": "dbac4089-97be-40b7-814c-d5ed05d83728",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 6.5,
-      "lower-diameter": 7.5,
-      "upper-diameter": 7.5
-     },
-     {
-      "height": 0.5,
-      "lower-diameter": 9,
-      "upper-diameter": 10
-     },
-     {
-      "height": 0.01,
-      "lower-diameter": 16.6,
-      "upper-diameter": 16.6
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from Carvera Community \"Makera Ball Endmills\"",
-    "diameter-offset": 1,
-    "length-offset": 1,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "",
-   "product-link": "https://global.makera.com/products/two-flute-ball-nose-bit-for-metal-6mm-shank",
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "200 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_feedRamp": "300 mmpm",
-       "tool_rampAngle": "1.2 degrees",
-       "tool_spindleSpeed": "6000 rpm",
-       "tool_stepdown": "0.3 mm",
-       "tool_stepover": "tool_diameter * 0.1",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "false"
-      },
-      "f_n": 0.03333333333333333,
-      "f_z": 0.016666666666666666,
-      "guid": "6e892e9e-4728-5533-8e63-01652b36d74c",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 6000,
-      "n_ramp": 6000,
-      "name": "Copper 101-H02",
-      "ramp-angle": 1.2,
-      "stepdown": 0.3,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": false,
-      "v_c": 113.09733552923255,
-      "v_f": 200,
-      "v_f_leadIn": 200,
-      "v_f_leadOut": 200,
-      "v_f_plunge": 200,
-      "v_f_ramp": 300,
-      "v_f_transition": 200
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".2 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "92c3a7bd-c382-4be8-ac3f-38977299c5bb",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Aluminum",
-      "ramp-angle": 1.8,
-      "stepdown": 0.2,
-      "stepover": 0.8571428571428572,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 226.1946710584651,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "a997d866-bb50-469a-afee-9f87c4db165f",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Brass",
-      "ramp-angle": 1.8,
-      "stepdown": 0.1,
-      "stepover": 0.8571428571428572,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 226.1946710584651,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": ".1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "5927a0fb-30df-43f3-bd19-7adf48879244",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Copper",
-      "ramp-angle": 1.8,
-      "stepdown": 0.1,
-      "stepover": 0.8571428571428572,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 226.1946710584651,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "8f691e39-7c19-4354-8a86-1f14ae47ab26",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Hardwood",
-      "ramp-angle": 1.8,
-      "stepdown": 1,
-      "stepover": 0.8571428571428572,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 226.1946710584651,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "1 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "ec23012e-0337-4518-85f3-d90569a63c0b",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Plastic",
-      "ramp-angle": 1.8,
-      "stepdown": 1,
-      "stepover": 0.8571428571428572,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 226.1946710584651,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     },
-     {
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "500 mmpm",
-       "tool_feedPlunge": "300 mmpm",
-       "tool_rampAngle": "1.8 degrees",
-       "tool_spindleSpeed": "12000 rpm",
-       "tool_stepdown": "2 mm",
-       "tool_stepover": "tool_diameter/7",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.025,
-      "f_z": 0.020833333333333332,
-      "guid": "0aff56b7-fd8b-427a-82bd-109ccbc16c2e",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 12000,
-      "n_ramp": 12000,
-      "name": "Softwood",
-      "ramp-angle": 1.8,
-      "stepdown": 2,
-      "stepover": 0.8571428571428572,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 226.1946710584651,
-      "v_f": 500,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 300,
-      "v_f_ramp": 333.3333333333333,
-      "v_f_transition": 500
-     }
-    ]
-   },
-   "type": "ball end mill",
-   "unit": "millimeters",
-   "vendor": ""
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "Mill Generic",
-   "description": "Single Flute Engraving Metal 60 deg*.1mm",
-   "expressions": {
-    "tool_bodyLength": "max(tool_shoulderLength, (tool_overallLength - tool_holderGaugeLength -12.5 ))"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 3.175,
-    "HAND": true,
-    "LB": 19,
-    "LCF": 8,
-    "NOF": 1,
-    "OAL": 38,
-    "SFDM": 3.175,
-    "TA": 30,
-    "assemblyGaugeLength": 25.5,
-    "shoulder-diameter": 3.175,
-    "shoulder-length": 8,
-    "tip-diameter": 0.1
-   },
-   "guid": "754d5d97-0e38-4d10-89d9-48d519c9865e",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 6.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 6.5,
-      "lower-diameter": 7.5,
-      "upper-diameter": 7.5
-     },
-     {
-      "height": 0.5,
-      "lower-diameter": 9,
-      "upper-diameter": 10
-     },
-     {
-      "height": 0.01,
-      "lower-diameter": 16.6,
-      "upper-diameter": 16.6
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from Carvera Community \"Makera Engraving Bits\"",
-    "diameter-offset": 1,
-    "length-offset": 1,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "",
-   "product-link": "https://www.makera.com/products/single-flute-engraving-bit-for-metal-1-8-shank?variant=43974732185825",
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "200 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_feedRamp": "300 mmpm",
-       "tool_rampAngle": "2 degrees",
-       "tool_spindleSpeed": "6000 rpm",
-       "tool_stepdown": "0.1 mm",
-       "tool_stepover": "0.1 mm",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.03333333333333333,
-      "f_z": 0.03333333333333333,
-      "guid": "1f3bff76-584e-541e-84d8-a714b47ff1fb",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 6000,
-      "n_ramp": 6000,
-      "name": "Copper 101-H02",
-      "ramp-angle": 2,
-      "stepdown": 0.1,
-      "stepover": 0.1,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 59.847340050885556,
-      "v_f": 200,
-      "v_f_leadIn": 200,
-      "v_f_leadOut": 200,
-      "v_f_plunge": 200,
-      "v_f_ramp": 300,
-      "v_f_transition": 200
-     },
-     {
-      "description": "",
-      "f_n": 0.01671928238010626,
-      "f_z": 0.0416667,
-      "guid": "2484bebb-49e9-abf3-be49-39b54cfc241e",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Aluminum",
-      "ramp-angle": 1.2,
-      "stepdown": 0.2,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 498.4268947999572,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     },
-     {
-      "description": "",
-      "f_n": 0.00835964119005313,
-      "f_z": 0.02500000000000001,
-      "guid": "a588619c-498a-aa86-189b-e3b236c7c66d",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Brass",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 299.05589763525626,
-      "v_f_leadIn": 300,
-      "v_f_leadOut": 300,
-      "v_f_plunge": 100,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 300
-     },
-     {
-      "description": "",
-      "f_n": 0.00835964119005313,
-      "f_z": 0.02500000000000001,
-      "guid": "8d819a33-4246-480c-3823-969ec0032121",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Copper",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 299.05589763525626,
-      "v_f_leadIn": 300,
-      "v_f_leadOut": 300,
-      "v_f_plunge": 100,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 300
-     },
-     {
-      "description": "",
-      "f_n": 0.04179820595026564,
-      "f_z": 0.0833333,
-      "guid": "015ec3c8-44f1-e730-78b4-f8b14a606dc6",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Hardwood",
-      "ramp-angle": 1.2,
-      "stepdown": 1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 996.852593376324,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     },
-     {
-      "description": "",
-      "f_n": 0.01671928238010626,
-      "f_z": 0.0416667,
-      "guid": "93df1b9a-4a4e-3af2-283c-47ba52f70c51",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "PCB",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 498.4268947999572,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     },
-     {
-      "description": "",
-      "f_n": 0.04179820595026564,
-      "f_z": 0.0833333,
-      "guid": "ac7fddfe-463a-1f99-8a5c-f78b6b95ec9e",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Plastic",
-      "ramp-angle": 1.2,
-      "stepdown": 1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 996.852593376324,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     },
-     {
-      "description": "",
-      "f_n": 0.04179820595026564,
-      "f_z": 0.0833333,
-      "guid": "784dfac5-47bf-a058-73b0-0ab2d4a19103",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Softwood",
-      "ramp-angle": 1.2,
-      "stepdown": 2,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 996.852593376324,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     }
-    ]
-   },
-   "type": "chamfer mill",
-   "unit": "millimeters",
-   "vendor": ""
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "Mill Generic",
-   "description": "Single Flute Engraving Metal 30 deg*.3mm",
-   "expressions": {
-    "tool_bodyLength": "max(tool_shoulderLength, (tool_overallLength - tool_holderGaugeLength -12.5 ))"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 3.175,
-    "HAND": true,
-    "LB": 19,
-    "LCF": 9,
-    "NOF": 1,
-    "OAL": 38,
-    "SFDM": 3.175,
-    "TA": 15,
-    "assemblyGaugeLength": 25.5,
-    "shoulder-diameter": 3.175,
-    "shoulder-length": 9,
-    "tip-diameter": 0.3
-   },
-   "guid": "351658be-f58d-44a2-a502-a8e1e86b6273",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 6.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 6.5,
-      "lower-diameter": 7.5,
-      "upper-diameter": 7.5
-     },
-     {
-      "height": 0.5,
-      "lower-diameter": 9,
-      "upper-diameter": 10
-     },
-     {
-      "height": 0.01,
-      "lower-diameter": 16.6,
-      "upper-diameter": 16.6
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from Carvera Community \"Makera Engraving Bits\"",
-    "diameter-offset": 1,
-    "length-offset": 1,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "",
-   "product-link": "https://www.makera.com/products/single-flute-engraving-bit-for-metal-1-8-shank?variant=43974732251361",
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "200 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_feedRamp": "300 mmpm",
-       "tool_rampAngle": "2 degrees",
-       "tool_spindleSpeed": "6000 rpm",
-       "tool_stepdown": "0.1 mm",
-       "tool_stepover": "0.1 mm",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.03333333333333333,
-      "f_z": 0.03333333333333333,
-      "guid": "8eebb53f-f691-5506-a439-b70a14ec242c",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 6000,
-      "n_ramp": 6000,
-      "name": "Copper 101-H02",
-      "ramp-angle": 2,
-      "stepdown": 0.1,
-      "stepover": 0.1,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 59.847340050885556,
-      "v_f": 200,
-      "v_f_leadIn": 200,
-      "v_f_leadOut": 200,
-      "v_f_plunge": 200,
-      "v_f_ramp": 300,
-      "v_f_transition": 200
-     },
-     {
-      "description": "",
-      "f_n": 0.01671928238010626,
-      "f_z": 0.0416667,
-      "guid": "67534542-4caf-1459-dd54-f291cd4c92fc",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Aluminum",
-      "ramp-angle": 1.2,
-      "stepdown": 0.2,
-      "stepover": 0.09,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 498.4268947999572,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     },
-     {
-      "description": "",
-      "f_n": 0.00835964119005313,
-      "f_z": 0.02500000000000001,
-      "guid": "861d569f-4298-e456-5e2f-1b89b8eb57ed",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Brass",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.09,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 299.05589763525626,
-      "v_f_leadIn": 300,
-      "v_f_leadOut": 300,
-      "v_f_plunge": 100,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 300
-     },
-     {
-      "description": "",
-      "f_n": 0.00835964119005313,
-      "f_z": 0.02500000000000001,
-      "guid": "852aaae2-4b98-3843-3a31-3aacd868d07d",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Copper",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.09,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 299.05589763525626,
-      "v_f_leadIn": 300,
-      "v_f_leadOut": 300,
-      "v_f_plunge": 100,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 300
-     },
-     {
-      "description": "",
-      "f_n": 0.04179820595026564,
-      "f_z": 0.0833333,
-      "guid": "eec0a5e3-4e57-c004-f55a-aaa1b0c4ef19",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Hardwood",
-      "ramp-angle": 1.2,
-      "stepdown": 1,
-      "stepover": 0.09,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 996.852593376324,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     },
-     {
-      "description": "",
-      "f_n": 0.01671928238010626,
-      "f_z": 0.0416667,
-      "guid": "d624a1f6-43b4-fc99-1305-4db3e88208cc",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "PCB",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.09,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 498.4268947999572,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     },
-     {
-      "description": "",
-      "f_n": 0.04179820595026564,
-      "f_z": 0.0833333,
-      "guid": "91740163-412d-0cdb-9eba-7bbedc7f462a",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Plastic",
-      "ramp-angle": 1.2,
-      "stepdown": 1,
-      "stepover": 0.09,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 996.852593376324,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     },
-     {
-      "description": "",
-      "f_n": 0.04179820595026564,
-      "f_z": 0.0833333,
-      "guid": "a67c7b33-4926-16a5-d75e-1989398d65b3",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Softwood",
-      "ramp-angle": 1.2,
-      "stepdown": 2,
-      "stepover": 0.09,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 996.852593376324,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     }
-    ]
-   },
-   "type": "chamfer mill",
-   "unit": "millimeters",
-   "vendor": ""
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "Mill Generic",
-   "description": "Single Flute Engraving Metal 30 deg*.4mm",
-   "expressions": {
-    "tool_bodyLength": "max(tool_shoulderLength, (tool_overallLength - tool_holderGaugeLength -12.5 ))"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 3.175,
-    "HAND": true,
-    "LB": 19,
-    "LCF": 9,
-    "NOF": 1,
-    "OAL": 38,
-    "SFDM": 3.175,
-    "TA": 15,
-    "assemblyGaugeLength": 25.5,
-    "shoulder-diameter": 3.175,
-    "shoulder-length": 9,
-    "tip-diameter": 0.4
-   },
-   "guid": "28b622d6-c7c6-4f1f-ae2f-8fc4787bc7bf",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 6.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 6.5,
-      "lower-diameter": 7.5,
-      "upper-diameter": 7.5
-     },
-     {
-      "height": 0.5,
-      "lower-diameter": 9,
-      "upper-diameter": 10
-     },
-     {
-      "height": 0.01,
-      "lower-diameter": 16.6,
-      "upper-diameter": 16.6
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from Carvera Community \"Makera Engraving Bits\"",
-    "diameter-offset": 1,
-    "length-offset": 1,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "",
-   "product-link": "https://www.makera.com/products/single-flute-engraving-bit-for-metal-1-8-shank?variant=43974732284129",
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "200 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_feedRamp": "300 mmpm",
-       "tool_rampAngle": "2 degrees",
-       "tool_spindleSpeed": "6000 rpm",
-       "tool_stepdown": "0.1 mm",
-       "tool_stepover": "0.1 mm",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.03333333333333333,
-      "f_z": 0.03333333333333333,
-      "guid": "f3ff54da-09a8-5580-b075-35e21ac98321",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 6000,
-      "n_ramp": 6000,
-      "name": "Copper 101-H02",
-      "ramp-angle": 2,
-      "stepdown": 0.1,
-      "stepover": 0.1,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 59.847340050885556,
-      "v_f": 200,
-      "v_f_leadIn": 200,
-      "v_f_leadOut": 200,
-      "v_f_plunge": 200,
-      "v_f_ramp": 300,
-      "v_f_transition": 200
-     },
-     {
-      "description": "",
-      "f_n": 0.01671928238010626,
-      "f_z": 0.0416667,
-      "guid": "09d0d240-46bd-908a-7f9d-629ac0410fc5",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Aluminum",
-      "ramp-angle": 1.2,
-      "stepdown": 0.2,
-      "stepover": 0.12,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 498.4268947999572,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     },
-     {
-      "description": "",
-      "f_n": 0.00835964119005313,
-      "f_z": 0.02500000000000001,
-      "guid": "d42c998e-413e-d16a-defb-2aa32712e2ca",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Brass",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.12,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 299.05589763525626,
-      "v_f_leadIn": 300,
-      "v_f_leadOut": 300,
-      "v_f_plunge": 100,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 300
-     },
-     {
-      "description": "",
-      "f_n": 0.00835964119005313,
-      "f_z": 0.02500000000000001,
-      "guid": "0514ff2b-42e5-4aa1-aedc-bf87323e7329",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Copper",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.12,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 299.05589763525626,
-      "v_f_leadIn": 300,
-      "v_f_leadOut": 300,
-      "v_f_plunge": 100,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 300
-     },
-     {
-      "description": "",
-      "f_n": 0.04179820595026564,
-      "f_z": 0.0833333,
-      "guid": "e66d5926-4f6a-56a8-3a81-c8846f01f1f2",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Hardwood",
-      "ramp-angle": 1.2,
-      "stepdown": 1,
-      "stepover": 0.12,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 996.852593376324,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     },
-     {
-      "description": "",
-      "f_n": 0.01671928238010626,
-      "f_z": 0.0416667,
-      "guid": "f87411f1-4f4d-f80c-9a73-4cbbe56df3ab",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "PCB",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.12,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 498.4268947999572,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     },
-     {
-      "description": "",
-      "f_n": 0.04179820595026564,
-      "f_z": 0.0833333,
-      "guid": "260f67a8-429f-207b-8604-35bf218d713c",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Plastic",
-      "ramp-angle": 1.2,
-      "stepdown": 1,
-      "stepover": 0.12,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 996.852593376324,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     },
-     {
-      "description": "",
-      "f_n": 0.04179820595026564,
-      "f_z": 0.0833333,
-      "guid": "f2caed4d-4e47-42f7-6e18-57b6d57d5a31",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Softwood",
-      "ramp-angle": 1.2,
-      "stepdown": 2,
-      "stepover": 0.12,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 996.852593376324,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     }
-    ]
-   },
-   "type": "chamfer mill",
-   "unit": "millimeters",
-   "vendor": ""
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "Mill Generic",
-   "description": "Single Flute Engraving Metal 30 deg*.5mm",
-   "expressions": {
-    "tool_bodyLength": "max(tool_shoulderLength, (tool_overallLength - tool_holderGaugeLength -12.5 ))"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 3.175,
-    "HAND": true,
-    "LB": 19,
-    "LCF": 9,
-    "NOF": 1,
-    "OAL": 38,
-    "SFDM": 3.175,
-    "TA": 15,
-    "assemblyGaugeLength": 25.5,
-    "shoulder-diameter": 3.175,
-    "shoulder-length": 9,
-    "tip-diameter": 0.5
-   },
-   "guid": "65c78b4b-4ca4-426b-9384-2abc3b4373b1",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 6.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 6.5,
-      "lower-diameter": 7.5,
-      "upper-diameter": 7.5
-     },
-     {
-      "height": 0.5,
-      "lower-diameter": 9,
-      "upper-diameter": 10
-     },
-     {
-      "height": 0.01,
-      "lower-diameter": 16.6,
-      "upper-diameter": 16.6
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from Carvera Community \"Makera Engraving Bits\"",
-    "diameter-offset": 1,
-    "length-offset": 1,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "",
-   "product-link": "https://www.makera.com/products/single-flute-engraving-bit-for-metal-1-8-shank?variant=43974732316897",
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "200 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_feedRamp": "300 mmpm",
-       "tool_rampAngle": "2 degrees",
-       "tool_spindleSpeed": "6000 rpm",
-       "tool_stepdown": "0.1 mm",
-       "tool_stepover": "0.1 mm",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.03333333333333333,
-      "f_z": 0.03333333333333333,
-      "guid": "262a174e-3937-5442-bef2-3775473451f2",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 6000,
-      "n_ramp": 6000,
-      "name": "Copper 101-H02",
-      "ramp-angle": 2,
-      "stepdown": 0.1,
-      "stepover": 0.1,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 59.847340050885556,
-      "v_f": 200,
-      "v_f_leadIn": 200,
-      "v_f_leadOut": 200,
-      "v_f_plunge": 200,
-      "v_f_ramp": 300,
-      "v_f_transition": 200
-     },
-     {
-      "description": "",
-      "f_n": 0.01671928238010626,
-      "f_z": 0.0416667,
-      "guid": "17e80c05-4f4c-4e19-8125-3da3c596a36e",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Aluminum",
-      "ramp-angle": 1.2,
-      "stepdown": 0.2,
-      "stepover": 0.15,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 498.4268947999572,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     },
-     {
-      "description": "",
-      "f_n": 0.00835964119005313,
-      "f_z": 0.02500000000000001,
-      "guid": "34cdcfea-4919-83dd-8815-9b88766d1953",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Brass",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.15,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 299.05589763525626,
-      "v_f_leadIn": 300,
-      "v_f_leadOut": 300,
-      "v_f_plunge": 100,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 300
-     },
-     {
-      "description": "",
-      "f_n": 0.00835964119005313,
-      "f_z": 0.02500000000000001,
-      "guid": "35290701-4b83-cc9d-8178-96b99813c0b8",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Copper",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.15,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 299.05589763525626,
-      "v_f_leadIn": 300,
-      "v_f_leadOut": 300,
-      "v_f_plunge": 100,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 300
-     },
-     {
-      "description": "",
-      "f_n": 0.04179820595026564,
-      "f_z": 0.0833333,
-      "guid": "a02086c5-4e2a-c3b1-708d-dabaf859b918",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Hardwood",
-      "ramp-angle": 1.2,
-      "stepdown": 1,
-      "stepover": 0.15,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 996.852593376324,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     },
-     {
-      "description": "",
-      "f_n": 0.01671928238010626,
-      "f_z": 0.0416667,
-      "guid": "3e351561-4cf0-d6f2-00ad-409af0b2be2d",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "PCB",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.15,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 498.4268947999572,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     },
-     {
-      "description": "",
-      "f_n": 0.04179820595026564,
-      "f_z": 0.0833333,
-      "guid": "c3a586cf-4b23-a4a8-33ba-70868da0b49b",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Plastic",
-      "ramp-angle": 1.2,
-      "stepdown": 1,
-      "stepover": 0.15,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 996.852593376324,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     },
-     {
-      "description": "",
-      "f_n": 0.04179820595026564,
-      "f_z": 0.0833333,
-      "guid": "a4a2de7b-47bd-148b-0fa0-d1985e149704",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11962.235905410247,
-      "n_ramp": 12000,
-      "name": "Softwood",
-      "ramp-angle": 1.2,
-      "stepdown": 2,
-      "stepover": 0.15,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 119.318,
-      "v_f": 996.852593376324,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     }
-    ]
-   },
-   "type": "chamfer mill",
-   "unit": "millimeters",
-   "vendor": ""
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "Mill Generic",
-   "description": "Single Flute Engraving Metal 30 deg*.3mm 4mm shaft",
-   "expressions": {
-    "tool_bodyLength": "max(tool_shoulderLength, (tool_overallLength - tool_holderGaugeLength -12.5 ))"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 4,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 7,
-    "NOF": 1,
-    "OAL": 45,
-    "SFDM": 4,
-    "TA": 15,
-    "assemblyGaugeLength": 32.5,
-    "shoulder-diameter": 4,
-    "shoulder-length": 7,
-    "tip-diameter": 0.3
-   },
-   "guid": "056af751-4b5e-4abc-93b4-b83230eb186b",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 6.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 6.5,
-      "lower-diameter": 7.5,
-      "upper-diameter": 7.5
-     },
-     {
-      "height": 0.5,
-      "lower-diameter": 9,
-      "upper-diameter": 10
-     },
-     {
-      "height": 0.01,
-      "lower-diameter": 16.6,
-      "upper-diameter": 16.6
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from Carvera Community \"Makera Engraving Bits\"",
-    "diameter-offset": 1,
-    "length-offset": 1,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "",
-   "product-link": "https://global.makera.com/products/single-flute-engraving-bit-for-metal-4mm-shank?variant=46211231776943",
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "200 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_feedRamp": "300 mmpm",
-       "tool_rampAngle": "2 degrees",
-       "tool_spindleSpeed": "6000 rpm",
-       "tool_stepdown": "0.1 mm",
-       "tool_stepover": "0.1 mm",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.03333333333333333,
-      "f_z": 0.03333333333333333,
-      "guid": "b54e69df-c56a-5bc0-a8e5-cbd47d69df25",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 6000,
-      "n_ramp": 6000,
-      "name": "Copper 101-H02",
-      "ramp-angle": 2,
-      "stepdown": 0.1,
-      "stepover": 0.1,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 75.39822368615503,
-      "v_f": 200,
-      "v_f_leadIn": 200,
-      "v_f_leadOut": 200,
-      "v_f_plunge": 200,
-      "v_f_ramp": 300,
-      "v_f_transition": 200
-     },
-     {
-      "description": "",
-      "f_n": 0.01666671611230958,
-      "f_z": 0.0416667,
-      "guid": "4b9d819e-4bc8-b5f7-9959-5688fc00225e",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Aluminum",
-      "ramp-angle": 1.2,
-      "stepdown": 0.2,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 499.99891663392685,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     },
-     {
-      "description": "",
-      "f_n": 0.00833335805615479,
-      "f_z": 0.025,
-      "guid": "0270ea55-47eb-330c-5040-52868571d7d6",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Brass",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 299.9991099810681,
-      "v_f_leadIn": 300,
-      "v_f_leadOut": 300,
-      "v_f_plunge": 100,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 300
-     },
-     {
-      "description": "",
-      "f_n": 0.00833335805615479,
-      "f_z": 0.025,
-      "guid": "d792debe-4f6b-2354-cd12-dab2ea5d4d67",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Copper",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 299.9991099810681,
-      "v_f_leadIn": 300,
-      "v_f_leadOut": 300,
-      "v_f_plunge": 100,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 300
-     },
-     {
-      "description": "",
-      "f_n": 0.041666790280773934,
-      "f_z": 0.0833333,
-      "guid": "fe26b547-4f60-675c-df16-52986b106a40",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Hardwood",
-      "ramp-angle": 1.2,
-      "stepdown": 1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 999.9966332714138,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     },
-     {
-      "description": "",
-      "f_n": 0.01666671611230958,
-      "f_z": 0.0416667,
-      "guid": "d2209e7a-42c3-142f-a771-00862e71909d",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "PCB",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 499.99891663392685,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     },
-     {
-      "description": "",
-      "f_n": 0.041666790280773934,
-      "f_z": 0.0833333,
-      "guid": "afe41cf1-4ef0-37c2-fa55-60952087cb70",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Plastic",
-      "ramp-angle": 1.2,
-      "stepdown": 1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 999.9966332714138,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     },
-     {
-      "description": "",
-      "f_n": 0.041666790280773934,
-      "f_z": 0.0416667,
-      "guid": "c8266265-4b47-d7ad-0af8-89af616fa07d",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Softwood",
-      "ramp-angle": 1.2,
-      "stepdown": 2,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 499.99891663392685,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     }
-    ]
-   },
-   "type": "chamfer mill",
-   "unit": "millimeters",
-   "vendor": ""
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "Mill Generic",
-   "description": "Single Flute Engraving Metal 30 deg*.4mm 4mm shaft",
-   "expressions": {
-    "tool_bodyLength": "max(tool_shoulderLength, (tool_overallLength - tool_holderGaugeLength -12.5 ))"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 4,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 7,
-    "NOF": 1,
-    "OAL": 45,
-    "SFDM": 4,
-    "TA": 15,
-    "assemblyGaugeLength": 32.5,
-    "shoulder-diameter": 4,
-    "shoulder-length": 7,
-    "tip-diameter": 0.4
-   },
-   "guid": "8aea8668-dc79-47c6-93fd-50ece81c425e",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 6.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 6.5,
-      "lower-diameter": 7.5,
-      "upper-diameter": 7.5
-     },
-     {
-      "height": 0.5,
-      "lower-diameter": 9,
-      "upper-diameter": 10
-     },
-     {
-      "height": 0.01,
-      "lower-diameter": 16.6,
-      "upper-diameter": 16.6
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from Carvera Community \"Makera Engraving Bits\"",
-    "diameter-offset": 1,
-    "length-offset": 1,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "",
-   "product-link": "https://global.makera.com/products/single-flute-engraving-bit-for-metal-4mm-shank?variant=46211231809711",
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "200 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_feedRamp": "300 mmpm",
-       "tool_rampAngle": "2 degrees",
-       "tool_spindleSpeed": "6000 rpm",
-       "tool_stepdown": "0.1 mm",
-       "tool_stepover": "0.1 mm",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.03333333333333333,
-      "f_z": 0.03333333333333333,
-      "guid": "1f22ab9a-2f99-5b0f-b8f4-9fa58c3f4224",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 6000,
-      "n_ramp": 6000,
-      "name": "Copper 101-H02",
-      "ramp-angle": 2,
-      "stepdown": 0.1,
-      "stepover": 0.1,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 75.39822368615503,
-      "v_f": 200,
-      "v_f_leadIn": 200,
-      "v_f_leadOut": 200,
-      "v_f_plunge": 200,
-      "v_f_ramp": 300,
-      "v_f_transition": 200
-     },
-     {
-      "description": "",
-      "f_n": 0.01666671611230958,
-      "f_z": 0.0416667,
-      "guid": "3092dc11-4e3f-2f96-b473-54982bf68ec4",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Aluminum",
-      "ramp-angle": 1.2,
-      "stepdown": 0.2,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 499.99891663392685,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     },
-     {
-      "description": "",
-      "f_n": 0.00833335805615479,
-      "f_z": 0.025,
-      "guid": "dd415cc9-4168-98a3-dbd4-27814abb17dd",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Brass",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 299.9991099810681,
-      "v_f_leadIn": 300,
-      "v_f_leadOut": 300,
-      "v_f_plunge": 100,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 300
-     },
-     {
-      "description": "",
-      "f_n": 0.00833335805615479,
-      "f_z": 0.025,
-      "guid": "08de283b-4fb7-5631-a320-fab202270208",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Copper",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 299.9991099810681,
-      "v_f_leadIn": 300,
-      "v_f_leadOut": 300,
-      "v_f_plunge": 100,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 300
-     },
-     {
-      "description": "",
-      "f_n": 0.041666790280773934,
-      "f_z": 0.0833333,
-      "guid": "549b2a21-468d-f666-db05-7cb290575884",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Hardwood",
-      "ramp-angle": 1.2,
-      "stepdown": 1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 999.9966332714138,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     },
-     {
-      "description": "",
-      "f_n": 0.01666671611230958,
-      "f_z": 0.0416667,
-      "guid": "6a416575-48e4-7923-31db-89b47866b8a5",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "PCB",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 499.99891663392685,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     },
-     {
-      "description": "",
-      "f_n": 0.041666790280773934,
-      "f_z": 0.0833333,
-      "guid": "89706353-43be-b2a1-d719-968a0f510bac",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Plastic",
-      "ramp-angle": 1.2,
-      "stepdown": 1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 999.9966332714138,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     },
-     {
-      "description": "",
-      "f_n": 0.041666790280773934,
-      "f_z": 0.0416667,
-      "guid": "c5656ffd-4919-7d5f-3eba-20a6e92e63bc",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Softwood",
-      "ramp-angle": 1.2,
-      "stepdown": 2,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 499.99891663392685,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     }
-    ]
-   },
-   "type": "chamfer mill",
-   "unit": "millimeters",
-   "vendor": ""
-  },
-  {
-   "BMC": "carbide",
-   "GRADE": "Mill Generic",
-   "description": "Single Flute Engraving Metal 30 deg*.5mm 4mm shaft",
-   "expressions": {
-    "tool_bodyLength": "max(tool_shoulderLength, (tool_overallLength - tool_holderGaugeLength -12.5 ))"
-   },
-   "geometry": {
-    "CSP": false,
-    "DC": 4,
-    "HAND": true,
-    "LB": 26,
-    "LCF": 7,
-    "NOF": 1,
-    "OAL": 45,
-    "SFDM": 4,
-    "TA": 15,
-    "assemblyGaugeLength": 32.5,
-    "shoulder-diameter": 4,
-    "shoulder-length": 7,
-    "tip-diameter": 0.5
-   },
-   "guid": "7ce3ded3-ada3-4b73-8dcb-d7e8697578bc",
-   "holder": {
-    "description": "Carvera ToolHolder",
-    "gaugeLength": 6.5,
-    "guid": "",
-    "product-id": "",
-    "product-link": "",
-    "segments": [
-     {
-      "height": 6.5,
-      "lower-diameter": 7.5,
-      "upper-diameter": 7.5
-     },
-     {
-      "height": 0.5,
-      "lower-diameter": 9,
-      "upper-diameter": 10
-     },
-     {
-      "height": 0.01,
-      "lower-diameter": 16.6,
-      "upper-diameter": 16.6
-     }
-    ],
-    "type": "holder",
-    "unit": "millimeters",
-    "vendor": "Makera"
-   },
-   "post-process": {
-    "break-control": false,
-    "comment": "carvera-cam: added from Carvera Community \"Makera Engraving Bits\"",
-    "diameter-offset": 1,
-    "length-offset": 1,
-    "live": true,
-    "manual-tool-change": false,
-    "number": 0,
-    "turret": 0
-   },
-   "product-id": "",
-   "product-link": "https://global.makera.com/products/single-flute-engraving-bit-for-metal-4mm-shank?variant=46211231842479",
-   "start-values": {
-    "presets": [
-     {
-      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
-      "expressions": {
-       "tool_coolant": "'disabled'",
-       "tool_feedCutting": "200 mmpm",
-       "tool_feedPlunge": "200 mmpm",
-       "tool_feedRamp": "300 mmpm",
-       "tool_rampAngle": "2 degrees",
-       "tool_spindleSpeed": "6000 rpm",
-       "tool_stepdown": "0.1 mm",
-       "tool_stepover": "0.1 mm",
-       "use_tool_stepdown": "true",
-       "use_tool_stepover": "true"
-      },
-      "f_n": 0.03333333333333333,
-      "f_z": 0.03333333333333333,
-      "guid": "9245e633-84d3-5fec-9829-9b3fa573ebc5",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 6000,
-      "n_ramp": 6000,
-      "name": "Copper 101-H02",
-      "ramp-angle": 2,
-      "stepdown": 0.1,
-      "stepover": 0.1,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 75.39822368615503,
-      "v_f": 200,
-      "v_f_leadIn": 200,
-      "v_f_leadOut": 200,
-      "v_f_plunge": 200,
-      "v_f_ramp": 300,
-      "v_f_transition": 200
-     },
-     {
-      "description": "",
-      "f_n": 0.01666671611230958,
-      "f_z": 0.0416667,
-      "guid": "a57ce1c5-4850-993e-f0fb-5a8f571345b4",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Aluminum",
-      "ramp-angle": 1.2,
-      "stepdown": 0.2,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 499.99891663392685,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     },
-     {
-      "description": "",
-      "f_n": 0.00833335805615479,
-      "f_z": 0.025,
-      "guid": "3541e56e-4c60-a8b8-9eb7-b69dee599634",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Brass",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 299.9991099810681,
-      "v_f_leadIn": 300,
-      "v_f_leadOut": 300,
-      "v_f_plunge": 100,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 300
-     },
-     {
-      "description": "",
-      "f_n": 0.00833335805615479,
-      "f_z": 0.025,
-      "guid": "97eb5978-4fbd-1cd1-327d-64a6a605f2b6",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Copper",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 299.9991099810681,
-      "v_f_leadIn": 300,
-      "v_f_leadOut": 300,
-      "v_f_plunge": 100,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 300
-     },
-     {
-      "description": "",
-      "f_n": 0.041666790280773934,
-      "f_z": 0.0833333,
-      "guid": "9adfeefd-4470-abcc-6994-148b5055fbf9",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Hardwood",
-      "ramp-angle": 1.2,
-      "stepdown": 1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 999.9966332714138,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     },
-     {
-      "description": "",
-      "f_n": 0.01666671611230958,
-      "f_z": 0.0416667,
-      "guid": "fb916b69-464a-5b53-c71a-339b8a5a2981",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "PCB",
-      "ramp-angle": 1.2,
-      "stepdown": 0.1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 499.99891663392685,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 200,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     },
-     {
-      "description": "",
-      "f_n": 0.041666790280773934,
-      "f_z": 0.0833333,
-      "guid": "c1a5b187-4e32-0efd-6cda-bab466151496",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Plastic",
-      "ramp-angle": 1.2,
-      "stepdown": 1,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 999.9966332714138,
-      "v_f_leadIn": 1000,
-      "v_f_leadOut": 1000,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 1000
-     },
-     {
-      "description": "",
-      "f_n": 0.041666790280773934,
-      "f_z": 0.0416667,
-      "guid": "f582c6f2-4dd9-d3b3-b032-bca8e2f16d08",
-      "material": {
-       "category": "all",
-       "query": "",
-       "use-hardness": false
-      },
-      "n": 11999.964399242725,
-      "n_ramp": 12000,
-      "name": "Softwood",
-      "ramp-angle": 1.2,
-      "stepdown": 2,
-      "stepover": 0.03,
-      "tool-coolant": "disabled",
-      "use-stepdown": true,
-      "use-stepover": true,
-      "v_c": 150.796,
-      "v_f": 499.99891663392685,
-      "v_f_leadIn": 500,
-      "v_f_leadOut": 500,
-      "v_f_plunge": 500,
-      "v_f_ramp": 333.333,
-      "v_f_transition": 500
-     }
-    ]
-   },
-   "type": "chamfer mill",
-   "unit": "millimeters",
-   "vendor": ""
-  },
-  {
-   "BMC": "carbide",
    "GRADE": "generic",
    "description": "0.152*2.3mm Drill (0.0060\")",
    "expressions": {
@@ -10373,6 +5842,116 @@
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 20.747077884306993,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "0.7*9.1mm Drill 2841A12",
+   "expressions": {
+    "tool_description": "'0.7*9.1mm Drill 2841A12'",
+    "tool_diameter": "0.7 mm",
+    "tool_fluteLength": "9.1 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A12'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A12/'",
+    "tool_shoulderLength": "9.1 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 0.7,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 9.1,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 9.1,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "acd19565-55d3-5fe0-9bdd-466c7464a7f4",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "carvera-cam: added from McMaster-Carr \"Expanded-Shank Carbide Drill Bits\"",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A12",
+   "product-link": "https://www.mcmaster.com/2841A12/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 0.7,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
+      },
+      "f_z": 0,
+      "guid": "2c4e0c0f-b216-55a3-ae04-a47a100e6bef",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 21.991148575128552,
       "v_f": 0,
       "v_f_leadIn": 0,
       "v_f_leadOut": 0,
@@ -14570,6 +10149,116 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
+   "description": "1.6*9.7mm Drill 2841A129",
+   "expressions": {
+    "tool_description": "'1.6*9.7mm Drill 2841A129'",
+    "tool_diameter": "1.6 mm",
+    "tool_fluteLength": "9.7 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A129'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A129/'",
+    "tool_shoulderLength": "9.7 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 1.6,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 9.7,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 9.7,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "31c2d04f-8520-51e0-b948-08606d406b94",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "carvera-cam: added from McMaster-Carr \"Expanded-Shank Carbide Drill Bits\"",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A129",
+   "product-link": "https://www.mcmaster.com/2841A129/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 1.6,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
+      },
+      "f_z": 0,
+      "guid": "337bd0b7-fdaa-5bb0-acf0-b228e19e7892",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 50.26548245743669,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
    "description": "1.613*9.7mm Drill (No. 52)",
    "expressions": {
     "tool_description": "'1.613*9.7mm Drill (No. 52)'",
@@ -14773,6 +10462,116 @@
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 51.83627878423159,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "1.7*9.6mm Drill 2841A155",
+   "expressions": {
+    "tool_description": "'1.7*9.6mm Drill 2841A155'",
+    "tool_diameter": "1.7 mm",
+    "tool_fluteLength": "9.6 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A155'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A155/'",
+    "tool_shoulderLength": "9.6 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 1.7,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 9.6,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 9.6,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "eb180547-80f7-5d15-8001-1dd3fb9038fa",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "carvera-cam: added from McMaster-Carr \"Expanded-Shank Carbide Drill Bits\"",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A155",
+   "product-link": "https://www.mcmaster.com/2841A155/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 1.7,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
+      },
+      "f_z": 0,
+      "guid": "abd52077-44fd-576b-adc4-6a1582cc6a80",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 53.40707511102648,
       "v_f": 0,
       "v_f_leadIn": 0,
       "v_f_leadOut": 0,
@@ -16000,6 +11799,116 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
+   "description": "2*9.1mm Drill 2841A134",
+   "expressions": {
+    "tool_description": "'2*9.1mm Drill 2841A134'",
+    "tool_diameter": "2 mm",
+    "tool_fluteLength": "9.1 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A134'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A134/'",
+    "tool_shoulderLength": "9.1 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2.0,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 9.1,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 9.1,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "d6b4e2d4-37e4-55ec-9407-463adc02d2cb",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "carvera-cam: added from McMaster-Carr \"Expanded-Shank Carbide Drill Bits\"",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A134",
+   "product-link": "https://www.mcmaster.com/2841A134/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 2.0,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
+      },
+      "f_z": 0,
+      "guid": "8a083d3a-5a01-5ebb-8e30-238a41840374",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 62.83185307179586,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
    "description": "2.05*9.1mm Drill",
    "expressions": {
     "tool_description": "'2.05*9.1mm Drill'",
@@ -16330,6 +12239,116 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
+   "description": "2.1*9mm Drill 2841A159",
+   "expressions": {
+    "tool_description": "'2.1*9mm Drill 2841A159'",
+    "tool_diameter": "2.1 mm",
+    "tool_fluteLength": "9 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A159'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A159/'",
+    "tool_shoulderLength": "9 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2.1,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 9.0,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 9.0,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "d89905ed-951f-5614-a9cd-db2978abc0e2",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "carvera-cam: added from McMaster-Carr \"Expanded-Shank Carbide Drill Bits\"",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A159",
+   "product-link": "https://www.mcmaster.com/2841A159/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 2.1,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
+      },
+      "f_z": 0,
+      "guid": "c64ee1f8-9acb-5d2e-b2ec-3149fedeeab5",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 65.97344572538566,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
    "description": "2.15*8.9mm Drill",
    "expressions": {
     "tool_description": "'2.15*8.9mm Drill'",
@@ -16533,6 +12552,116 @@
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 68.62494992501544,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "2.2*8.8mm Drill 2841A16",
+   "expressions": {
+    "tool_description": "'2.2*8.8mm Drill 2841A16'",
+    "tool_diameter": "2.2 mm",
+    "tool_fluteLength": "8.8 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A16'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A16/'",
+    "tool_shoulderLength": "8.8 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2.2,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 8.8,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 8.8,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "c03873dd-f763-5392-98d2-ebea593b0b01",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "carvera-cam: added from McMaster-Carr \"Expanded-Shank Carbide Drill Bits\"",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A16",
+   "product-link": "https://www.mcmaster.com/2841A16/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 2.2,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
+      },
+      "f_z": 0,
+      "guid": "8a85e363-fe49-56e7-9a6b-35eecdf8ba1f",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 69.11503837897546,
       "v_f": 0,
       "v_f_leadIn": 0,
       "v_f_leadOut": 0,
@@ -17650,6 +13779,116 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
+   "description": "2.5*8.4mm Drill 2841A137",
+   "expressions": {
+    "tool_description": "'2.5*8.4mm Drill 2841A137'",
+    "tool_diameter": "2.5 mm",
+    "tool_fluteLength": "8.4 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A137'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A137/'",
+    "tool_shoulderLength": "8.4 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2.5,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 8.4,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 8.4,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "7c264393-663e-5966-990d-0a83b1ce1b49",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "carvera-cam: added from McMaster-Carr \"Expanded-Shank Carbide Drill Bits\"",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A137",
+   "product-link": "https://www.mcmaster.com/2841A137/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 2.5,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
+      },
+      "f_z": 0,
+      "guid": "74faca3d-bca0-5f3b-9c76-9b1c78208f35",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 78.53981633974482,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
    "description": "2.527*8.4mm Drill (No. 39)",
    "expressions": {
     "tool_description": "'2.527*8.4mm Drill (No. 39)'",
@@ -17980,6 +14219,116 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
+   "description": "2.6*8.2mm Drill 2841A166",
+   "expressions": {
+    "tool_description": "'2.6*8.2mm Drill 2841A166'",
+    "tool_diameter": "2.6 mm",
+    "tool_fluteLength": "8.2 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A166'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A166/'",
+    "tool_shoulderLength": "8.2 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2.6,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 8.2,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 8.2,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "3a0692f3-8081-5454-94a6-f091b07d4781",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "carvera-cam: added from McMaster-Carr \"Expanded-Shank Carbide Drill Bits\"",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A166",
+   "product-link": "https://www.mcmaster.com/2841A166/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 2.6,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
+      },
+      "f_z": 0,
+      "guid": "c1ae537a-137f-5630-afda-ee68691401c9",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 81.68140899333463,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
    "description": "2.642*8.1mm Drill (No. 37)",
    "expressions": {
     "tool_description": "'2.642*8.1mm Drill (No. 37)'",
@@ -18183,6 +14532,116 @@
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 83.2522053201295,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "2.7*8.1mm Drill 2841A168",
+   "expressions": {
+    "tool_description": "'2.7*8.1mm Drill 2841A168'",
+    "tool_diameter": "2.7 mm",
+    "tool_fluteLength": "8.1 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A168'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A168/'",
+    "tool_shoulderLength": "8.1 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 2.7,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 8.1,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 8.1,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "c344bd5d-b968-5ea3-a6fe-fd7c3a04a6c0",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "carvera-cam: added from McMaster-Carr \"Expanded-Shank Carbide Drill Bits\"",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A168",
+   "product-link": "https://www.mcmaster.com/2841A168/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 2.7,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
+      },
+      "f_z": 0,
+      "guid": "f350b0d9-dc6e-5181-9a64-7d790b988998",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 84.82300164692441,
       "v_f": 0,
       "v_f_leadIn": 0,
       "v_f_leadOut": 0,
@@ -19410,6 +15869,116 @@
   {
    "BMC": "carbide",
    "GRADE": "generic",
+   "description": "3*7.6mm Drill 2841A138",
+   "expressions": {
+    "tool_description": "'3*7.6mm Drill 2841A138'",
+    "tool_diameter": "3 mm",
+    "tool_fluteLength": "7.6 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A138'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A138/'",
+    "tool_shoulderLength": "7.6 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 3.0,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 7.6,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 7.6,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "b4001d7c-4c79-5c78-a1d4-0c16ab11e57d",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "carvera-cam: added from McMaster-Carr \"Expanded-Shank Carbide Drill Bits\"",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A138",
+   "product-link": "https://www.mcmaster.com/2841A138/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 3.0,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
+      },
+      "f_z": 0,
+      "guid": "08a30436-52e0-5b22-8b59-ef5659e21804",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 94.2477796076938,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
    "description": "3.048*7.6mm Drill (No. 31)",
    "expressions": {
     "tool_description": "'3.048*7.6mm Drill (No. 31)'",
@@ -19833,6 +16402,116 @@
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 98.96016858807847,
+      "v_f": 0,
+      "v_f_leadIn": 0,
+      "v_f_leadOut": 0,
+      "v_f_plunge": 50,
+      "v_f_ramp": 0,
+      "v_f_retract": 500,
+      "v_f_transition": 0
+     }
+    ]
+   },
+   "type": "drill",
+   "unit": "millimeters",
+   "vendor": "McMaster-Carr"
+  },
+  {
+   "BMC": "carbide",
+   "GRADE": "generic",
+   "description": "3.175*7.4mm Drill (1/8\") 2841A98",
+   "expressions": {
+    "tool_description": "'3.175*7.4mm Drill (1/8\") 2841A98'",
+    "tool_diameter": "3.175 mm",
+    "tool_fluteLength": "7.4 mm",
+    "tool_number": "0",
+    "tool_productId": "'2841A98'",
+    "tool_productLink": "'https://www.mcmaster.com/2841A98/'",
+    "tool_shoulderLength": "7.4 mm",
+    "tool_tipAngle": "130 degrees",
+    "tool_vendor": "'McMaster-Carr'"
+   },
+   "geometry": {
+    "CSP": false,
+    "DC": 3.175,
+    "HAND": true,
+    "LB": 26,
+    "LCF": 7.4,
+    "NOF": 2,
+    "NT": 1,
+    "OAL": 38,
+    "RE": 0,
+    "SFDM": 3.175,
+    "SIG": 130,
+    "TP": 0,
+    "assemblyGaugeLength": 26.5,
+    "shoulder-length": 7.4,
+    "thread-profile-angle": 60,
+    "tip-diameter": 0,
+    "tip-length": 0,
+    "tip-offset": 0
+   },
+   "guid": "c27adf05-43c5-5705-a142-203a828f14e5",
+   "holder": {
+    "description": "Carvera ToolHolder",
+    "gaugeLength": 0.5,
+    "guid": "",
+    "product-id": "",
+    "product-link": "",
+    "segments": [
+     {
+      "height": 3.5,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "holder",
+    "unit": "millimeters",
+    "vendor": "Makera"
+   },
+   "post-process": {
+    "break-control": false,
+    "comment": "carvera-cam: added from McMaster-Carr \"Expanded-Shank Carbide Drill Bits\"",
+    "diameter-offset": 0,
+    "length-offset": 0,
+    "live": true,
+    "manual-tool-change": false,
+    "number": 0,
+    "turret": 0
+   },
+   "product-id": "2841A98",
+   "product-link": "https://www.mcmaster.com/2841A98/",
+   "shaft": {
+    "segments": [
+     {
+      "height": 4,
+      "lower-diameter": 3.175,
+      "upper-diameter": 3.175
+     }
+    ],
+    "type": "shaft"
+   },
+   "start-values": {
+    "presets": [
+     {
+      "description": "Derived by carvera-cam from the lab's Copper 101-H02 presets for this kind of tool; the lab has not cut copper with this tool yet.",
+      "expressions": {
+       "tool_feedPlunge": "50 mmpm",
+       "tool_feedRetract": "500 mmpm",
+       "tool_spindleSpeed": "10000 rpm"
+      },
+      "f_z": 0,
+      "guid": "cf279002-979b-5b52-8623-3f01d83e85c4",
+      "material": {
+       "category": "all",
+       "query": "",
+       "use-hardness": false
+      },
+      "n": 10000,
+      "name": "Copper 101-H02",
+      "tool-coolant": "disabled",
+      "use-feed-per-revolution": false,
+      "v_c": 99.74556675147592,
       "v_f": 0,
       "v_f_leadIn": 0,
       "v_f_leadOut": 0,

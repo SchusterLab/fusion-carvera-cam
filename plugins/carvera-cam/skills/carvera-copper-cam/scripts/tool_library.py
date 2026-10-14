@@ -7,11 +7,11 @@ assets/carvera-tools.json holds two kinds of tools:
     its drills from McMaster-Carr's expanded-shank series are rebuilt from the
     catalogue's table as the added ones are (lab_drills), its other drills are
     left out, and every drill's preset follows the lab's drill rule;
-  - added tools, marked in their post-processor comment (ADDED): a drill of
-    each uncoated diameter of McMaster-Carr's expanded-shank carbide drills, the
-    series most lab drills come from (read from MCMASTER_DRILLS, a copy of the
-    catalogue's table), and the end mills, engravers and thread mills for
-    metal from the Carvera Community's copies of Makera's tool libraries. The lab has not cut with these, so their
+  - added tools, marked in their post-processor comment (ADDED): every
+    uncoated drill of McMaster-Carr's expanded-shank carbide drills, the series
+    most lab drills come from (read from MCMASTER_DRILLS, a copy of the
+    catalogue's table), and the end mills and thread mills for metal from the
+    Carvera Community's copies of Makera's tool libraries. The lab has not cut with these, so their
     Copper 101-H02 preset is derived from the lab's presets for the same kind
     of tool (lab_preset), and says so.
 
@@ -45,11 +45,10 @@ DERIVED = ('Derived by carvera-cam from the lab\'s Copper 101-H02 presets for th
 # Makera's libraries, and which of their tools are made for metal. The others
 # (wood and plastic O-flutes and engravers, corn bits for PCB and carbon fibre,
 # the solder mask tool, lasers) do not cut copper. Makera's drills are left out:
-# the McMaster-Carr drills cover their diameters.
+# the McMaster-Carr drills cover their diameters. So are its ball end mills and
+# engraving bits (the user's choice, 2026-10-14).
 COMMUNITY_PICKS = {
     'Makera O Flute Bits': lambda t: t['description'].startswith('Spiral O Metal'),
-    'Makera Ball Endmills': lambda t: 'Metal' in t['description'],
-    'Makera Engraving Bits': lambda t: 'Metal' in t['description'],
     'Makera Thread Mills': lambda t: True,
     'Makera Other Tools': lambda t: t['description'].startswith('Chamfering Bit'),
 }
@@ -213,18 +212,23 @@ def lab_drills(lab, rows, templates):
 
 def mcmaster_drills(lab, rows, templates):
     """A drill for each of McMaster-Carr's uncoated expanded-shank carbide drills
-    (rows of MCMASTER_DRILLS) that is not already a lab drill, with its maximum
-    drilling depth as its flute length. The TiN and TiAlN drills are left out."""
+    (rows of MCMASTER_DRILLS), lab drills' sizes and parts included, with its
+    maximum drilling depth as its flute length. The TiN and TiAlN drills are
+    left out. A drill whose name a lab drill already has gets its part number
+    after the name, so every tool keeps a name of its own."""
     have = {t.get('product-id') for t in lab if t['type'] == 'drill'}
     names = {t['description'] for t in lab}
     template = _drill_template(lab)
     out = []
     for r in sorted(rows, key=lambda r: float(r['diameter_mm'])):
-        if r['coating'] != 'uncoated' or r['part'] in have:
+        if r['coating'] != 'uncoated':
             continue
         t = _mcmaster_drill(r, template)
-        if t['description'] in names:  # a lab drill of the same size, in another coating
-            continue
+        if r['part'] in have:  # a copy of a lab drill: a guid of its own
+            t['guid'] = str(uuid.uuid5(uuid.NAMESPACE_URL, t['product-link'] + '#added'))
+        if t['description'] in names:
+            t['description'] += ' ' + r['part']
+            t['expressions']['tool_description'] = "'%s'" % t['description'].replace("'", "\\'")
         t['post-process']['comment'] = ADDED + 'McMaster-Carr "Expanded-Shank Carbide Drill Bits"'
         t['start-values'] = {'presets': []}
         out.append(_with_preset(t, templates))
@@ -283,12 +287,13 @@ def complete(lab, community, mcmaster=()):
 
 def merge(lab, current):
     """After an export from Fusion: the lab's tools, its drills rebuilt as
-    lab_drills does, plus the added tools already in the library that do not
-    duplicate one of them."""
+    lab_drills does, plus the added tools already in the library: the
+    McMaster-Carr drills, and the others that do not duplicate a lab tool."""
     templates = _templates(lab)
     lab = [_with_preset(copy.deepcopy(t), templates) for t in lab_drills(lab, read_mcmaster(), templates)]
     seen = {_key(t) for t in lab} | {_name(t) for t in lab}
-    return lab + [t for t in current if is_added(t) and _key(t) not in seen and _name(t) not in seen]
+    return lab + [t for t in current if is_added(t) and (
+        'McMaster-Carr' in t['post-process']['comment'] or _key(t) not in seen and _name(t) not in seen)]
 
 
 def read(path=TOOLS_FILE):
