@@ -61,7 +61,6 @@ Chip load is the feed per cutting edge per revolution: feed ÷ (rpm × flutes).
 | F1 | the spindle speed, cutting feed or plunge feed differs from the tool's Copper 101-H02 preset | warning | the feeds match the tool's Copper 101-H02 preset in all 916 operations whose tool had one; the other 88 use tools without one (rule N5) | settings the lab has not used with that tool |
 | F2 | an end mill or chamfering bit cuts at more than 0.034 mm chip load, or its plunge feed exceeds 0.034 mm per revolution | warning | all 647 end-mill operations cut at 0.033 mm (one flute) or 0.017 mm (two flutes), and all 112 chamfering operations at 0.017 mm | stall and broken small end mills |
 | F3 | a drill feeds more than 0.0051 mm per revolution | warning | 217 of 218 drill operations feed 0.005 mm per revolution | broken drills |
-| F4 | a three-flute thread mill cuts at more than 0.0045 mm chip load | warning | all 27 thread operations: 0.0022 (M2, 100 mm/min) to 0.0044 mm (M4, 200 mm/min) | broken thread mills |
 
 ### How much the tool cuts at once
 

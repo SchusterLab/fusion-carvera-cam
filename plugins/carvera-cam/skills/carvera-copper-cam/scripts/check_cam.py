@@ -34,7 +34,6 @@ STATE = os.path.join(tempfile.gettempdir(), 'carvera-cam-check.json')
 CHIP_LOAD_MILL = 0.034       # mm/tooth, end mills and chamfer bits (lab: 0.0333)
 PLUNGE_PER_REV_MILL = 0.034  # mm/rev, end mill plunge (lab: 0.0333)
 DRILL_FEED_PER_REV = 0.0051  # mm/rev (lab: 50 mm/min at 10000 rpm)
-THREAD_CHIP_LOAD = 0.0045    # mm/tooth (lab: 0.0022 to 0.0044)
 STEPDOWN_LARGE = 0.3         # end mills of 3 mm and up
 STEPDOWN_SMALL = 0.2         # smaller end mills, at most 0.2 x diameter
 POCKET_STEPOVER = 0.6        # x diameter
@@ -145,11 +144,6 @@ def _check_op(rep, s, o, t, earlier, lab, through_before=False):
         if fr > DRILL_FEED_PER_REV:
             rep.add('F3', 'warning', sn, on, 'drill feed %.4f mm/rev is above the lab\'s 0.005 '
                     '(50 mm/min at 10000 rpm)' % fr, plunge=t['plunge'], rpm=t['rpm'])
-    if t['type'] == 'thread mill' and t['feed']:
-        fz = t['feed'] / t['rpm'] / t['flutes']
-        if fz > THREAD_CHIP_LOAD:
-            rep.add('F4', 'warning', sn, on, 'thread mill chip load %.4f mm/tooth is above the '
-                    'lab\'s %.4f' % (fz, THREAD_CHIP_LOAD), feed=t['feed'], rpm=t['rpm'])
     preset = lab.get(_ascii(t['desc']))
     if preset is None:
         rep.add('N5', 'warning', sn, on, '%s is not in the skill\'s tool library, so its feeds '
