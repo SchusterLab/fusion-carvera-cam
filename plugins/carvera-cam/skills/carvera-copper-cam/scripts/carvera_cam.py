@@ -1579,7 +1579,10 @@ def _add_face_patches(design, lay, a):
     top and bottom faces' outer loops, so a pocket open to the side is covered too.
     The patch reaches FACE_MARGIN past the outline, so that the face also clears
     the stock the outline cut comes down through, one end mill wide outside it.
-    Return {'top': face, 'bottom': face} as seen from the root."""
+    The finishing face runs after the outline cut has cleared that, so its
+    patch is the outline itself.
+    Return {'top': face, 'bottom': face, 'top finish': face, 'bottom finish':
+    face} as seen from the root."""
     root = design.rootComponent
     occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
     comp = occ.component
@@ -1601,14 +1604,25 @@ def _add_face_patches(design, lay, a):
         sk.offset(curves, away, FACE_MARGIN / 10)
         for c in curves:
             c.isConstruction = True  # the patch is the offset loop's inside
-        prof = max(sk.profiles, key=lambda pr: pr.areaProperties().area)
-        patches = comp.features.patchFeatures
-        e = patches.add(patches.createInput(prof, adsk.fusion.FeatureOperations.NewBodyFeatureOperation))
-        e.name = 'face ' + side
-        body = e.bodies.item(0)
-        body.name = 'face ' + side
-        out[side] = body.faces.item(0).createForAssemblyContext(occ)
+        out[side] = _patch(comp, occ, sk, 'face ' + side)
+        sk = comp.sketches.add(plane)
+        sk.name = 'face outline ' + side + ' (finish)'
+        for pc in lay['outline']:
+            _sketch_curve(sk, pc, 0, pc['len'])
+        out[side + ' finish'] = _patch(comp, occ, sk, 'face ' + side + ' (finish)')
     return out
+
+
+def _patch(comp, occ, sk, name):
+    """A planar patch body filling the sketch's largest profile; its face as
+    seen from the root."""
+    prof = max(sk.profiles, key=lambda pr: pr.areaProperties().area)
+    patches = comp.features.patchFeatures
+    e = patches.add(patches.createInput(prof, adsk.fusion.FeatureOperations.NewBodyFeatureOperation))
+    e.name = name
+    body = e.bodies.item(0)
+    body.name = name
+    return body.faces.item(0).createForAssemblyContext(occ)
 
 
 def _at_tab(which, face, offset=0.0):
@@ -2260,18 +2274,24 @@ def _side_ops(b, setup, a, side, plan, warnings):
     entry = [lay['entry']] if lay else []
 
     def face_op(which, multi, suffix, leave):
+        finish = which == 'finish'
         params = dict(POCKET, doMultipleDepths=multi, bottomHeight_mode="'from contour'",
-                      rampType="'predrill'", **top_at(-m))
+                      **top_at(-m))
+        if not finish:
+            params['rampType'] = "'predrill'"
         if leave:
             params.update(useStockToLeave='true', simpleStockToLeave='false',
                           stockToLeave='0mm', verticalStockToLeave='%gmm' % leave)
         # the patch over the face, not the face: see _add_face_patches
         # the patch's edge, not the patch: nothing walls a selected face in, so
         # Fusion takes it for an open pocket and runs the tool past its edge
-        sel = _sel_pocket_outline(patch) if patch else _sel_pocket([f['face'] for f in facing])
+        # The finishing face stops at the outline: the outline cut has cleared
+        # past it. The main entry hole is outside the outline, so the finishing
+        # face ramps down through its allowance in a helix instead.
+        p = (plan.get('face_patches') or {}).get(side + ' finish') if finish else patch
+        sel = _sel_pocket_outline(p) if p else _sel_pocket([f['face'] for f in facing])
         op = b.op(setup, 'pocket2d', (ENDMILL, which), 'Face' + suffix, params,
-                  _both(sel,
-                        _sel_faces('predrillPositions', entry)))
+                  sel if finish else _both(sel, _sel_faces('predrillPositions', entry)))
         high[0] = leave  # the face is now the stock's highest point
         return op
 
