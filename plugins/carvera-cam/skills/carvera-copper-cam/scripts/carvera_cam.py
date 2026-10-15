@@ -840,6 +840,19 @@ def _sel_pocket(faces):
     return f
 
 
+def _sel_pocket_outline(face):
+    """A pocket inside the face's outer loop, as a closed boundary."""
+    def f(params):
+        v = params.itemByName('pockets').value
+        sels = v.getCurveSelections()
+        s = sels.createNewFaceContourSelection()
+        s.inputGeometry = [face]
+        s.loopType = adsk.cam.LoopTypes.OnlyOutsideLoops
+        s.sideType = adsk.cam.SideTypes.AlwaysInsideSideType
+        v.applyCurveSelections(sels)
+    return f
+
+
 def _sel_silhouette():
     # The setup-model flag, not inputGeometry=[body]: a body silhouette comes out
     # empty in the flipped bottom setup.
@@ -996,7 +1009,9 @@ THREAD = {
 FACE_ALLOWANCE = 0.2
 # The facing pockets face this far past the part's outline: the outline cut is
 # one end mill wide outside it, and starts on the faced stock (_add_face_patches).
-FACE_MARGIN = ENDMILL_D
+# The main entry is the outline cut's, one radius outside the outline, and Fusion
+# wants about 5 x the pocket tolerance of room round an entry hole.
+FACE_MARGIN = ENDMILL_D + 5 * POCKET_TOL
 
 
 def _drill_ends(through):
@@ -2203,8 +2218,11 @@ def _side_ops(b, setup, a, side, plan, warnings):
             params.update(useStockToLeave='true', simpleStockToLeave='false',
                           stockToLeave='0mm', verticalStockToLeave='%gmm' % leave)
         # the patch over the face, not the face: see _add_face_patches
+        # the patch's edge, not the patch: nothing walls a selected face in, so
+        # Fusion takes it for an open pocket and runs the tool past its edge
+        sel = _sel_pocket_outline(patch) if patch else _sel_pocket([f['face'] for f in facing])
         op = b.op(setup, 'pocket2d', (ENDMILL, which), 'Face' + suffix, params,
-                  _both(_sel_pocket([patch] if patch else [f['face'] for f in facing]),
+                  _both(sel,
                         _sel_faces('predrillPositions', entry)))
         high[0] = leave  # the face is now the stock's highest point
         return op
