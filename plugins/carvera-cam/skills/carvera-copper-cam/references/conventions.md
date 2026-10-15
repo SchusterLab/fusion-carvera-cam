@@ -121,6 +121,10 @@ Every operation that would start at the face or above it starts at that point in
 - drills, bores and thread mills that start at the hole top start 0.2 mm above it until the finishing face.
 Operations that start below the face, such as the cuts round the tabs and the deeper stages of a staged cut, keep their own top heights.
 
+Every top and bottom height is taken from geometry, not computed from the stock top: the stock top, the face patches, the tab bodies' faces, the pocket floors, a window's top face, the part's far face, or the hole top.
+An offset from that geometry is only ever one of the lab's fixed numbers: the 0.2 mm the rough face leaves, the 0.5 mm a drill or cut goes past a face it breaks through, or a thread's offset from threads.toml.
+The one exception is a cut deeper than T1 reaches, which goes down in stages; the stage depths come from the drill's reach and have no geometry.
+
 The lab's parts from October 2026 on (`kiutra-beam`, `tee`) work this way; older parts finish the face with the other T3 passes.
 
 ## Entry holes
