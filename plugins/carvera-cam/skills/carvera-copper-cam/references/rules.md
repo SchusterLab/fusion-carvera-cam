@@ -68,7 +68,7 @@ A roughing pass below means a multi-depth pass that cuts the feature to size in 
 | Id | Finding when | Severity | Evidence | Guards against |
 |---|---|---|---|---|
 | D1 | a roughing pass steps down more than 0.3 mm with an end mill of 3 mm or more, or more than 0.2 mm or 0.2 × the diameter, whichever is less, with a smaller one | warning | 168 of 169 roughing passes in the current parts and 134 of 161 in the older versions; the exceptions step 0.5 mm | stall and broken end mills |
-| D4 | a pocket (or contour) cuts its full depth in one pass with no roughing pass of a pocket (or contour) by an end mill of the same diameter earlier in the setup; rest machining, and contours that cut sideways in steps of at most 0.3 mm, are exempt | warning | 174 of 197 single-pass operations follow such a roughing pass | a full-depth cut into solid stock |
+| D4 | a pocket (or contour) cuts its full depth in one pass with no roughing pass of a pocket (or contour) by an end mill of the same diameter earlier in the setup; rest machining is exempt | warning | 174 of 197 single-pass operations follow such a roughing pass | a full-depth cut into solid stock |
 | D6 | a pocket's stepover is more than 0.6 × the tool's diameter | warning | 261 of 263 pockets step over 0.6 × the diameter | an overloaded end mill |
 | D8 | a bore's radial stepover is more than 0.3 mm | warning | 23 of 33 bores in the current parts step over 0.1 mm, the rest 0.3 to 0.5 mm | stall and broken end mills |
 | CH1 | a deburr (2D chamfer) keeps the chamfering bit's point less than 0.1 mm off the edge (Fusion's tip offset) | warning | all 104 deburr operations keep it at least 0.1 mm off, most 0.3 to 0.5 mm | the bit's sharp point doing the cutting and chipping |

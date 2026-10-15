@@ -216,8 +216,7 @@ def _check_op(rep, s, o, t, earlier, lab, threaded=frozenset()):
         if multi is False and not rest:
             twin = [e for e in earlier if e['strategy'] == strat and e['multi']
                     and abs(e['d'] - d) < 1e-3]
-            sides = _v(p, 'doMultiplePasses', False) and (_mm(_v(p, 'maximumStepover')) or 9) <= 0.3
-            if not twin and not sides:
+            if not twin:
                 rep.add('D4', 'warning', sn, on, 'single full-depth pass, with no multi-depth '
                         'roughing by a %.3g mm tool before it in this setup: it may cut solid '
                         'stock at full depth' % d, limit_mm=limit)
