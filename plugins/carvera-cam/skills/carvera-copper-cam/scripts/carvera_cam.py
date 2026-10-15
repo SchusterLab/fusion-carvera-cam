@@ -836,16 +836,17 @@ def _sel_pocket(faces):
     return f
 
 
-def _sel_silhouette():
+def _sel_silhouette(param='contours', outside=True):
     # The setup-model flag, not inputGeometry=[body]: a body silhouette comes out
     # empty in the flipped bottom setup.
     def f(params):
-        v = params.itemByName('contours').value
+        v = params.itemByName(param).value
         sels = v.getCurveSelections()
         s = sels.createNewSilhouetteSelection()
         s.isSetupModelSelected = True
         s.loopType = adsk.cam.LoopTypes.OnlyOutsideLoops
-        s.sideType = adsk.cam.SideTypes.AlwaysOutsideSideType
+        if outside:  # a contour around the part; the face takes the area inside
+            s.sideType = adsk.cam.SideTypes.AlwaysOutsideSideType
         v.applyCurveSelections(sels)
     return f
 
@@ -963,6 +964,14 @@ POCKET = {
     'doRamp': 'true',
     'rampType': "'helix'",
     'compensation': "'left'",
+}
+FACE = {  # Fusion's face toolpath, over the silhouette (face_op)
+    'useStockContours': 'false',
+    'stepover': 'tool_diameter * 0.6',
+    'passExtension': 'tool_diameter / 2',
+    'maximumStepdown': 'tool_stepdown',  # the face's own default is 1 mm
+    'doLeadIn': 'false',
+    'doLeadOut': 'false',
 }
 CONTOUR = {
     'tolerance': '0.01mm',
@@ -2134,18 +2143,18 @@ def _side_ops(b, setup, a, side, plan, warnings):
     entry = [lay['entry']] if lay else []
 
     def face_op(which, multi, suffix, leave):
-        params = dict(POCKET, doMultipleDepths=multi, topHeight_mode="'from stock top'",
-                      topHeight_offset='0mm', bottomHeight_mode="'from contour'",
-                      rampType="'predrill'")
+        # Fusion's face toolpath over the whole silhouette, the openings in the
+        # face included: a pocket on the face goes round them and leaves the
+        # stock above them uncut. Each pass starts and ends one tool radius
+        # outside the silhouette, in the groove the outline has cut, so the end
+        # mill comes down there and never plunges into the stock.
+        params = dict(FACE, doMultipleDepths=multi, topHeight_mode="'from stock top'",
+                      topHeight_offset='0mm', bottomHeight_mode="'from surface top'",
+                      bottomHeight_offset='0mm')
         if leave:
-            params.update(useStockToLeave='true', simpleStockToLeave='false',
-                          stockToLeave='0mm', verticalStockToLeave='%gmm' % leave)
-        return b.op(setup, 'pocket2d', (ENDMILL, which), 'Face' + suffix, params,
-                    _both(_sel_pocket([f['face'] for f in facing]),
-                          _sel_faces('predrillPositions', entry)))
-
-    if facing:
-        ops['main'].append(face_op('rough', 'true', '', allow))
+            params.update(useStockToLeave='true', verticalStockToLeave='%gmm' % leave)
+        return b.op(setup, 'face', (ENDMILL, which), 'Face' + suffix, params,
+                    _sel_silhouette('stockContours', outside=False))
 
     def staged_bore(hs, which, tool, params, bottom_offset, name):
         """A bore op for the holes `hs`; a rough bore deeper than the drill
@@ -2200,6 +2209,9 @@ def _side_ops(b, setup, a, side, plan, warnings):
             ops['main'].append(b.op(setup, 'contour2d', tk, name, params, _both(
                 _sel_silhouette(), _sel_faces('entryPositions', entry), set_lo)))
         if which == 'rough':
+            # the face comes in from the outline's groove, so it follows the outline
+            if facing:
+                ops['main'].append(face_op('rough', 'true', '', allow))
             ops['main'] += later_drills()
         if pockets:
             shelves = lay['shelves'] if lay else {}

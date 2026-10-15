@@ -98,7 +98,7 @@ The generator works in the part's design instead, and adds the fixture's bodies 
 Top setup:
 
 1. T1 drills the main entry hole through the stock, or in stages with the outline when the stock is deeper than T1 reaches (see "Entry holes").
-2. T2 faces the stock top down to 0.2 mm above the part's top face and cuts the outline down to the tab band, both entering through the main entry hole.
+2. T2 cuts the outline down to the tab band, entering through the main entry hole, then faces the stock top down to 0.2 mm above the part's top face. The face clears the whole area inside the part's silhouette, openings in the face included, so every later cut there starts on the faced stock; its passes start and end one tool radius outside the silhouette, in the outline's groove, so the end mill comes down there instead of plunging into the stock.
 3. T1 drills the other entry holes and pre-drills the holes the end mill will bore, each from where the end mill has left the stock: the corner-chain entries from the top of the tab band, the pocket and window entries and pre-drills from 0.2 mm above the face.
 4. T2 roughs the pockets, bores, through windows, and the outline between the tabs down through the band.
 5. T3 finishes the features of steps 2 and 4, except the face, in single full-depth passes.
@@ -126,7 +126,7 @@ The lab's parts from October 2026 on (`kiutra-beam`, `tee`) work this way; older
 The end mill never ramps or plunges into solid metal.
 It enters every cut through a hole the T1 drill (3.175 mm, the end mill's diameter) makes first, at points kept in a sketch:
 
-- **The main entry**, just outside the outline at the edge of a tab, one tool radius out, so the end mill's centre sits on the outline's toolpath. T1 drills it through the whole stock with 0.5 mm breakthrough. Both facing pockets and both outline contours enter there.
+- **The main entry**, just outside the outline at the edge of a tab, one tool radius out, so the end mill's centre sits on the outline's toolpath. T1 drills it through the whole stock with 0.5 mm breakthrough. Both outline contours enter there.
 - **One entry per corner chain** (the outline between two tabs; see "Holding tabs"), at the same offset from the start of the chain, drilled through the tab band from its top, which the outline cut has already reached there.
 - **One entry per pocket**, at the point of the pocket farthest from its walls, drilled from 0.2 mm above the face to the pocket floor with the drill tip through, so that the hole is full width down to the floor and the end mill never plunges. The tip leaves a cone-shaped dimple in the floor, 3.175 mm across and 0.74 mm deep for T1's 130° point; `build` warns about each one. A pocket toolpath enters there only if the end mill has 0.05 mm of room all round, five times the pocket's tolerance; with less, Fusion refuses the entry. A closed pocket with less room, but wide enough for the end mill, still gets the entry hole, and a 2D contour along its wall cuts it instead, entering through the hole (`build` warns about it). A shelf, a floor that steps down into a deeper pocket inside it, is pocketed with that deeper pocket as one region (the opening just above the shelf), and its entry is the deeper pocket's, drilled to the deeper floor.
 - **One entry per through window**, at the point of the window farthest from its walls, drilled from 0.2 mm above the face through the part, 0.5 mm past its bottom, with the drill tip through. The window contour enters there.
@@ -167,7 +167,8 @@ Feeds, speeds and stepdowns come from the tool preset; the operations set only t
 
 | Operation | Parameters |
 |---|---|
-| 2D pocket | tolerance 0.01 mm (at the lab's 0.1 mm, Fusion refuses an entry hole with less than about 0.5 mm of room round the end mill), stepover 0.6 × tool diameter, compensation left, no stock to leave, `predrill` ramp at the entry holes; floors selected as pocket faces, shelves as the closed opening above them (one counter-clockwise chain per opening); the facing pocket starts at the stock top, and its roughing pass leaves 0.2 mm on the face (axial stock to leave 0.2 mm, radial 0) |
+| 2D pocket | tolerance 0.01 mm (at the lab's 0.1 mm, Fusion refuses an entry hole with less than about 0.5 mm of room round the end mill), stepover 0.6 × tool diameter, compensation left, no stock to leave, `predrill` ramp at the entry holes; floors selected as pocket faces, shelves as the closed opening above them (one counter-clockwise chain per opening) |
+| Face | Fusion's face toolpath over the model's silhouette (not the stock), stepover 0.6 × tool diameter, the tool's stepdown, pass extension one tool radius, no lead-in or lead-out; from the stock top, and the roughing pass leaves 0.2 mm on the face (axial stock to leave 0.2 mm) |
 | 2D contour | tolerance 0.01 mm, compensation left, two finishing stepovers, no ramp, no stock to leave; a closed contour enters at its entry hole |
 | Drill | chip breaking - partial retract cycle, 0.1 mm pecking depth, 1 mm accumulated pecking depth, 0.1 mm chip break; through holes break through 0.5 mm with the drill tip past the bottom |
 | Bore | climb, tolerance 0.01 mm, stepover 0.3 mm with enough passes to reach the wall; through holes go 0.5 mm past the bottom |
