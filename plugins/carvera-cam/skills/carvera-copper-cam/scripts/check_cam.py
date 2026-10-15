@@ -437,6 +437,42 @@ def _check_entries(rep, sn, o, moves, t, holes, milled, to_world, top):
                 plunges=len(bad))
 
 
+def _check_thread_depth(rep, sn, o, cuts, setup):
+    """TH3: a thread mill never goes below the bottom of the hole it threads.
+    The holes are the operation's selected faces; depths are along the setup's
+    tool axis."""
+    sel = o.parameters.itemByName('circularFaces')
+    try:
+        faces = list(sel.value.value) if sel is not None else []
+    except Exception:
+        faces = []
+    org, ax, ay, az = setup.workCoordinateSystem.getAsCoordinateSystem()
+    um = adsk.fusion.Design.cast(_app().activeDocument.products.itemByProductType(
+        'DesignProductType')).unitsManager
+    k = um.convert(1, um.defaultLengthUnits, 'cm')
+
+    def wcs(p):  # world Point3D (cm) -> setup WCS (mm)
+        d = adsk.core.Vector3D.create(p.x - org.x * k, p.y - org.y * k, p.z - org.z * k)
+        return d.dotProduct(ax) * 10, d.dotProduct(ay) * 10, d.dotProduct(az) * 10
+
+    for f in faces:
+        cyl = adsk.core.Cylinder.cast(getattr(f, 'geometry', None))
+        if cyl is None:
+            continue
+        r = cyl.radius * 10
+        cx, cy, _ = wcs(cyl.origin)
+        ends = [wcs(v.geometry)[2] for v in f.vertices] or             [wcs(e.pointOnEdge)[2] for e in f.edges]
+        if not ends:
+            continue
+        hole_bottom = min(ends)
+        inside = [min(m[3], m[6]) for m in cuts
+                  if math.hypot(m[1] - cx, m[2] - cy) < r and math.hypot(m[4] - cx, m[5] - cy) < r]
+        if inside and min(inside) < hole_bottom - 0.01:
+            rep.add('TH3', 'error', sn, o.name, 'the thread mill goes %.2f mm below the bottom of '
+                    'the hole at X%.3f Y%.3f' % (hole_bottom - min(inside), cx, cy),
+                    z_min=round(min(inside), 3), hole_bottom=round(hole_bottom, 3))
+
+
 def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None):
     """The rules read from the setup's G-code. `holes` lists the holes earlier
     setups drilled (see _drilled); this setup's holes are added to it."""
@@ -478,6 +514,8 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None):
             if _enters_by_holes(o):
                 _check_entries(rep, sn, o, moves, t, holes, milled, to_world, top)
             milled.append((cuts, t['d'] / 2))
+        if o.strategy == 'thread':
+            _check_thread_depth(rep, sn, o, cuts, s)
         # the toolpath's retract plane against the operation's current heights: a
         # toolpath computed for another stock or model keeps its old heights
         p = o.parameters
