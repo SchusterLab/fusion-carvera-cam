@@ -136,7 +136,7 @@ The check does not replace Fusion's simulation with collision checking, which th
 ## Limits
 
 - The part's machining axis must be the design's Z axis, with the top setup looking down −Z.
-- A pocket narrower than the 3.175 mm end mill gets no entry hole; the small end mills clear it by rest machining, plunging as the lab does.
+- A closed pocket less than about 3.28 mm wide gets no entry hole, since Fusion refuses one with less room round the 3.175 mm end mill; a 2D contour cuts it instead, ramping down along its wall. A pocket narrower than the end mill is cut only by the small end mills, rest machining.
 - The tabs follow the outline of the part's top or bottom face, whichever encloses more area; a part wider in the middle than at both faces gets a warning.
 - A pocket's inside corners finish at the radius of the smallest end mill that fits: 1 mm diameter leaves R0.5 in a sharp corner.
 - A through window with inside corners below R1.59 keeps material in its corners; `build` warns about it.

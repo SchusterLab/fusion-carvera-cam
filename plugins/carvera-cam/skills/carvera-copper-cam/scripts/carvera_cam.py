@@ -137,7 +137,10 @@ def _set(params, name, expression):
     p = params.itemByName(name)
     if p is None:
         raise KeyError('no CAM parameter named %r' % name)
-    p.expression = expression
+    try:
+        p.expression = expression
+    except RuntimeError as e:
+        raise RuntimeError('%s = %s: %s' % (name, expression, e)) from None
 
 
 def _try_set(params, name, expression):
@@ -839,16 +842,19 @@ def _sel_silhouette():
 
 
 def _sel_chains(loops):
+    # Inner loops of an upward face, cut from the top with the tool inside them.
+    # The API ignores a chain's side and takes it from its first edge's direction:
+    # with compensation left, the tool is inside a chain running counter-clockwise
+    # seen from +Z. An inner loop's coedges run clockwise, so the chain runs
+    # against the first coedge.
     def f(params):
         v = params.itemByName('contours').value
         sels = v.getCurveSelections()
         for loop in loops:
             s = sels.createNewChainSelection()
-            s.inputGeometry = [e for e in loop.edges]
-            try:
-                s.sideType = adsk.cam.SideTypes.AlwaysInsideSideType
-            except Exception:
-                pass
+            s.inputGeometry = [c.edge for c in loop.coEdges]
+            s.isOpen = False
+            s.isReverted = not loop.coEdges.item(0).isOpposedToEdge
         v.applyCurveSelections(sels)
     return f
 
@@ -860,6 +866,21 @@ def _sel_face_contours(faces):
         for face in faces:
             s = sels.createNewFaceContourSelection()
             s.inputGeometry = [face]
+        v.applyCurveSelections(sels)
+    return f
+
+
+def _sel_floor_outlines(faces):
+    # a chain selection ignores its side type, and the contour then runs
+    # outside the floor's edge; the face's outer loop with the tool inside does not
+    def f(params):
+        v = params.itemByName('contours').value
+        sels = v.getCurveSelections()
+        for face in faces:
+            s = sels.createNewFaceContourSelection()
+            s.inputGeometry = [face]
+            s.loopType = adsk.cam.LoopTypes.OnlyOutsideLoops
+            s.sideType = adsk.cam.SideTypes.AlwaysInsideSideType
         v.applyCurveSelections(sels)
     return f
 
@@ -921,8 +942,12 @@ def _both(*selectors):
 # Values below are the lab's, read from its existing setups. Feeds and speeds
 # come from the tool preset, not from here.
 
+# Fusion rejects a pocket's entry hole unless the end mill has about 5 x the
+# tolerance of room around it: 0.5 mm at the lab's 0.1 mm tolerance. A pocket
+# with less room is cut by a contour along its wall instead (_make_layout).
+POCKET_TOL = 0.01  # mm
 POCKET = {
-    'tolerance': '0.1mm',
+    'tolerance': '%gmm' % POCKET_TOL,
     'maximumStepover': 'tool_diameter * 0.6',
     'useStockToLeave': 'false',
     'doRamp': 'true',
@@ -1347,6 +1372,8 @@ def _setup(cam, name, body, machine, stock, top, x_axis, vise=None, warnings=Non
 LAYOUT_SKETCH = 'carvera-cam'
 VISE_PREFIX = LAYOUT_SKETCH + ' vise '
 TOOL_R = ENDMILL_D / 2 / 10  # cm
+# the room a pocket's entry hole needs, plus 0.001 mm for _pocket_entry sampling the walls
+ENTRY_R = TOOL_R + (5 * POCKET_TOL + 0.001) / 10  # cm
 
 
 def _flat(p):
@@ -1557,6 +1584,7 @@ def _make_layout(design, a, plan, warnings):
     tab_chains = [{'curves': sg[0], 'start': sg[2], 'dir': sg[3]} for sg in segs if sg[1]]
 
     pocket_entries = {}
+    narrow = set()  # closed pockets the end mill fits but cannot enter by a hole
     for f in a['floors']:
         if f['role'] != 'pocket':
             continue
@@ -1569,14 +1597,19 @@ def _make_layout(design, a, plan, warnings):
                 'side': f['side'], 'depth': f['depth'], 'drill': False}
             continue
         c, x, y = _pocket_entry(f['face'])
-        if c >= TOOL_R + 0.005:
+        if c >= ENTRY_R:
             pocket_entries[f['face'].tempId] = {
                 'point': sk.sketchPoints.add(adsk.core.Point3D.create(x, y, 0)),
                 'side': f['side'], 'depth': f['depth'], 'drill': True}
+        elif c >= TOOL_R:
+            narrow.add(f['face'].tempId)
+            warnings.append('pocket at z=%g mm leaves the end mill %.3f mm of room, too little '
+                            'for an entry hole: a 2D contour cuts it, ramping along its wall'
+                            % (f['z'], (c - TOOL_R) * 10))
     shelves = _shelf_regions(root, a, sk, pocket_entries)
     _merge_entries(pocket_entries)
     return {'sketch': sk, 'corner': corner, 'tabs': tab_chains, 'shelves': shelves,
-            'entry': corner[0]['entry'], 'pocket_entries': pocket_entries}
+            'entry': corner[0]['entry'], 'pocket_entries': pocket_entries, 'narrow': narrow}
 
 
 def _profile_rings(profile):
@@ -1648,7 +1681,7 @@ def _shelf_regions(root, a, sk, pocket_entries):
                                            rings[0] + [q for r in rings[1] for q in r],
                                            (min(xs), min(ys), max(xs), max(ys)))
                 pt = (sk.sketchPoints.add(adsk.core.Point3D.create(x, y, 0))
-                      if c >= TOOL_R + 0.005 else None)
+                      if c >= ENTRY_R else None)
                 # the ring starts along the first profile curve's own direction;
                 # the chain starts along its sketch curve's
                 r0 = rings[0]
@@ -1917,6 +1950,8 @@ def _side_ops(b, setup, a, side, plan, warnings):
         return out
 
     pockets = sorted([f for f in floors if f['role'] == 'pocket'], key=lambda f: f['depth'])
+    narrow = [f for f in pockets if lay and f['face'].tempId in lay['narrow']
+              and f['face'].tempId not in lay['shelves']]
     windows = [w for w in a['windows']] if top else []
     entry = [lay['entry']] if lay else []
 
@@ -1990,6 +2025,8 @@ def _side_ops(b, setup, a, side, plan, warnings):
             # region, though several shelves share it; each with its depth and entry
             units = []  # (floor face or None, chain or None, depth, entry point or None)
             for f in pockets:
+                if f in narrow:
+                    continue
                 e = side_entries.get(f['face'].tempId)
                 c = shelves.get(f['face'].tempId)
                 if c is None or all(c is not u[1] for u in units):
@@ -2044,6 +2081,15 @@ def _side_ops(b, setup, a, side, plan, warnings):
                              numberOfStepovers=str(bore['passes']), doMultiplePasses=multi),
                         bore['through_bottom_offset'] if h['through'] else 0.0,
                         'Bore %s %.3f%s' % (t, h['dia'], suffix))
+        # pockets too narrow for an entry hole: a contour along the wall, ramping down it
+        for f in narrow:
+            # the ramp type is the default 'profile', down along the contour; Fusion
+            # refuses to set it on a new operation
+            params = dict(CONTOUR, doMultipleDepths=multi, doRamp='true')
+            params.update(top_at(0))
+            params.update(_bottom_below_part_top(f['depth'], m))
+            ops['main'].append(b.op(setup, 'contour2d', tk, 'Narrow pocket' + suffix, params,
+                                    _sel_floor_outlines([f['face']])))
         if windows:
             for w in windows:
                 params = dict(CONTOUR, doMultipleDepths=multi)

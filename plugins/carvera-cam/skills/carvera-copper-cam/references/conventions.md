@@ -128,7 +128,7 @@ It enters every cut through a hole the T1 drill (3.175 mm, the end mill's diamet
 
 - **The main entry**, just outside the outline at the edge of a tab, one tool radius out, so the end mill's centre sits on the outline's toolpath. T1 drills it through the whole stock with 0.5 mm breakthrough. Both facing pockets and both outline contours enter there.
 - **One entry per corner chain** (the outline between two tabs; see "Holding tabs"), at the same offset from the start of the chain, drilled through the tab band from its top, which the outline cut has already reached there.
-- **One entry per pocket**, at the point of the pocket farthest from its walls, drilled from 0.2 mm above the face to the pocket floor. A shelf, a floor that steps down into a deeper pocket inside it, is pocketed with that deeper pocket as one region (the opening just above the shelf), and its entry is the deeper pocket's, drilled to the deeper floor.
+- **One entry per pocket**, at the point of the pocket farthest from its walls, drilled from 0.2 mm above the face to the pocket floor. The point must leave the end mill 0.05 mm of room all round, five times the pocket's tolerance, or Fusion refuses the entry hole. A closed pocket with less room, but wide enough for the end mill, is cut by a 2D contour along its wall instead, ramping down along it (`build` warns about it). A shelf, a floor that steps down into a deeper pocket inside it, is pocketed with that deeper pocket as one region (the opening just above the shelf), and its entry is the deeper pocket's, drilled to the deeper floor.
 - **A pocket open to the side** gets no hole: its entry sits just outside the opening, where the outline cut has already cleared the stock down to the pocket's floor, and the end mill enters sideways.
 
 The pockets use the `predrill` ramp with these points as their predrill positions, and the outline contours use the main entry as their entry position.
@@ -162,8 +162,8 @@ Feeds, speeds and stepdowns come from the tool preset; the operations set only t
 
 | Operation | Parameters |
 |---|---|
-| 2D pocket | tolerance 0.1 mm, stepover 0.6 × tool diameter, compensation left, no stock to leave, `predrill` ramp at the entry holes; floors selected as pocket faces, shelves as the closed opening above them (one counter-clockwise chain per opening); the facing pocket starts at the stock top, and its roughing pass leaves 0.2 mm on the face (axial stock to leave 0.2 mm, radial 0) |
-| 2D contour | tolerance 0.01 mm, compensation left, two finishing stepovers, no ramp, no stock to leave |
+| 2D pocket | tolerance 0.01 mm (at the lab's 0.1 mm, Fusion refuses an entry hole with less than about 0.5 mm of room round the end mill), stepover 0.6 × tool diameter, compensation left, no stock to leave, `predrill` ramp at the entry holes; floors selected as pocket faces, shelves as the closed opening above them (one counter-clockwise chain per opening); the facing pocket starts at the stock top, and its roughing pass leaves 0.2 mm on the face (axial stock to leave 0.2 mm, radial 0) |
+| 2D contour | tolerance 0.01 mm, compensation left, two finishing stepovers, no ramp except in a narrow pocket, where it ramps down along the wall; no stock to leave |
 | Drill | chip breaking - partial retract cycle, 0.1 mm pecking depth, 1 mm accumulated pecking depth, 0.1 mm chip break; through holes break through 0.5 mm with the drill tip past the bottom |
 | Bore | climb, tolerance 0.01 mm, stepover 0.3 mm with enough passes to reach the wall; through holes go 0.5 mm past the bottom |
 | Thread | per thread size, from [threads.toml](threads.toml); the top offset there is from the finished face, and 0.2 mm is added while the face still carries its finishing allowance |
