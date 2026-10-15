@@ -1184,10 +1184,11 @@ def _vise_matrices(box, held_bottom, held_top, flipped):
 
     held_bottom..held_top is the stock's Z extent in the setup's own upright
     frame. For the bottom setup that frame is the model turned 180 degrees about
-    X through the stock's centre, as the setup's WCS turns it.
+    Y through the stock's centre, as the setup's WCS turns it: the stock turns
+    about the jaws' axis, so its back edge stays on the fixed jaw.
     """
     (x0, y0, _), (x1, y1, _) = box
-    cy = (y0 + y1) / 2
+    cx = (x0 + x1) / 2
     grip = min(GRIP, (held_top - held_bottom) * 10 - 1.0) / 10
     # fixture X (towards the fixed jaw) -> +Y, fixture Y -> -X, Z -> Z
     origin = adsk.core.Point3D.create((x0 + x1) / 2 + FX_JAW_CENTRE / 10,
@@ -1205,8 +1206,8 @@ def _vise_matrices(box, held_bottom, held_top, flipped):
     adj.transformBy(m)
     if flipped:
         flip = adsk.core.Matrix3D.create()
-        flip.setToRotation(math.pi, adsk.core.Vector3D.create(1, 0, 0),
-                           adsk.core.Point3D.create(0, cy, 0))
+        flip.setToRotation(math.pi, adsk.core.Vector3D.create(0, 1, 0),
+                           adsk.core.Point3D.create(cx, 0, 0))
         m.transformBy(flip)
         adj.transformBy(flip)
     return m, adj
@@ -1282,7 +1283,7 @@ def _axis_line(design):
 
 
 def _setup(cam, name, body, machine, stock, top, x_axis, vise=None, warnings=None):
-    """One setup. Its X axis is the model's +Y (top) or -Y (bottom): the vise's
+    """One setup. Its X axis is the model's +Y in both setups: the vise's
     jaws close along the Carvera's X axis and grip the stock's Y edges, so the
     part lies turned 90 degrees on the machine, as in the lab's setups."""
     si = cam.setups.createInput(adsk.cam.OperationTypes.MillingOperation)
@@ -1325,8 +1326,9 @@ def _setup(cam, name, body, machine, stock, top, x_axis, vise=None, warnings=Non
         _set(p, 'wcs_origin_boxPoint', "'%s'" % WCS_CORNER[True])
     else:
         _set(p, 'job_stockMode', "'previoussetup'")
+        # turned about the setup's X axis (the model's Y), as the operator
+        # turns the stock in the vise: Z flips, X stays
         _set(p, 'wcs_orientation_flipZ', 'true')
-        _set(p, 'wcs_orientation_flipX', 'true')
         _set(p, 'wcs_origin_mode', "'stockPoint'")
         _set(p, 'wcs_origin_boxPoint', "'%s'" % WCS_CORNER[False])
     return setup

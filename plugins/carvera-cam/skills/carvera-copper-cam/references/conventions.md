@@ -77,7 +77,7 @@ The work coordinate system (WCS) origin is the stock box's `top 2` corner: the c
 The box's corners and sides follow the setup's axes, so the box is set as `stock y` long along the setup's X.
 
 **Bottom setup.**
-The part is flipped about the model's X axis: Z and X flipped (`flipZ`, `flipX`), stock from the previous setup, WCS origin at the stock box's `top 2` corner.
+The stock is turned over about the setup's X axis, the axis the jaws close along, so its back edge stays on the fixed jaw: Z flipped (`flipZ`) and X kept, stock from the previous setup, WCS origin at the stock box's `top 2` corner.
 
 ## Fixture
 
