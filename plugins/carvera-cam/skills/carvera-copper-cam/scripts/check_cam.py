@@ -437,10 +437,11 @@ def _check_entries(rep, sn, o, moves, t, holes, milled, to_world, top):
                 plunges=len(bad))
 
 
-def _check_thread_depth(rep, sn, o, cuts, setup):
-    """TH3: a thread mill never goes below the bottom of the hole it threads.
-    The holes are the operation's selected faces; depths are along the setup's
-    tool axis."""
+def _check_thread_depth(rep, sn, o, cuts, setup, holes):
+    """TH3: a thread mill never goes deeper than the hole it threads. The holes
+    are the operation's selected faces; each reaches its modelled bottom, or as
+    deep as an earlier drill (`holes`, see _drilled) cut it at full width, if
+    that is deeper. Depths are along the setup's tool axis."""
     sel = o.parameters.itemByName('circularFaces')
     try:
         faces = list(sel.value.value) if sel is not None else []
@@ -465,11 +466,15 @@ def _check_thread_depth(rep, sn, o, cuts, setup):
         if not ends:
             continue
         hole_bottom = min(ends)
+        for hx, hy, hlo, hhi, hd, _ in holes:
+            p, q = (wcs(adsk.core.Point3D.create(hx / 10, hy / 10, z / 10)) for z in (hlo, hhi))
+            if hd >= 2 * r - 0.01 and math.hypot(p[0] - cx, p[1] - cy) < 0.05:
+                hole_bottom = min(hole_bottom, p[2], q[2])
         inside = [min(m[3], m[6]) for m in cuts
                   if math.hypot(m[1] - cx, m[2] - cy) < r and math.hypot(m[4] - cx, m[5] - cy) < r]
         if inside and min(inside) < hole_bottom - 0.01:
-            rep.add('TH3', 'error', sn, o.name, 'the thread mill goes %.2f mm below the bottom of '
-                    'the hole at X%.3f Y%.3f' % (hole_bottom - min(inside), cx, cy),
+            rep.add('TH3', 'error', sn, o.name, 'the thread mill goes %.2f mm deeper than the '
+                    'hole at X%.3f Y%.3f' % (hole_bottom - min(inside), cx, cy),
                     z_min=round(min(inside), 3), hole_bottom=round(hole_bottom, 3))
 
 
@@ -515,7 +520,7 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None):
                 _check_entries(rep, sn, o, moves, t, holes, milled, to_world, top)
             milled.append((cuts, t['d'] / 2))
         if o.strategy == 'thread':
-            _check_thread_depth(rep, sn, o, cuts, s)
+            _check_thread_depth(rep, sn, o, cuts, s, holes)
         # the toolpath's retract plane against the operation's current heights: a
         # toolpath computed for another stock or model keeps its old heights
         p = o.parameters

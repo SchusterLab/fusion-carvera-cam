@@ -1022,9 +1022,6 @@ BORE = {
 }
 THREAD = {
     'doMultiplePasses': 'true',
-    # a helical lead-in starts below the bottom height and climbs to it; a flat
-    # one stays at it, so the thread mill never goes below the hole's bottom
-    'useHelicalLeads': 'false',
 }
 # The rough face leaves this much on the outer face, and the finishing face
 # takes it off after every other cut but the deburr: facing leaves fewer burrs
@@ -1051,16 +1048,20 @@ def _drill_ends(through):
 def _thread_params(name, through, allow=0.0):
     """Thread-mill parameters for one thread size, from threads.toml; `allow` is
     the material still on the face above the hole top. The thread mill never
-    goes below the bottom of the hole it threads, whatever threads.toml says."""
+    goes deeper than the hole it threads: a through hole is drilled 0.5 mm past
+    its bottom, but a blind hole ends at its bottom, so there the thread mill
+    stops at the bottom, whatever threads.toml says, and enters along a flat
+    lead, since a helical one starts below the bottom height."""
     r, c = THREAD_RECIPES[name], THREAD_COMMON['thread']
     r = dict(r, **r.get('through' if through else 'blind', {}))
     stepover = 'tool_stepover' if r['stepover'] == 'tool' else '%gmm' % r['stepover']
+    bottom = c['through_bottom_offset'] if through else max(0.0, c['blind_bottom_offset'])
     return dict(THREAD, direction="'%s'" % c['direction'], threadPitch='%gmm' % r['pitch'],
                 pitchDiameterOffset='%gmm' % r['pitch_diameter_offset'],
                 numberOfStepovers=str(r['passes']), stepover=stepover,
                 topHeight_offset='%gmm' % (c['top_offset'] + allow),
-                bottomHeight_offset='%gmm' % max(0.0, c['through_bottom_offset'] if through
-                                                 else c['blind_bottom_offset']))
+                bottomHeight_offset='%gmm' % bottom,
+                useHelicalLeads='true' if through else 'false')
 CHAMFER_OP = {
     'tolerance': '0.01mm',
     'chamferWidth': '0.1mm',

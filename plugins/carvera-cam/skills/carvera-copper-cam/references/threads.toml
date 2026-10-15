@@ -40,12 +40,12 @@ blind_breakthrough = 0.0
 [thread]
 direction = "climb"
 top_offset = 0.0          # start at the hole top
-# Bottom of the thread-mill pass, relative to the hole bottom: at it in every
-# hole. A thread mill never goes deeper than the hole it threads, so the
-# generator raises a negative offset to 0 and enters along a flat lead, not a
-# helical one, which would start below the bottom. (The lab's parts went 0.3 mm
-# past the bottom of a through hole.)
-through_bottom_offset = 0.0
+# Bottom of the thread-mill pass, relative to the hole bottom: 0.3 mm past it
+# in a through hole, inside the 0.5 mm the drill goes past it; at it in a blind
+# hole. A thread mill never goes deeper than the hole it threads, so in a blind
+# hole the generator raises a negative offset to 0 and enters along a flat lead,
+# not a helical one, which would start below the bottom.
+through_bottom_offset = -0.3
 blind_bottom_offset = 0.0
 
 
