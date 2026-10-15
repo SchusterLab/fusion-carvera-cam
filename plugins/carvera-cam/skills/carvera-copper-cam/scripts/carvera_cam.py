@@ -180,8 +180,9 @@ def _find_body(args):
     for b in design.rootComponent.bRepBodies:
         bodies.append(b)
     for occ in design.rootComponent.allOccurrences:
-        if occ.component.name.startswith(VISE_PREFIX) or occ.component.name == TABS_COMPONENT:
-            continue  # the vise or the tabs an earlier build added
+        if occ.component.name.startswith(VISE_PREFIX) or \
+                occ.component.name in (TABS_COMPONENT, FACES_COMPONENT):
+            continue  # the vise, tabs or face patches an earlier build added
         for b in occ.bRepBodies:
             bodies.append(b)
     bodies = [b for b in bodies if b.isSolid and b.isVisible]
@@ -1382,6 +1383,7 @@ def _setup(cam, name, body, machine, stock, top, x_axis, vise=None, warnings=Non
 LAYOUT_SKETCH = 'carvera-cam'
 VISE_PREFIX = LAYOUT_SKETCH + ' vise '
 TABS_COMPONENT = LAYOUT_SKETCH + ' tabs'
+FACES_COMPONENT = LAYOUT_SKETCH + ' faces'
 TOOL_R = ENDMILL_D / 2 / 10  # cm
 ENTRY_R = TOOL_R + 5 * POCKET_TOL / 10  # cm, the room a pocket's entry hole needs
 
@@ -1521,6 +1523,38 @@ def _add_tabs(design, lay, tab):
             and abs(abs(f.geometry.normal.z) - 1) < 1e-6]
     return {'top': max(flat, key=lambda f: f.pointOnFace.z).createForAssemblyContext(occ),
             'bottom': min(flat, key=lambda f: f.pointOnFace.z).createForAssemblyContext(occ)}
+
+
+def _add_face_patches(design, lay, a):
+    """The faces the facing pockets select: in their own component, a planar
+    patch filling the part's outline at its top and one at its bottom. The
+    part's own outer faces have holes where the pockets, windows and holes
+    open, and a pocket on them goes round those, leaving the stock above them
+    uncut; the patches have none. The outline is the layout's, the larger of the
+    top and bottom faces' outer loops, so a pocket open to the side is covered too.
+    Return {'top': face, 'bottom': face} as seen from the root."""
+    root = design.rootComponent
+    occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
+    comp = occ.component
+    comp.name = FACES_COMPONENT
+    out = {}
+    for side, z in (('top', a['ztop']), ('bottom', a['zbot'])):
+        pi = comp.constructionPlanes.createInput()
+        pi.setByOffset(comp.xYConstructionPlane, adsk.core.ValueInput.createByReal(z / 10))
+        plane = comp.constructionPlanes.add(pi)
+        plane.name = 'face ' + side
+        sk = comp.sketches.add(plane)
+        sk.name = 'face outline ' + side
+        for pc in lay['outline']:
+            _sketch_curve(sk, pc, 0, pc['len'])
+        prof = max(sk.profiles, key=lambda pr: pr.areaProperties().area)
+        patches = comp.features.patchFeatures
+        e = patches.add(patches.createInput(prof, adsk.fusion.FeatureOperations.NewBodyFeatureOperation))
+        e.name = 'face ' + side
+        body = e.bodies.item(0)
+        body.name = 'face ' + side
+        out[side] = body.faces.item(0).createForAssemblyContext(occ)
+    return out
 
 
 def _at_tab(which, face, offset=0.0):
@@ -1753,6 +1787,7 @@ def _make_layout(design, a, plan, warnings):
     _merge_entries(pocket_entries)
     return {'sketch': sk, 'corner': corner, 'tabs': tab_chains, 'shelves': shelves,
             'entry': corner[0]['entry'], 'pocket_entries': pocket_entries, 'narrow': narrow,
+            'outline': pieces,
             'window_entries': window_entries}
 
 
@@ -2140,8 +2175,10 @@ def _side_ops(b, setup, a, side, plan, warnings):
         if leave:
             params.update(useStockToLeave='true', simpleStockToLeave='false',
                           stockToLeave='0mm', verticalStockToLeave='%gmm' % leave)
+        # the patch over the face, not the face: see _add_face_patches
+        patch = (plan.get('face_patches') or {}).get(side)
         return b.op(setup, 'pocket2d', (ENDMILL, which), 'Face' + suffix, params,
-                    _both(_sel_pocket([f['face'] for f in facing]),
+                    _both(_sel_pocket([patch] if patch else [f['face'] for f in facing]),
                           _sel_faces('predrillPositions', entry)))
 
     if facing:
@@ -2396,7 +2433,7 @@ def _delete_previous(cam, design):
     for pl in [pl for pl in root.constructionPlanes if pl.name.startswith(LAYOUT_SKETCH)]:
         pl.deleteMe()
     for occ in [o for o in root.occurrences if o.component.name.startswith(VISE_PREFIX)
-                or o.component.name == TABS_COMPONENT]:
+                or o.component.name in (TABS_COMPONENT, FACES_COMPONENT)]:
         occ.deleteMe()
 
 
@@ -2502,6 +2539,7 @@ def build(args):
                            *_vise_matrices(box, -ztop, -z0, True))]
         vises[1][0].isLightBulbOn = False  # it would hang upside down over the part
     plan['tab_faces'] = _add_tabs(design, plan['layout'], plan['tab'])
+    plan['face_patches'] = _add_face_patches(design, plan['layout'], a)
     x_axis = _axis_line(design)
     top = _setup(cam, 'Top ' + SETUP_TAG, body, machine, stock, True, x_axis, vises[0], warnings)
     top_ops = _side_ops(b, top, a, 'top', plan, warnings)
