@@ -43,6 +43,8 @@ STICKOUT_WARN = 0.75         # deepest cut below stock top / tool length below h
 STICKOUT_ERROR = 0.95
 ATC_SLOTS = 6
 RETRACT_MIN = 2.0            # lateral rapids at least this far above the stock top
+CHAMFER_TIP_MIN = 0.1        # the chamfering bit's point kept this far off the edge
+BREAKTHROUGH = 0.5           # a through hole's drill goes this far past its bottom
 MILLING = ('flat end mill', 'ball end mill', 'bull nose end mill', 'chamfer mill',
            'face mill', 'slot mill', 'lollipop mill', 'tapered mill', 'dovetail mill')
 
@@ -140,8 +142,62 @@ def _tool(o):
 
 # --------------------------------------------------------- parameter rules
 
-def _check_op(rep, s, o, t, earlier, lab):
-    """Rules read from the operation's and the tool's parameters."""
+def _wcs_fn(setup):
+    """Function mapping a world Point3D (cm) to the setup's WCS (x, y, z) in mm."""
+    org, ax, ay, az = setup.workCoordinateSystem.getAsCoordinateSystem()
+    um = adsk.fusion.Design.cast(_app().activeDocument.products.itemByProductType(
+        'DesignProductType')).unitsManager
+    k = um.convert(1, um.defaultLengthUnits, 'cm')
+
+    def f(p):
+        d = adsk.core.Vector3D.create(p.x - org.x * k, p.y - org.y * k, p.z - org.z * k)
+        return d.dotProduct(ax) * 10, d.dotProduct(ay) * 10, d.dotProduct(az) * 10
+    return f
+
+
+def _selected(o, name):
+    """The entities an operation's selection parameter holds."""
+    x = o.parameters.itemByName(name)
+    try:
+        return list(x.value.value) if x is not None else []
+    except Exception:
+        return []
+
+
+def _hole(face, wcs):
+    """A cylindrical hole face as seen from the setup: (diameter, centre x, y,
+    bottom z, through), in mm in the WCS. `through` is False when a floor or a
+    drill point closes the hole's bottom, None when the hole steps into another
+    cylinder there. None for a face that is no cylinder."""
+    cyl = adsk.core.Cylinder.cast(getattr(face, 'geometry', None))
+    if cyl is None:
+        return None
+    r = cyl.radius * 10
+    cx, cy, _ = wcs(cyl.origin)
+    ends = [(wcs(e.pointOnEdge)[2], e) for e in face.edges]
+    if not ends:
+        return None
+    bottom = min(z for z, _ in ends)
+    through = True
+    for z, e in ends:
+        if z > bottom + 1e-3:
+            continue
+        for g in e.faces:
+            if g == face:
+                continue
+            geo = g.geometry
+            if isinstance(geo, adsk.core.Cone):
+                through = False  # a drill point
+            elif isinstance(geo, adsk.core.Plane) and g.area * 100 < math.pi * r * r * 1.05:
+                through = False  # a flat floor
+            elif isinstance(geo, adsk.core.Cylinder) and through:
+                through = None
+    return 2 * r, cx, cy, bottom, through
+
+
+def _check_op(rep, s, o, t, earlier, lab, threaded=frozenset()):
+    """Rules read from the operation's and the tool's parameters. `threaded`
+    holds the entity tokens of the faces the document's thread mills cut."""
     p = o.parameters
     sn, on = s.name, o.name
     strat = o.strategy
@@ -238,6 +294,49 @@ def _check_op(rep, s, o, t, earlier, lab):
         elif acc and acc > ACCUMULATED_PECK_MAX + 1e-6:
             rep.add('K1', 'warning', sn, on, 'accumulated pecking depth %.2f mm is above %.0f mm'
                     % (acc, ACCUMULATED_PECK_MAX))
+        # the holes it drills, when it selects them; a drill stopping at a height
+        # of its own, such as a stage of a deep hole, is not checked for breakthrough
+        wcs = _wcs_fn(s)
+        to_bottom = 'from hole bottom' in (_expr(p, 'bottomHeight_mode') or '')
+        tip_through = bool(_v(p, 'drillTipThroughBottom', False))
+        brk = _mm(_v(p, 'breakThroughDepth', 0)) or 0.0
+        short, wide = [], []
+        for f in _selected(o, 'holeFaces'):
+            h = _hole(f, wcs)
+            if h is None:
+                continue
+            dia, cx, cy, _, through = h
+            if to_bottom and through and (not tip_through or brk < BREAKTHROUGH - 1e-6):
+                short.append((cx, cy))
+            if d > dia + 0.01 and f.entityToken not in threaded:
+                wide.append((dia, cx, cy))
+        if short:
+            rep.add('K2', 'warning', sn, on, 'the drill does not break through %d through '
+                    'hole%s (tip through the bottom %s, breakthrough %.2f mm; the lab sends the '
+                    'tip %.1f mm past the bottom); first at X%.3f Y%.3f'
+                    % (len(short), '' if len(short) == 1 else 's', 'on' if tip_through else 'off',
+                       brk, BREAKTHROUGH, short[0][0], short[0][1]), holes=len(short))
+        if wide:
+            rep.add('K3', 'warning', sn, on, 'the %.3g mm drill is wider than %d hole%s it drills '
+                    '(%.3g mm), and no thread mill threads %s; first at X%.3f Y%.3f'
+                    % (d, len(wide), '' if len(wide) == 1 else 's', wide[0][0],
+                       'it' if len(wide) == 1 else 'them', wide[0][1], wide[0][2]),
+                    holes=len(wide))
+    if strat == 'chamfer2d':
+        tip = _mm(_v(p, 'chamferTipOffset'))
+        if tip is not None and tip < CHAMFER_TIP_MIN - 1e-6:
+            rep.add('CH1', 'warning', sn, on, "chamfer tip offset %.2f mm is below %.1f mm: the "
+                    "bit's point cuts the edge" % (tip, CHAMFER_TIP_MIN), tip_offset=tip)
+    # a finishing pass: a single-depth pass after a multi-depth roughing pass of
+    # the same kind by an end mill of the same size (as in D4)
+    if strat in ('pocket2d', 'contour2d') and milling and t['type'] != 'chamfer mill' \
+            and multi is False and not rest:
+        rough = [e for e in earlier if e['strategy'] == strat and e['multi']
+                 and abs(e['d'] - d) < 1e-3]
+        if any(e['number'] == t['number'] for e in rough):
+            rep.add('N6', 'warning', sn, on, 'the finishing pass uses T%s, the end mill that '
+                    'roughed it: the lab finishes with a second %g mm end mill'
+                    % (t['number'], d))
 
 
 # ------------------------------------------------------------- the G-code
@@ -448,30 +547,13 @@ def _check_thread_depth(rep, sn, o, cuts, setup, holes):
     are the operation's selected faces; each reaches its modelled bottom, or as
     deep as an earlier drill (`holes`, see _drilled) cut it at full width, if
     that is deeper. Depths are along the setup's tool axis."""
-    sel = o.parameters.itemByName('circularFaces')
-    try:
-        faces = list(sel.value.value) if sel is not None else []
-    except Exception:
-        faces = []
-    org, ax, ay, az = setup.workCoordinateSystem.getAsCoordinateSystem()
-    um = adsk.fusion.Design.cast(_app().activeDocument.products.itemByProductType(
-        'DesignProductType')).unitsManager
-    k = um.convert(1, um.defaultLengthUnits, 'cm')
-
-    def wcs(p):  # world Point3D (cm) -> setup WCS (mm)
-        d = adsk.core.Vector3D.create(p.x - org.x * k, p.y - org.y * k, p.z - org.z * k)
-        return d.dotProduct(ax) * 10, d.dotProduct(ay) * 10, d.dotProduct(az) * 10
-
-    for f in faces:
-        cyl = adsk.core.Cylinder.cast(getattr(f, 'geometry', None))
-        if cyl is None:
+    wcs = _wcs_fn(setup)
+    for f in _selected(o, 'circularFaces'):
+        h = _hole(f, wcs)
+        if h is None:
             continue
-        r = cyl.radius * 10
-        cx, cy, _ = wcs(cyl.origin)
-        ends = [wcs(v.geometry)[2] for v in f.vertices] or             [wcs(e.pointOnEdge)[2] for e in f.edges]
-        if not ends:
-            continue
-        hole_bottom = min(ends)
+        dia, cx, cy, hole_bottom, _ = h
+        r = dia / 2
         for hx, hy, hlo, hhi, hd, _ in holes:
             p, q = (wcs(adsk.core.Point3D.create(hx / 10, hy / 10, z / 10)) for z in (hlo, hhi))
             if hd >= 2 * r - 0.01 and math.hypot(p[0] - cx, p[1] - cy) < 0.05:
@@ -613,6 +695,10 @@ def check(args=None):
     cc = runpy.run_path(os.path.join(HERE, 'carvera_cam.py'))
     post = cc['_post'](cc['_fetch_community']([])['post'])
     wanted = args.get('setups')
+    # the faces the document's thread mills cut: their drills may be wider than the hole
+    threaded = frozenset(f.entityToken for s in cam.setups for o in s.allOperations
+                         if o.strategy == 'thread' and not o.isSuppressed
+                         for f in _selected(o, 'circularFaces'))
     setups = [s for s in cam.setups if (not wanted or s.name in wanted)
               and s.operationType == adsk.cam.OperationTypes.MillingOperation]
     try:
@@ -670,9 +756,10 @@ def check(args=None):
                             % getattr(o, 'warning', ''))
                 ok.append(o)
                 tools.append(t)
-            _check_op(rep, s, o, t, earlier, lab)
+            _check_op(rep, s, o, t, earlier, lab, threaded)
             earlier.append({'strategy': o.strategy, 'type': t['type'], 'd': t['d'] or 0,
-                            'multi': bool(_v(o.parameters, 'doMultipleDepths'))})
+                            'multi': bool(_v(o.parameters, 'doMultipleDepths')),
+                            'number': t['number']})
         if ok:
             folder = tempfile.mkdtemp(prefix='carvera-check-')
             text = _post_setup(cam, s, ok, post, folder)

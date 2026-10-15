@@ -73,6 +73,7 @@ A roughing pass below means a multi-depth pass that cuts the feature to size in 
 | D4 | a pocket (or contour) cuts its full depth in one pass with no roughing pass of a pocket (or contour) by an end mill of the same diameter earlier in the setup; rest machining, and contours that cut sideways in steps of at most 0.3 mm, are exempt | warning | 174 of 197 single-pass operations follow such a roughing pass | a full-depth cut into solid stock |
 | D6 | a pocket's stepover is more than 0.6 × the tool's diameter | warning | 261 of 263 pockets step over 0.6 × the diameter | an overloaded end mill |
 | D8 | a bore's radial stepover is more than 0.3 mm | warning | 23 of 33 bores in the current parts step over 0.1 mm, the rest 0.3 to 0.5 mm | stall and broken end mills |
+| CH1 | a deburr (2D chamfer) keeps the chamfering bit's point less than 0.1 mm off the edge (Fusion's tip offset) | warning | all 104 deburr operations keep it at least 0.1 mm off, most 0.3 to 0.5 mm | the bit's sharp point doing the cutting and chipping |
 
 ### How the tool enters the cut
 
@@ -107,6 +108,8 @@ A tool's stick-out is its length below the holder, Fusion's body length: 28 mm f
 | Id | Finding when | Severity | Evidence | Guards against |
 |---|---|---|---|---|
 | K1 | a drill's cycle is not chip breaking (partial retract), its pecking depth is over 0.1 mm, or its accumulated pecking depth, after which it retracts fully, is over 1 mm | warning | all 224 drill operations chip-break; 222 peck 0.1 mm, and 193 retract fully every 1 mm, the rest at Fusion's default of 2.5 × the diameter | chips packing in the hole and breaking the drill |
+| K2 | a drill that selects a through hole's faces and goes to the hole's bottom does not send its tip through the bottom and 0.5 mm past it | warning | 64 of the 65 drills that select a through hole's faces do | a thin cap of copper left at the bottom, which the thread mill or bore then runs into |
+| K3 | a drill is wider than a hole it selects, and no thread mill in the document threads that hole | warning | the drills wider than their hole are threads' pre-drills, such as the 1.7 mm drill in M2's 1.623 mm hole, except 2 operations drilling 3.175 mm into 3.0 mm holes | an oversized hole from the wrong drill |
 | TH1 | a thread mill cuts conventional rather than climb | warning | all 27 thread operations climb | thread mill wear |
 | TH2 | a thread mill (error), or a bore or circular cut (warning), runs with no drill before it in its setup | as given | every thread and all 72 bores follow a drill in their setup | the tool cutting a hole into solid copper |
 | TH3 | a thread mill goes more than 0.01 mm deeper than the hole it threads, along the setup's tool axis: deeper than an earlier drill cut it at full width, or than its modelled bottom if that is deeper | error | the lab's rule; its through holes are drilled 0.5 mm past the bottom and thread-milled 0.3 mm past it; a helical lead-in would start about 0.05 mm below the bottom height, so the generator uses a flat one | the thread mill cutting solid copper: a blind hole's floor, or stock the drill never reached |
@@ -120,6 +123,7 @@ The Carvera's automatic tool changer holds six tools, numbered 1 to 6, and the o
 | N1 | one tool number names two different tools in a setup (error), or in two setups of the document (warning) | as given | never within one of the lab's 88 setups; across setups, in 3 documents | the wrong tool in the changer, and a crash at its first move |
 | N3 | a tool number is above 6 | warning | 12 current setups use tools 7 to 10 | a missed manual tool change |
 | N5 | the tool is not in the skill's tool library, or has no holder | warning | a few of the lab's tools have no preset, such as the 1/8″ two-flute end mill in `sample-clamp-6port7x7`, which also has no holder | feeds unchecked against a preset; holder collisions unchecked in simulation |
+| N6 | a finishing pass (a single-depth pocket or contour after a multi-depth one of the same kind, as in D4) uses the tool number of the roughing pass before it | warning | the lab's finishing passes run on T3, a second 3.175 mm end mill, and never on T2, the roughing one | a worn roughing edge spoiling the finished wall and floor |
 | M1 | the setup has no machine | warning | 3 of the 88 setups have none | simulation not checking the machine |
 | M2 | the setup has no fixture | warning | only 10 of the 88 setups set one, all in older versions such as `2026-01-20_sample-puck-6port7x7`, whose fixture setup the skill copies | simulation, and rule X1, not checking the vise |
 | G0 | no posted G-code could be matched to the operation | warning | — | an operation left out of the depth and fixture checks |
