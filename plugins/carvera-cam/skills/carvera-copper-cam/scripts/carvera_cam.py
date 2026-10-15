@@ -2444,6 +2444,22 @@ def _side_ops(b, setup, a, side, plan, warnings):
             ops['main'].append(b.op(setup, 'bore', em, 'Bore %.2f' % hs[0]['dia'], params,
                                     _sel_faces('circularFaces', [x['face'] for x in hs])))
 
+    def blind_tip_warning(desc, hs):
+        if b.dry:
+            return
+        tip = b.tools.tip_length(desc)
+        name = desc.split('*')[0]
+        where = ', '.join('(%g, %g)' % (h['x'], h['y']) for h in hs)
+        warnings.append('the %d blind %s mm hole%s drilled by the %s go%s full diameter to the '
+                        "bottom, so the drill's point goes %.2f mm deeper than the hole and "
+                        'leaves a cone there; at x, y = %s mm'
+                        % (len(hs), name, '' if len(hs) == 1 else 's', name + ' mm drill',
+                           'es' if len(hs) == 1 else '', tip, where))
+        thin = [h['depth'] for h in hs if thickness - h['depth'] < tip + 0.2]
+        if thin:
+            warnings.append("a blind %s mm hole's drill point comes within 0.2 mm of the part's "
+                            'other face, or through it, under a hole %g mm deep' % (name, max(thin)))
+
     # drills (plain holes, then tap drills), grouped by tool
     by_drill = {}
     for h, desc in drilled:
@@ -2454,12 +2470,17 @@ def _side_ops(b, setup, a, side, plan, warnings):
     for desc, hs in by_drill.items():
         for through in (True, False):
             sub = [h for h in hs if h['through'] == through]
-            if sub:
-                ops['main'].append(b.op(
-                    setup, 'drill', desc,
-                    'Drill ' + desc.split('*')[0] + ('' if through else ' (blind)'),
-                    dict(DRILL, **_drill_ends(through), **from_hole_top()),
-                    _sel_faces('holeFaces', [h['face'] for h in sub])))
+            if not sub:
+                continue
+            params = dict(DRILL, **_drill_ends(through), **from_hole_top())
+            if not through:
+                # full diameter to the bottom: the drill's point goes below it
+                params['drillTipThroughBottom'] = 'true'
+                blind_tip_warning(desc, sub)
+            ops['main'].append(b.op(
+                setup, 'drill', desc,
+                'Drill ' + desc.split('*')[0] + ('' if through else ' (blind)'),
+                params, _sel_faces('holeFaces', [h['face'] for h in sub])))
 
     # thread mills
     by_thread = {}
