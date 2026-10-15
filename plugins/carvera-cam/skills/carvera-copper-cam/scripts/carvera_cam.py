@@ -999,7 +999,8 @@ POCKET = {
     'maximumStepover': 'tool_diameter * 0.6',
     'useStockToLeave': 'false',
     'doRamp': 'true',
-    'rampType': "'helix'",
+    # copper is always entered at a pre-drilled hole, never by a helix or ramp
+    'rampType': "'predrill'",
     'compensation': "'left'",
 }
 CONTOUR = {
@@ -2274,24 +2275,25 @@ def _side_ops(b, setup, a, side, plan, warnings):
     entry = [lay['entry']] if lay else []
 
     def face_op(which, multi, suffix, leave):
-        finish = which == 'finish'
         params = dict(POCKET, doMultipleDepths=multi, bottomHeight_mode="'from contour'",
                       **top_at(-m))
-        if not finish:
-            params['rampType'] = "'predrill'"
         if leave:
             params.update(useStockToLeave='true', simpleStockToLeave='false',
                           stockToLeave='0mm', verticalStockToLeave='%gmm' % leave)
-        # the patch over the face, not the face: see _add_face_patches
-        # the patch's edge, not the patch: nothing walls a selected face in, so
-        # Fusion takes it for an open pocket and runs the tool past its edge
-        # The finishing face stops at the outline: the outline cut has cleared
-        # past it. The main entry hole is outside the outline, so the finishing
-        # face ramps down through its allowance in a helix instead.
-        p = (plan.get('face_patches') or {}).get(side + ' finish') if finish else patch
-        sel = _sel_pocket_outline(p) if p else _sel_pocket([f['face'] for f in facing])
+        # The patch over the face, not the face: see _add_face_patches. The rough
+        # face selects the patch's edge, not the patch: nothing walls a selected
+        # face in, so Fusion takes it for an open pocket and runs the tool past
+        # its edge. The finishing face selects its patch, which stops at the
+        # outline: the outline cut has cleared the stock past it, so the tool
+        # may run past the edge, and it reaches the entry hole outside it.
+        if which == 'finish' and plan.get('face_patches'):
+            sel = _sel_pocket([plan['face_patches'][side + ' finish']])
+        elif patch:
+            sel = _sel_pocket_outline(patch)
+        else:
+            sel = _sel_pocket([f['face'] for f in facing])
         op = b.op(setup, 'pocket2d', (ENDMILL, which), 'Face' + suffix, params,
-                  sel if finish else _both(sel, _sel_faces('predrillPositions', entry)))
+                  _both(sel, _sel_faces('predrillPositions', entry)))
         high[0] = leave  # the face is now the stock's highest point
         return op
 

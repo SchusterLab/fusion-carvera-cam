@@ -205,11 +205,17 @@ def _check_op(rep, s, o, t, earlier, lab):
                         'instead of entering a pre-drilled hole' % d)
             elif ramp == 'disabled':
                 rep.add('E1', 'warning', sn, on, 'pocket entry ramp is disabled')
+            elif ramp and ramp != 'predrill' and ramp != 'plunge':
+                rep.add('E1', 'warning', sn, on, 'the %.3g mm end mill ramps into the pocket '
+                        '(%s) instead of entering a pre-drilled hole' % (d, ramp))
         if strat == 'contour2d':
-            if not _entry_count(p) and not _v(p, 'doRamp', False) and _closed_contour(p):
+            if _v(p, 'doRamp', False):
+                rep.add('E1', 'warning', sn, on, 'the %.3g mm end mill ramps into the contour '
+                        'instead of entering a pre-drilled hole' % d)
+            elif not _entry_count(p) and _closed_contour(p):
                 rep.add('E5', 'warning', sn, on, 'the %.3g mm end mill plunges at the start of '
                         'the contour instead of entering a pre-drilled hole: it has no entry '
-                        'position and no ramp' % d)
+                        'position' % d)
     if strat == 'bore':
         so = _mm(_v(p, 'stepover'))
         if so and so > BORE_STEPOVER + 1e-6:

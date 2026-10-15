@@ -84,10 +84,10 @@ The checker reads the entries from the G-code: an end mill that should enter thr
 
 | Id | Finding when | Severity | Evidence | Guards against |
 |---|---|---|---|---|
-| E1 | a pocket's entry (Fusion's ramp type) is set to none | warning | 259 of 263 pockets enter by `predrill` (213) or by plunging (46) | an entry Fusion chooses, into solid stock |
+| E1 | a pocket or 2D contour ramps into the copper (a helix, profile or other ramp) instead of entering a pre-drilled hole, or a pocket's entry (Fusion's ramp type) is set to none | warning | the lab's rule: copper is always entered at a pre-drilled hole; 259 of 263 pockets enter by `predrill` (213) or by plunging (46) | the end mill rubbing and loading up as it ramps into copper; an entry Fusion chooses, into solid stock |
 | E2 | a pocket enters by plunging, other than in rest machining | warning | — (46 of the lab's 263 pockets plunge, 39 of them with a 1 or 2 mm end mill or into a pocket already roughed) | stall and broken end mills from plunging into solid copper |
 | E4 | a pocket entering by `predrill`, or a 2D contour entering at entry positions, plunges where no earlier drill, in its setup or an earlier one, made a hole as wide as the end mill and full width over the plunge, and no earlier pass in its setup has cleared the stock | warning | 86 of 111 `predrill` pockets in the current parts have a drill before them in their setup (whether its tip goes through was not counted); most of the rest are bottom-side pockets, which the check accepts when an earlier setup drilled through | the end mill plunging where the entry hole should be |
-| E5 | a 2D contour around a closed loop has no entry position and no ramp | warning | — (200 of the lab's 318 contours have neither; whether their loops are closed, or start where an earlier cut has cleared the stock, was not recorded) | stall and broken end mills from plunging into solid copper |
+| E5 | a 2D contour around a closed loop has no entry position | warning | — (200 of the lab's 318 contours have neither; whether their loops are closed, or start where an earlier cut has cleared the stock, was not recorded) | stall and broken end mills from plunging into solid copper |
 
 ### Heights, depth and reach
 
