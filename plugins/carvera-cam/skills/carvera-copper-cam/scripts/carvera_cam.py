@@ -583,6 +583,15 @@ class Tools:
                             mm(p.itemByName('tool_fluteLength').value.value)))
         return sorted(out, key=lambda x: x[1])
 
+    def tip_length(self, desc):
+        """How far a drill's point reaches below its full diameter (mm)."""
+        p = self.by_desc[desc].parameters
+        x = p.itemByName('tool_tipAngle')
+        angle = x.value.value if x is not None else 118.0
+        if angle < 2 * math.pi + 1e-6:  # radians
+            angle = math.degrees(angle)
+        return mm(p.itemByName('tool_diameter').value.value) / 2 / math.tan(math.radians(angle / 2))
+
     def get(self, desc, key=None):
         """Return (tool, preset) for a slot; `key` lets one tool fill two slots (T2/T3)."""
         key = key or desc
@@ -1950,6 +1959,21 @@ def _side_ops(b, setup, a, side, plan, warnings):
     for e in side_entries.values():
         if e['drill'] and (e['point'] is None or all(e['point'] is not q for q, _ in holes_in)):
             holes_in.append((e['point'], e['depth']))
+    # each entry hole's drill tip goes through the pocket floor
+    dimples = [(q, d) for q, d in holes_in if q is not None]
+    if dimples:
+        tip = b.tools.tip_length(DRILL_3175)
+        where = ', '.join('(%.2f, %.2f)' % (mm(q.geometry.x), mm(q.geometry.y)) for q, _ in dimples)
+        warnings.append('the %d pocket entry hole%s on the %s leave%s a cone-shaped dimple %g mm '
+                        'across and %.2f mm deep in the pocket floor, so that the end mill '
+                        'never plunges; at x, y = %s mm'
+                        % (len(dimples), '' if len(dimples) == 1 else 's', side,
+                           's' if len(dimples) == 1 else '', ENDMILL_D, tip, where))
+        thin = [d for _, d in dimples if thickness - d < tip + 0.2]
+        if thin:
+            warnings.append('a pocket entry hole\'s dimple comes within 0.2 mm of the part\'s '
+                            'other face, or through it, under a floor %g mm deep'
+                            % max(thin))
     pocket_bands = []  # (top, bottom or None for the floors, [(point, drill bottom)])
     t = -allow
     while True:
@@ -1969,8 +1993,10 @@ def _side_ops(b, setup, a, side, plan, warnings):
             by_depth.setdefault(round(d, 3), []).append(p)
         out = []
         for depth, pts in sorted(by_depth.items()):
+            # the tip goes through, so that the hole is full width down to the
+            # floor and the end mill never plunges; it leaves a dimple there
             params = dict(DRILL, holeMode="'selection-points'", breakThroughDepth='0mm',
-                          drillTipThroughBottom='false',
+                          drillTipThroughBottom='true',
                           **(top_at(0) if t <= 0 else _top_below_part_top(t, m)))
             params.update(_bottom_below_part_top(depth, m))
             name = ('Pocket entry holes %g to %g mm' % (round(max(t, 0), 2), depth)
