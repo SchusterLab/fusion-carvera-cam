@@ -2359,8 +2359,10 @@ def _side_ops(b, setup, a, side, plan, warnings):
         for hs in _group(end_bored):
             h = hs[0]
             radial = max(0.1, (h['dia'] - ENDMILL_D) / 2)
+            # the finishing bore is a single pass at the wall
             staged_bore(hs, which, tk, dict(BORE, stepover='0.3mm',
-                                            numberOfStepovers=str(max(1, math.ceil(radial / 0.3)))),
+                                            numberOfStepovers=str(max(1, math.ceil(radial / 0.3))),
+                                            doMultiplePasses=multi),
                         -0.5 if h['through'] else 0.0, 'Bore %.2f%s' % (h['dia'], suffix))
         # tap holes bored to size: one light pass, plus a finishing pass in blind holes
         for hs in _group([h for h, _ in tap_bored]):
