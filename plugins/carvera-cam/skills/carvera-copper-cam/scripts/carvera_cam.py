@@ -1484,6 +1484,12 @@ def _pocket_entry(face):
             ok, t0, t1 = ev.getParameterExtents()
             ok, pts = ev.getStrokes(t0, t1, 0.0005)
             edge_pts += [(q.x, q.y) for q in pts]
+            # strokes give a straight edge only its ends: add points every 0.1 mm
+            n = int(e.length / 0.01)
+            for k in range(1, n):
+                ok, q = ev.getPointAtParameter(t0 + (t1 - t0) * k / n)
+                if ok:
+                    edge_pts.append((q.x, q.y))
     fev = face.evaluator
 
     def inside(x, y):
@@ -2183,10 +2189,15 @@ def build(args):
                  collision checks (default true)
     """
     t0 = time.time()
-    body = _find_body(args)
-    a = analyze_body(body)
     if 'stock' not in args:
         raise RuntimeError('args["stock"] is required: {"x":..,"y":..,"z":..} in mm')
+    cam = _cam()
+    design = _design()
+    # before reading the body: deleting an earlier build's sketches and vises
+    # recomputes any feature added after them, which would leave stale faces
+    _delete_previous(cam, design)
+    body = _find_body(args)
+    a = analyze_body(body)
     stock = args['stock']
     thickness = a['ztop'] - a['zbot']
     if stock['z'] < thickness - 1e-3:
@@ -2222,9 +2233,6 @@ def build(args):
         'tab': {'band': band, 'overlap': overlap, 'width': tab_width, 'z': tab_z},
         'layout': None,
     }
-    cam = _cam()
-    design = _design()
-    _delete_previous(cam, design)
     tools = Tools()
     # dry run to learn which tools the part needs, then number them in slot order
     dry = Builder(cam, tools, [], dry=True)
