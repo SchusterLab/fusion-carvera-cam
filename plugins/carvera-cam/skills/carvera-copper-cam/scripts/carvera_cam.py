@@ -245,6 +245,18 @@ def _end_open(hole, edge, at_top):
     return True
 
 
+def _point_angle(hole, edge):
+    """The included angle (degrees) of a drill point modelled at this closed end
+    of the hole: a cone narrowing away from it. None if there is none."""
+    other = _other_face(edge, hole)
+    if other is None or not isinstance(other.geometry, adsk.core.Cone):
+        return None
+    bb = other.boundingBox
+    if (bb.maxPoint.x - bb.minPoint.x) / 2 > hole.geometry.radius + EPS:
+        return None  # a chamfer or countersink
+    return math.degrees(2 * other.geometry.halfAngle)
+
+
 def _classify_hole(face, ztop, zbot, threads):
     g = face.geometry
     z0, z1 = _zrange(face)
@@ -255,6 +267,7 @@ def _classify_hole(face, ztop, zbot, threads):
     top_open = bool(top_edges) and _end_open(face, top_edges[0], True)
     bot_open = bool(bot_edges) and _end_open(face, bot_edges[0], False)
     side = 'top' if top_open else ('bottom' if bot_open else 'none')
+    closed = bot_edges if top_open and not bot_open else top_edges if bot_open and not top_open else []
     return {
         'face': face,
         'dia': mm(2 * g.radius),
@@ -264,6 +277,7 @@ def _classify_hole(face, ztop, zbot, threads):
         'through': top_open and bot_open,
         'x': mm(g.origin.x), 'y': mm(g.origin.y),
         'thread': threads.get(face.tempId),
+        'point_angle': _point_angle(face, closed[0]) if closed else None,
     }
 
 
@@ -583,6 +597,12 @@ class Tools:
                 out.append((d, mm(p.itemByName('tool_diameter').value.value),
                             mm(p.itemByName('tool_fluteLength').value.value)))
         return sorted(out, key=lambda x: x[1])
+
+    def tip_angle(self, desc):
+        """A drill's point angle, included (degrees)."""
+        x = self.by_desc[desc].parameters.itemByName('tool_tipAngle')
+        angle = x.value.value if x is not None else 118.0
+        return math.degrees(angle) if angle < 2 * math.pi + 1e-6 else angle
 
     def tip_length(self, desc):
         """How far a drill's point reaches below its full diameter (mm)."""
@@ -2447,14 +2467,38 @@ def _side_ops(b, setup, a, side, plan, warnings):
     def blind_tip_warning(desc, hs):
         if b.dry:
             return
+        angle = b.tools.tip_angle(desc)
+        # a hole whose modelled point matches the drill's is cut as modelled
+        hs = [h for h in hs if h['point_angle'] is None or abs(h['point_angle'] - angle) > 0.5]
+        if not hs:
+            return
         tip = b.tools.tip_length(desc)
         name = desc.split('*')[0]
-        where = ', '.join('(%g, %g)' % (h['x'], h['y']) for h in hs)
-        warnings.append('the %d blind %s mm hole%s drilled by the %s go%s full diameter to the '
-                        "bottom, so the drill's point goes %.2f mm deeper than the hole and "
-                        'leaves a cone there; at x, y = %s mm'
-                        % (len(hs), name, '' if len(hs) == 1 else 's', name + ' mm drill',
-                           'es' if len(hs) == 1 else '', tip, where))
+        model = 'Model the point in the design (in the Hole command, a %g° drill point) so '                 'the design shows what is cut' % round(angle, 1)
+        plain = [h for h in hs if h['point_angle'] is None]
+        if plain:
+            where = ', '.join('(%g, %g)' % (h['x'], h['y']) for h in plain)
+            warnings.append('the %d blind %s mm hole%s drilled by the %s mm drill %s no modelled '
+                            "point: drilled full diameter to the bottom, the drill's %g° point "
+                            "goes %.2f mm deeper than the hole's bottom and leaves a cone there. "
+                            '%s; at x, y = %s mm'
+                            % (len(plain), name, '' if len(plain) == 1 else 's', name,
+                               'has' if len(plain) == 1 else 'have', round(angle, 1), tip,
+                               model, where))
+        for h in hs:
+            if h['point_angle'] is None:
+                continue
+            # how far the modelled point reaches below the hole's full diameter
+            modelled = h['dia'] / 2 / math.tan(math.radians(h['point_angle'] / 2))
+            if modelled < tip:
+                what = 'goes %.2f mm deeper than the modelled point' % (tip - modelled)
+            else:
+                what = 'stops %.2f mm short of the modelled tip and leaves material there' % (
+                    modelled - tip)
+            warnings.append("the blind %s mm hole at x, y = (%g, %g) mm has a %g° point modelled, "
+                            "but the %s mm drill's point is %g°: it %s. %s"
+                            % (name, h['x'], h['y'], round(h['point_angle'], 1), name,
+                               round(angle, 1), what, model))
         thin = [h['depth'] for h in hs if thickness - h['depth'] < tip + 0.2]
         if thin:
             warnings.append("a blind %s mm hole's drill point comes within 0.2 mm of the part's "
