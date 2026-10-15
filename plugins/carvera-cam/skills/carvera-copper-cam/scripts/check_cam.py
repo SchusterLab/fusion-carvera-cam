@@ -70,6 +70,29 @@ def _mm(cm):
     return None if cm is None else cm * 10
 
 
+def _entry_count(p):
+    """How many entry positions a 2D contour has selected."""
+    x = p.itemByName('entryPositions')
+    try:
+        return len(x.value.value) if x is not None else 0
+    except Exception:
+        return 0
+
+
+def _closed_contour(p):
+    """Does a 2D contour cut a closed loop? An open chain starts at its open end."""
+    x = p.itemByName('contours')
+    try:
+        sels = x.value.getCurveSelections()
+    except Exception:
+        return True
+    for i in range(sels.count):
+        c = adsk.cam.ChainSelection.cast(sels.item(i))
+        if c is None or not c.isOpen:
+            return True
+    return False
+
+
 class Report:
     def __init__(self):
         self.items = []
@@ -155,6 +178,8 @@ def _check_op(rep, s, o, t, earlier, lab, through_before=False):
 
     multi = _v(p, 'doMultipleDepths')
     rest = _v(p, 'useRestMachining', False)
+    # an entry hole is full width to its bottom only with the drill's tip through it
+    predrilled = any(e['tip_through'] for e in earlier) or through_before
     if strat in ('pocket2d', 'contour2d', 'adaptive2d', 'face', 'slot', 'trace') and milling \
             and t['type'] != 'chamfer mill':
         limit = STEPDOWN_LARGE if d >= 3 - 1e-6 else min(STEPDOWN_SMALL, 0.2 * d)
@@ -176,8 +201,6 @@ def _check_op(rep, s, o, t, earlier, lab, through_before=False):
                 rep.add('D6', 'warning', sn, on, 'pocket stepover %.2f mm is above 0.6 x tool '
                         'diameter' % so)
             ramp = _v(p, 'rampType', '')
-            # an entry hole is full width to its bottom only with the drill's tip through it
-            predrilled = any(e['tip_through'] for e in earlier) or through_before
             # rest machining plunges only into what a larger tool left, such as pocket corners
             if ramp == 'plunge' and not rest:
                 rep.add('E2', 'warning', sn, on, 'the %.3g mm end mill plunges into the pocket '
@@ -188,6 +211,16 @@ def _check_op(rep, s, o, t, earlier, lab, through_before=False):
                 rep.add('E4', 'warning', sn, on, 'predrill entry, but no drill with "drill tip '
                         'through bottom" runs before it in this setup: check that the entry '
                         'holes exist and are full width to the pocket floor')
+        if strat == 'contour2d':
+            entries = _entry_count(p)
+            if not entries and not _v(p, 'doRamp', False) and _closed_contour(p):
+                rep.add('E5', 'warning', sn, on, 'the %.3g mm end mill plunges at the start of '
+                        'the contour instead of entering a pre-drilled hole: it has no entry '
+                        'position and no ramp' % d)
+            elif entries and not predrilled:
+                rep.add('E4', 'warning', sn, on, 'the contour enters at entry positions, but no '
+                        'drill with "drill tip through bottom" runs before it in this setup: '
+                        'check that the entry holes exist and are full width to its bottom')
     if strat == 'bore':
         so = _mm(_v(p, 'stepover'))
         if so and so > BORE_STEPOVER + 1e-6:

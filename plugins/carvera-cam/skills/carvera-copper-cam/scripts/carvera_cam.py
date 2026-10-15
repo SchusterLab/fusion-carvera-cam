@@ -1372,8 +1372,7 @@ def _setup(cam, name, body, machine, stock, top, x_axis, vise=None, warnings=Non
 LAYOUT_SKETCH = 'carvera-cam'
 VISE_PREFIX = LAYOUT_SKETCH + ' vise '
 TOOL_R = ENDMILL_D / 2 / 10  # cm
-# the room a pocket's entry hole needs, plus 0.001 mm for _pocket_entry sampling the walls
-ENTRY_R = TOOL_R + (5 * POCKET_TOL + 0.001) / 10  # cm
+ENTRY_R = TOOL_R + 5 * POCKET_TOL / 10  # cm, the room a pocket's entry hole needs
 
 
 def _flat(p):
@@ -1500,31 +1499,75 @@ def _most_open_point(inside, edge_pts, bbox, n=24):
     return best
 
 
+def _edge_points(e, reverse=False):
+    """(x, y) points every 0.1 mm along an edge (strokes give a straight edge only its ends)."""
+    ev = e.evaluator
+    ok, t0, t1 = ev.getParameterExtents()
+    n = max(2, int(e.length / 0.01))
+    pts = []
+    for k in range(n + 1):
+        try:  # the end parameters can fall just outside the edge's range
+            ok, q = ev.getPointAtParameter(min(max(t0 + (t1 - t0) * k / n, t0), t1))
+        except RuntimeError:
+            continue
+        if ok:
+            pts.append((q.x, q.y))
+    return pts[::-1] if reverse else pts
+
+
+def _entry_point(inside, edges, z, bbox):
+    """The point inside farthest from the edges, its clearance (cm), and the
+    nearest point on the edges. The search uses sampled edge points; the
+    clearance is measured on the edges."""
+    c, x, y = _most_open_point(inside, [q for e in edges for q in _edge_points(e)], bbox)
+    q = None
+    if c > 0:
+        mm_ = adsk.core.Application.get().measureManager
+        pt = adsk.core.Point3D.create(x, y, z)
+        r = min((mm_.measureMinimumDistance(pt, e) for e in edges), key=lambda r: r.value)
+        # the wall end of the measured distance, whichever of the two positions it is
+        w = max((r.positionOne, r.positionTwo), key=lambda g: g.distanceTo(pt))
+        c, q = r.value, (w.x, w.y)
+    return c, x, y, q
+
+
+def _on_contour(c, x, y, q):
+    """A contour plunges on its own path, one tool radius from the wall, at the
+    point nearest its entry position: move the entry from (x, y) toward the
+    nearest wall point q until it is on that path. Every other wall stays at
+    least a tool radius away, since it was at least c away."""
+    k = (c - TOOL_R) / c
+    return x + (q[0] - x) * k, y + (q[1] - y) * k
+
+
 def _pocket_entry(face):
-    """Point on a pocket floor farthest from its edges, and that clearance (cm)."""
+    """Point on a pocket floor farthest from its edges (see _entry_point)."""
     bb = face.boundingBox
     z = face.pointOnFace.z
-    edge_pts = []
-    for lp in face.loops:
-        for e in lp.edges:
-            ev = e.evaluator
-            ok, t0, t1 = ev.getParameterExtents()
-            ok, pts = ev.getStrokes(t0, t1, 0.0005)
-            edge_pts += [(q.x, q.y) for q in pts]
-            # strokes give a straight edge only its ends: add points every 0.1 mm
-            n = int(e.length / 0.01)
-            for k in range(1, n):
-                ok, q = ev.getPointAtParameter(t0 + (t1 - t0) * k / n)
-                if ok:
-                    edge_pts.append((q.x, q.y))
     fev = face.evaluator
 
     def inside(x, y):
         ok, uv = fev.getParameterAtPoint(adsk.core.Point3D.create(x, y, z))
         return ok and fev.isParameterOnFace(uv)
 
-    return _most_open_point(inside, edge_pts,
-                            (bb.minPoint.x, bb.minPoint.y, bb.maxPoint.x, bb.maxPoint.y))
+    return _entry_point(inside, [e for lp in face.loops for e in lp.edges], z,
+                        (bb.minPoint.x, bb.minPoint.y, bb.maxPoint.x, bb.maxPoint.y))
+
+
+def _window_entry(loop):
+    """Point inside a window's loop farthest from it (see _entry_point)."""
+    bb = loop.boundingBox
+    poly = [q for ce in loop.coEdges for q in _edge_points(ce.edge, ce.isOpposedToEdge)]
+
+    def inside(x, y):  # ray casting
+        hit = False
+        for (u0, v0), (u1, v1) in zip(poly, poly[1:] + poly[:1]):
+            if (v0 > y) != (v1 > y) and x < u0 + (y - v0) * (u1 - u0) / (v1 - v0):
+                hit = not hit
+        return hit
+
+    return _entry_point(inside, [ce.edge for ce in loop.coEdges], bb.maxPoint.z,
+                        (bb.minPoint.x, bb.minPoint.y, bb.maxPoint.x, bb.maxPoint.y))
 
 
 def _make_layout(design, a, plan, warnings):
@@ -1584,7 +1627,7 @@ def _make_layout(design, a, plan, warnings):
     tab_chains = [{'curves': sg[0], 'start': sg[2], 'dir': sg[3]} for sg in segs if sg[1]]
 
     pocket_entries = {}
-    narrow = set()  # closed pockets the end mill fits but cannot enter by a hole
+    narrow = set()  # closed pockets the end mill fits, too narrow for a pocket toolpath's entry
     for f in a['floors']:
         if f['role'] != 'pocket':
             continue
@@ -1596,20 +1639,37 @@ def _make_layout(design, a, plan, warnings):
                 'point': sk.sketchPoints.add(adsk.core.Point3D.create(x + dx * off, y + dy * off, 0)),
                 'side': f['side'], 'depth': f['depth'], 'drill': False}
             continue
-        c, x, y = _pocket_entry(f['face'])
+        c, x, y, q = _pocket_entry(f['face'])
         if c >= ENTRY_R:
             pocket_entries[f['face'].tempId] = {
                 'point': sk.sketchPoints.add(adsk.core.Point3D.create(x, y, 0)),
                 'side': f['side'], 'depth': f['depth'], 'drill': True}
         elif c >= TOOL_R:
+            # a pocket toolpath cannot enter there, but a contour along the wall can
             narrow.add(f['face'].tempId)
+            x, y = _on_contour(c, x, y, q)
+            pocket_entries[f['face'].tempId] = {
+                'point': sk.sketchPoints.add(adsk.core.Point3D.create(x, y, 0)),
+                'side': f['side'], 'depth': f['depth'], 'drill': True}
             warnings.append('pocket at z=%g mm leaves the end mill %.3f mm of room, too little '
-                            'for an entry hole: a 2D contour cuts it, ramping along its wall'
-                            % (f['z'], (c - TOOL_R) * 10))
+                            'for a pocket toolpath to enter: a 2D contour cuts it, entering '
+                            'through its entry hole' % (f['z'], (c - TOOL_R) * 10))
+    # one entry per through window, drilled through the part
+    window_entries = []
+    for w in a['windows']:
+        c, x, y, q = _window_entry(w['loop'])
+        if c >= TOOL_R:
+            x, y = _on_contour(c, x, y, q)
+            window_entries.append(sk.sketchPoints.add(adsk.core.Point3D.create(x, y, 0)))
+        else:
+            window_entries.append(None)
+            warnings.append('window at z=%g mm is narrower than the end mill; it gets no '
+                            'entry hole' % w['z'])
     shelves = _shelf_regions(root, a, sk, pocket_entries)
     _merge_entries(pocket_entries)
     return {'sketch': sk, 'corner': corner, 'tabs': tab_chains, 'shelves': shelves,
-            'entry': corner[0]['entry'], 'pocket_entries': pocket_entries, 'narrow': narrow}
+            'entry': corner[0]['entry'], 'pocket_entries': pocket_entries, 'narrow': narrow,
+            'window_entries': window_entries}
 
 
 def _profile_rings(profile):
@@ -1938,6 +1998,14 @@ def _side_ops(b, setup, a, side, plan, warnings):
                             params, points([c['entry'] for c in lay['corner'][1:]]
                                            if lay else [])))
         out += entry_drills(pocket_bands[0])
+        # window entries, through the part, where the window contours enter
+        pts = [p for p in (window_entry(w) for w in windows) if p is not None]
+        if pts or (lay is None and windows):
+            params = dict(DRILL, holeMode="'selection-points'", breakThroughDepth='0mm',
+                          drillTipThroughBottom='true', **top_at(0))
+            params.update(_bottom_below_part_top(thickness + 0.5, m))
+            out.append(b.op(setup, 'drill', drill_for(thickness + 0.5), 'Window entry holes',
+                            params, points(pts)))
         # pre-drill everything the 3.175 end mill will bore
         pre = [h for h in end_bored + [h for h, _ in tap_bored] if not deep_bore(h)]
         for through in (True, False):
@@ -1953,6 +2021,9 @@ def _side_ops(b, setup, a, side, plan, warnings):
     narrow = [f for f in pockets if lay and f['face'].tempId in lay['narrow']
               and f['face'].tempId not in lay['shelves']]
     windows = [w for w in a['windows']] if top else []
+
+    def window_entry(w):
+        return lay['window_entries'][a['windows'].index(w)] if lay else None
     entry = [lay['entry']] if lay else []
 
     def face_op(which, multi, suffix, leave):
@@ -2032,7 +2103,8 @@ def _side_ops(b, setup, a, side, plan, warnings):
                 if c is None or all(c is not u[1] for u in units):
                     units.append((f['face'] if c is None else None, c, f['depth'],
                                   e['point'] if e else None))
-            has_entries = any(f['face'].tempId in side_entries for f in pockets)
+            has_entries = any(f['face'].tempId in side_entries for f in pockets
+                              if f not in narrow)
             bands = pocket_bands if which == 'rough' else [(-allow, None, [])]
             for k, band in enumerate(bands):
                 t, bot, _ = band
@@ -2081,22 +2153,24 @@ def _side_ops(b, setup, a, side, plan, warnings):
                              numberOfStepovers=str(bore['passes']), doMultiplePasses=multi),
                         bore['through_bottom_offset'] if h['through'] else 0.0,
                         'Bore %s %.3f%s' % (t, h['dia'], suffix))
-        # pockets too narrow for an entry hole: a contour along the wall, ramping down it
+        # pockets too narrow for a pocket toolpath to enter: a contour along the
+        # wall, entering through the pocket's entry hole
         for f in narrow:
-            # the ramp type is the default 'profile', down along the contour; Fusion
-            # refuses to set it on a new operation
-            params = dict(CONTOUR, doMultipleDepths=multi, doRamp='true')
+            params = dict(CONTOUR, doMultipleDepths=multi)
             params.update(top_at(0))
             params.update(_bottom_below_part_top(f['depth'], m))
-            ops['main'].append(b.op(setup, 'contour2d', tk, 'Narrow pocket' + suffix, params,
-                                    _sel_floor_outlines([f['face']])))
+            e = side_entries.get(f['face'].tempId)
+            ops['main'].append(b.op(setup, 'contour2d', tk, 'Narrow pocket' + suffix, params, _both(
+                _sel_floor_outlines([f['face']]),
+                _sel_faces('entryPositions', [e['point']] if e and e['point'] else []))))
         if windows:
             for w in windows:
                 params = dict(CONTOUR, doMultipleDepths=multi)
                 params.update(top_at(depth_of(w['z'])))
                 params.update(_bottom_below_part_top(thickness + 0.5, m))
-                ops['main'].append(b.op(setup, 'contour2d', tk, 'Window' + suffix, params,
-                                        _sel_chains([w['loop']])))
+                ops['main'].append(b.op(setup, 'contour2d', tk, 'Window' + suffix, params, _both(
+                    _sel_chains([w['loop']]),
+                    _sel_faces('entryPositions', [p for p in [window_entry(w)] if p]))))
         # top setup: the outline between the tabs, down through the tab band
         if top:
             params = dict(CONTOUR, doMultipleDepths=multi)
