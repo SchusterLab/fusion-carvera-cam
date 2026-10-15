@@ -157,6 +157,10 @@ A pocket open to the side of the part is reached sideways at its own depth, so t
 Each tab span is 5 mm along the outline, so the bridge left after the end mill's radius on each side is about 1.8 mm wide.
 The corner chains and tab spans are curves in the `carvera-cam` sketch; the generator orients each chain so a left-compensated tool stays outside the part in both setups.
 
+`build` models the tabs as bodies in a `carvera-cam tabs` component: each is the strip of stock the outline cut leaves under a tab, one end mill wide outward from the outline and as thick as the band, with concave ends where the cut between the tabs stops (an arc of the end mill's radius, around the tab entry hole).
+The heights above are set from the first tab's top and bottom faces (Fusion's "Selection" height), with 0.5 mm offsets past the band: the top setup's outline stops at the tab's top face, the bottom setup's at its bottom face, and the tab entry holes, the outline between tabs and the tab cut run between the two.
+Fusion reads such a height when it is set, not when the tabs change: to move the tabs, run `build` again with a new `tab_z` or `tab_width`.
+
 ## Operation parameters
 
 Feeds, speeds and stepdowns come from the tool preset; the operations set only the following.

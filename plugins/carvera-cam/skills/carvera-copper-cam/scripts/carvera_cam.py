@@ -180,8 +180,8 @@ def _find_body(args):
     for b in design.rootComponent.bRepBodies:
         bodies.append(b)
     for occ in design.rootComponent.allOccurrences:
-        if occ.component.name.startswith(VISE_PREFIX):
-            continue  # the vise an earlier build added
+        if occ.component.name.startswith(VISE_PREFIX) or occ.component.name == TABS_COMPONENT:
+            continue  # the vise or the tabs an earlier build added
         for b in occ.bRepBodies:
             bodies.append(b)
     bodies = [b for b in bodies if b.isSolid and b.isVisible]
@@ -943,7 +943,8 @@ def _sel_pocket_regions(faces, regions):
 def _both(*selectors):
     def f(params):
         for sel in selectors:
-            sel(params)
+            if sel is not None:
+                sel(params)
     return f
 
 
@@ -1380,6 +1381,7 @@ def _setup(cam, name, body, machine, stock, top, x_axis, vise=None, warnings=Non
 
 LAYOUT_SKETCH = 'carvera-cam'
 VISE_PREFIX = LAYOUT_SKETCH + ' vise '
+TABS_COMPONENT = LAYOUT_SKETCH + ' tabs'
 TOOL_R = ENDMILL_D / 2 / 10  # cm
 ENTRY_R = TOOL_R + 5 * POCKET_TOL / 10  # cm, the room a pocket's entry hole needs
 
@@ -1457,6 +1459,79 @@ def _sketch_curve(sk, pc, a, b):
     if a < 1e-6 and b > pc['len'] - 1e-6:
         return list(sk.project(pc['edge']))
     raise RuntimeError('a tab landed on an edge that is neither a line nor an arc')
+
+
+def _add_tabs(design, lay, tab):
+    """Model the tabs in their own component: one body per tab, the strip of
+    stock the outline cut leaves under it, one end mill wide outward from the
+    outline, from the tab band's bottom to its top. Its two ends are concave,
+    where the cut between the tabs stops with the end mill's centre one radius
+    out from the tab's edge. Return the first tab's top and bottom faces (as
+    seen from the root), which the cuts around the tabs take their heights from;
+    Fusion reads a height from them when it is set, not when the tabs change."""
+    root = design.rootComponent
+    occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
+    comp = occ.component
+    comp.name = TABS_COMPONENT
+    sk = comp.sketches.add(comp.xYConstructionPlane)
+    sk.name = 'tab outlines'
+    lines, arcs = sk.sketchCurves.sketchLines, sk.sketchCurves.sketchArcs
+    w = 2 * TOOL_R
+    for t in lay['tabs']:
+        d0 = t['dir']
+        for c in t['curves']:
+            ev = c.geometry.evaluator
+            ok, t0, t1 = ev.getParameterExtents()
+            pts, outs, ends = [], [], []
+            for u in (t0, (t0 + t1) / 2, t1):
+                ok, q = ev.getPointAtParameter(u)
+                ok, der = ev.getFirstDerivative(u)
+                if der.x * d0.x + der.y * d0.y < 0:  # run along the tab, as the outline does
+                    der = adsk.core.Vector3D.create(-der.x, -der.y, 0)
+                n = math.hypot(der.x, der.y)
+                # a clockwise loop has its outside on the left of the direction of travel
+                pts.append(adsk.core.Point3D.create(q.x, q.y, 0))
+                outs.append(adsk.core.Point3D.create(q.x - der.y / n * w, q.y + der.x / n * w, 0))
+                # the end mill's centre where the cut beside the tab stops, and the
+                # deepest point of the arc it leaves in the tab's end
+                cx, cy = q.x - der.y / n * TOOL_R, q.y + der.x / n * TOOL_R
+                k = TOOL_R if u == t0 else -TOOL_R
+                ends.append(adsk.core.Point3D.create(cx + der.x / n * k, cy + der.y / n * k, 0))
+            if isinstance(c, adsk.fusion.SketchLine):
+                lines.addByTwoPoints(pts[0], pts[2])
+                lines.addByTwoPoints(outs[0], outs[2])
+            else:
+                arcs.addByThreePoints(pts[0], pts[1], pts[2])
+                arcs.addByThreePoints(outs[0], outs[1], outs[2])
+            arcs.addByThreePoints(pts[0], ends[0], outs[0])
+            arcs.addByThreePoints(pts[2], ends[2], outs[2])
+    profiles = adsk.core.ObjectCollection.create()
+    for pr in sk.profiles:
+        profiles.add(pr)
+    ext = comp.features.extrudeFeatures
+    ei = ext.createInput(profiles, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    ei.startExtent = adsk.fusion.OffsetStartDefinition.create(
+        adsk.core.ValueInput.createByReal((tab['z'] - tab['band'] / 2) / 10))
+    ei.setDistanceExtent(False, adsk.core.ValueInput.createByReal(tab['band'] / 10))
+    e = ext.add(ei)
+    e.name = 'tabs'
+    for k, body in enumerate(e.bodies):
+        body.name = 'tab %d' % (k + 1)
+    flat = [f for f in e.bodies.item(0).faces if isinstance(f.geometry, adsk.core.Plane)
+            and abs(abs(f.geometry.normal.z) - 1) < 1e-6]
+    return {'top': max(flat, key=lambda f: f.pointOnFace.z).createForAssemblyContext(occ),
+            'bottom': min(flat, key=lambda f: f.pointOnFace.z).createForAssemblyContext(occ)}
+
+
+def _at_tab(which, face, offset=0.0):
+    """A top or bottom height at a tab face, `offset` mm along the setup's tool axis,
+    and the selector that sets the face. None without the tab bodies."""
+    if face is None:
+        return {}, None
+
+    def f(params):
+        params.itemByName(which + 'Height_ref').value.value = [face]
+    return {which + 'Height_mode': "'from point'", which + 'Height_offset': '%gmm' % offset}, f
 
 
 def _direction(pc, a, b):
@@ -1900,6 +1975,9 @@ def _side_ops(b, setup, a, side, plan, warnings):
 
     lay = plan['layout']
     band_top, band_bot = tab['z'] + tab['band'] / 2, tab['z'] - tab['band'] / 2
+    # the cuts around the tabs take their heights from the modelled tabs' faces
+    tab_faces = plan.get('tab_faces') or {}
+    tab_top, tab_bottom = tab_faces.get('top'), tab_faces.get('bottom')
     chain_bot = band_bot - tab['overlap']
     stock_z = thickness + plan['margin_top'] + plan['margin_bottom']
     points = lambda pts: _sel_faces('holePoints', pts)
@@ -2020,9 +2098,12 @@ def _side_ops(b, setup, a, side, plan, warnings):
                           drillTipThroughBottom='true')
             params.update(_top_below_part_top(a['ztop'] - band_top, m))
             params.update(_bottom_below_part_top(depth, m))
+            hi, set_hi = _at_tab('top', tab_top)
+            lo, set_lo = _at_tab('bottom', tab_bottom, -tab['overlap'])
+            params.update(hi, **lo)
             out.append(b.op(setup, 'drill', drill_for(band_top - chain_bot), 'Tab entry holes',
-                            params, points([c['entry'] for c in lay['corner'][1:]]
-                                           if lay else [])))
+                            params, _both(points([c['entry'] for c in lay['corner'][1:]]
+                                                 if lay else []), set_hi, set_lo)))
         out += entry_drills(pocket_bands[0])
         # window entries, through the part, where the window contours enter
         pts = [p for p in (window_entry(w) for w in windows) if p is not None]
@@ -2112,8 +2193,12 @@ def _side_ops(b, setup, a, side, plan, warnings):
                           bottomHeight_offset='%.4fmm' % -e)
             name = ('Outline %g to %g mm' % (round(s, 2), round(e, 2))
                     if staged_entry and which == 'rough' else 'Outline' + suffix)
+            set_lo = None
+            if abs(e - outline_depth[top]) < 1e-6:  # down to the tab band: the tabs' face
+                lo, set_lo = _at_tab('bottom', tab_top if top else tab_bottom)
+                params.update(lo)
             ops['main'].append(b.op(setup, 'contour2d', tk, name, params, _both(
-                _sel_silhouette(), _sel_faces('entryPositions', entry))))
+                _sel_silhouette(), _sel_faces('entryPositions', entry), set_lo)))
         if which == 'rough':
             ops['main'] += later_drills()
         if pockets:
@@ -2202,8 +2287,12 @@ def _side_ops(b, setup, a, side, plan, warnings):
             params = dict(CONTOUR, doMultipleDepths=multi)
             params.update(_top_below_part_top(a['ztop'] - band_top, m))
             params.update(_bottom_below_part_top(a['ztop'] - chain_bot, m))
+            hi, set_hi = _at_tab('top', tab_top)
+            lo, set_lo = _at_tab('bottom', tab_bottom, -tab['overlap'])
+            params.update(hi, **lo)
             ops['main'].append(b.op(setup, 'contour2d', tk, 'Outline between tabs' + suffix,
-                                    params, _sel_layout_chains(lay['corner'] if lay else [], True)))
+                                    params, _both(_sel_layout_chains(lay['corner'] if lay else [],
+                                                                     True), set_hi, set_lo)))
 
     # small end mills: rest machining in pockets whose corners the 3.175 can't reach,
     # one operation per tool
@@ -2287,8 +2376,12 @@ def _side_ops(b, setup, a, side, plan, warnings):
         params = dict(CONTOUR, doMultipleDepths='true', maximumStepdown='0.2mm')
         params.update(_top_below_part_top(band_bot - a['zbot'], m))
         params.update(_bottom_below_part_top(band_top + tab['overlap'] - a['zbot'], m))
+        hi, set_hi = _at_tab('top', tab_bottom)
+        lo, set_lo = _at_tab('bottom', tab_top, -tab['overlap'])
+        params.update(hi, **lo)
         ops['tabs'].append(b.op(setup, 'contour2d', (ENDMILL, 'rough'), 'Cut tabs', params,
-                                _sel_layout_chains(lay['tabs'] if lay else [], False)))
+                                _both(_sel_layout_chains(lay['tabs'] if lay else [], False),
+                                      set_hi, set_lo)))
     return ops
 
 
@@ -2302,7 +2395,8 @@ def _delete_previous(cam, design):
         sk.deleteMe()
     for pl in [pl for pl in root.constructionPlanes if pl.name.startswith(LAYOUT_SKETCH)]:
         pl.deleteMe()
-    for occ in [o for o in root.occurrences if o.component.name.startswith(VISE_PREFIX)]:
+    for occ in [o for o in root.occurrences if o.component.name.startswith(VISE_PREFIX)
+                or o.component.name == TABS_COMPONENT]:
         occ.deleteMe()
 
 
@@ -2407,6 +2501,7 @@ def build(args):
                  _add_vise(design, VISE_PREFIX + 'bottom', fixture,
                            *_vise_matrices(box, -ztop, -z0, True))]
         vises[1][0].isLightBulbOn = False  # it would hang upside down over the part
+    plan['tab_faces'] = _add_tabs(design, plan['layout'], plan['tab'])
     x_axis = _axis_line(design)
     top = _setup(cam, 'Top ' + SETUP_TAG, body, machine, stock, True, x_axis, vises[0], warnings)
     top_ops = _side_ops(b, top, a, 'top', plan, warnings)
