@@ -115,9 +115,11 @@ This saves wear on the drills, at the cost of two more tool changes in the top s
 The lab's parts from October 2026 on (`kiutra-beam`, `tee`) drill this way.
 
 The face is finished last because facing raises fewer burrs than side milling and thread milling, so the last cut across the face removes the burrs the earlier cuts left on it.
-Until then the face still carries 0.2 mm of material, and every operation that starts at the face starts 0.2 mm higher, on that material:
-- pockets, bores, windows and pocket corners that open in the face start 0.2 mm above it;
-- drills, bores and thread mills that start at the hole top start 0.2 mm above it.
+The generator keeps track of the stock's highest point in each setup, which is where the latest facing pocket left the stock: the stock top until the rough face, 0.2 mm above the face until the finishing face, and the face after it.
+Every operation that would start at the face or above it starts at that point instead, so its first pass cuts the stock that is there and no air above it:
+- the outline, pockets, bores, windows, pocket corners, entry holes and the finishing face take their top height from the face's patch (`from point`), 0.2 mm above it until the finishing face;
+- drills, bores and thread mills that start at the hole top start 0.2 mm above it until the finishing face.
+Operations that start below the face, such as the cuts round the tabs and the deeper stages of a staged cut, keep their own top heights.
 
 The lab's parts from October 2026 on (`kiutra-beam`, `tee`) work this way; older parts finish the face with the other T3 passes.
 
@@ -149,7 +151,7 @@ They sit on the longest straight or arc edges of the outline, one at the middle 
 The tab band is 1 mm thick (0.4 × the part's thickness for parts under 2.5 mm) and is centred on the plane halfway between the part's top and bottom.
 A pocket open to the side of the part is reached sideways at its own depth, so the band moves to the nearest height clear of every such opening.
 
-- The top setup's outline cuts from the stock top down to the top of the band.
+- The top setup's outline cuts from the faced stock down to the top of the band.
 - The **outline between tabs** (four corner chains, each running from one tab to the next) then cuts from the top of the band to 0.5 mm below its bottom.
 - The bottom setup's outline cuts from the bottom face up to the bottom of the band.
 - `<part>_tabs`, the last program, cuts each tab span through the band and 0.5 mm past it, in 0.2 mm steps, and frees the part.
@@ -167,7 +169,7 @@ Feeds, speeds and stepdowns come from the tool preset; the operations set only t
 
 | Operation | Parameters |
 |---|---|
-| 2D pocket | tolerance 0.01 mm (at the lab's 0.1 mm, Fusion refuses an entry hole with less than about 0.5 mm of room round the end mill), stepover 0.6 × tool diameter, compensation left, no stock to leave, `predrill` ramp at the entry holes; floors selected as pocket faces, shelves as the closed opening above them (one counter-clockwise chain per opening); the facing pocket starts at the stock top, and its roughing pass leaves 0.2 mm on the face (axial stock to leave 0.2 mm, radial 0). It selects a planar patch filling the part's outline at that face (`carvera-cam faces` component), not the face itself: a pocket on the face goes round the face's openings and leaves the stock above them uncut, while the patch has no holes and, taken from the larger of the top and bottom outlines, also covers a pocket open to the side |
+| 2D pocket | tolerance 0.01 mm (at the lab's 0.1 mm, Fusion refuses an entry hole with less than about 0.5 mm of room round the end mill), stepover 0.6 × tool diameter, compensation left, no stock to leave, `predrill` ramp at the entry holes; floors selected as pocket faces, shelves as the closed opening above them (one counter-clockwise chain per opening); the rough facing pocket starts at the stock top, the finishing one 0.2 mm above the face, and the roughing pass leaves 0.2 mm on the face (axial stock to leave 0.2 mm, radial 0). It selects a planar patch filling the part's outline at that face (`carvera-cam faces` component), not the face itself: a pocket on the face goes round the face's openings and leaves the stock above them uncut, while the patch has no holes and, taken from the larger of the top and bottom outlines, also covers a pocket open to the side |
 | 2D contour | tolerance 0.01 mm, compensation left, two finishing stepovers, no ramp, no stock to leave; a closed contour enters at its entry hole |
 | Drill | chip breaking - partial retract cycle, 0.1 mm pecking depth, 1 mm accumulated pecking depth, 0.1 mm chip break; through holes break through 0.5 mm with the drill tip past the bottom |
 | Bore | climb, tolerance 0.01 mm, stepover 0.3 mm with enough passes to reach the wall; through holes go 0.5 mm past the bottom |
