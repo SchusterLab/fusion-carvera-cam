@@ -994,6 +994,9 @@ THREAD = {
 # than side milling and thread milling. Until then every operation that starts
 # at the face starts this much higher.
 FACE_ALLOWANCE = 0.2
+# The facing pockets face this far past the part's outline: the outline cut is
+# one end mill wide outside it, and starts on the faced stock (_add_face_patches).
+FACE_MARGIN = ENDMILL_D + 0.5
 
 
 def _drill_ends(through):
@@ -1535,6 +1538,8 @@ def _add_face_patches(design, lay, a):
     open, and a pocket on them goes round those, leaving the stock above them
     uncut; the patches have none. The outline is the layout's, the larger of the
     top and bottom faces' outer loops, so a pocket open to the side is covered too.
+    The patch reaches FACE_MARGIN past the outline, so that the face also clears
+    the stock the outline cut comes down through, one end mill wide outside it.
     Return {'top': face, 'bottom': face} as seen from the root."""
     root = design.rootComponent
     occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
@@ -1548,8 +1553,15 @@ def _add_face_patches(design, lay, a):
         plane.name = 'face ' + side
         sk = comp.sketches.add(plane)
         sk.name = 'face outline ' + side
+        curves = adsk.core.ObjectCollection.create()
         for pc in lay['outline']:
-            _sketch_curve(sk, pc, 0, pc['len'])
+            for c in _sketch_curve(sk, pc, 0, pc['len']):
+                curves.add(c)
+        bb = sk.boundingBox
+        away = adsk.core.Point3D.create(bb.maxPoint.x + 10, bb.maxPoint.y + 10, 0)
+        sk.offset(curves, away, FACE_MARGIN / 10)
+        for c in curves:
+            c.isConstruction = True  # the patch is the offset loop's inside
         prof = max(sk.profiles, key=lambda pr: pr.areaProperties().area)
         patches = comp.features.patchFeatures
         e = patches.add(patches.createInput(prof, adsk.fusion.FeatureOperations.NewBodyFeatureOperation))
