@@ -996,7 +996,7 @@ THREAD = {
 FACE_ALLOWANCE = 0.2
 # The facing pockets face this far past the part's outline: the outline cut is
 # one end mill wide outside it, and starts on the faced stock (_add_face_patches).
-FACE_MARGIN = ENDMILL_D + 0.5
+FACE_MARGIN = ENDMILL_D
 
 
 def _drill_ends(through):
