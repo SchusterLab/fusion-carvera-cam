@@ -59,7 +59,7 @@ Chip load is the feed per cutting edge per revolution: feed ÷ (rpm × flutes).
 |---|---|---|---|---|
 | F0 | the spindle speed is 0 | error | — | feeding a stopped tool into the stock |
 | F1 | the spindle speed, cutting feed or plunge feed differs from the tool's Copper 101-H02 preset | warning | the feeds match the tool's Copper 101-H02 preset in all 916 operations whose tool had one; the other 88 use tools without one (rule N5) | settings the lab has not used with that tool |
-| F2 | an end mill or chamfering bit cuts at more than 0.034 mm chip load | warning | all 647 end-mill operations cut at 0.033 mm (one flute) or 0.017 mm (two flutes), and all 112 chamfering operations at 0.017 mm | stall and broken small end mills |
+| F2 | an end mill or chamfering bit with no Copper 101-H02 preset in the skill's library (N5) cuts at more than 0.034 mm chip load; a tool with a preset is checked against it by F1 | warning | all 647 end-mill operations cut at 0.033 mm (one flute) or 0.017 mm (two flutes), and all 112 chamfering operations at 0.017 mm | stall and broken small end mills |
 
 ### How much the tool cuts at once
 
@@ -78,17 +78,13 @@ A roughing pass below means a multi-depth pass that cuts the feature to size in 
 ### How the tool enters the cut
 
 The lab's end mills enter pockets through holes a drill makes first (Fusion's `predrill` entry), not by ramping into solid metal.
-The checker warns about every other entry, whatever the feed, since an end mill plunging into copper can stall or break.
-It allows one exception: an end mill rest machining a pocket may plunge, since it cuts only what a larger end mill left, such as the pocket's corners.
-A 2D contour around a closed loop must likewise enter through a hole, at its entry positions; an open contour starts at its open end, which the checker takes to be clear.
-The checker reads the entries from the G-code: an end mill that should enter through a hole must plunge down a hole an earlier drill made at that spot, at least as wide as the end mill there and full width down to the plunge's depth, which is the drill point's depth less the point's length. A hole drilled in an earlier setup counts too, wherever it is full width over the plunge, and so does stock that an earlier milling pass in the same setup has already cleared, as at a pocket's side entry.
+The checker warns about a ramp, whatever the feed, and about every plunge into stock that is neither cleared nor drilled, since an end mill plunging into copper can stall or break.
+The checker reads the plunges from the G-code, whatever the operation's entry setting. Earlier milling passes in the same setup must have cleared the end mill's whole footprint at that spot down to some depth, which counts stock cleared by a pocket, by the outline cut at a pocket's side entry, or by a larger end mill round a pocket's corners. Below that depth, an earlier drill must have made a hole there, at least as wide as the end mill and full width down to the plunge's depth, which is the drill point's depth less the point's length. A hole drilled in an earlier setup counts too, wherever it is full width over that stretch of the plunge.
 
 | Id | Finding when | Severity | Evidence | Guards against |
 |---|---|---|---|---|
 | E1 | a pocket or 2D contour ramps into the copper (a helix, profile or other ramp) instead of entering a pre-drilled hole, or a pocket's entry (Fusion's ramp type) is set to none | warning | the lab's rule: copper is always entered at a pre-drilled hole; 259 of 263 pockets enter by `predrill` (213) or by plunging (46) | the end mill rubbing and loading up as it ramps into copper; an entry Fusion chooses, into solid stock |
-| E2 | a pocket enters by plunging, other than in rest machining | warning | — (46 of the lab's 263 pockets plunge, 39 of them with a 1 or 2 mm end mill or into a pocket already roughed) | stall and broken end mills from plunging into solid copper |
-| E4 | a pocket entering by `predrill`, or a 2D contour entering at entry positions, plunges where no earlier drill, in its setup or an earlier one, made a hole as wide as the end mill and full width over the plunge, and no earlier pass in its setup has cleared the stock | warning | 86 of 111 `predrill` pockets in the current parts have a drill before them in their setup (whether its tip goes through was not counted); most of the rest are bottom-side pockets, which the check accepts when an earlier setup drilled through | the end mill plunging where the entry hole should be |
-| E5 | a 2D contour around a closed loop has no entry position | warning | — (200 of the lab's 318 contours have neither; whether their loops are closed, or start where an earlier cut has cleared the stock, was not recorded) | stall and broken end mills from plunging into solid copper |
+| E4 | a pocket or 2D contour by an end mill plunges into stock that earlier passes in its setup have not cleared and that no earlier drill, in its setup or an earlier one, made a hole in as wide as the end mill and full width over the rest of the plunge | warning | 86 of 111 `predrill` pockets in the current parts have a drill before them in their setup (whether its tip goes through was not counted); most of the rest are bottom-side pockets, which the check accepts when an earlier setup drilled through | stall and broken end mills from plunging into solid copper |
 
 ### Heights, depth and reach
 
@@ -111,7 +107,7 @@ A tool's stick-out is its length below the holder, Fusion's body length: 28 mm f
 | K2 | a drill that selects a through hole's faces and goes to the hole's bottom does not send its tip through the bottom and 0.5 mm past it | warning | 64 of the 65 drills that select a through hole's faces do | a thin cap of copper left at the bottom, which the thread mill or bore then runs into |
 | K3 | a drill is wider than a hole it selects, and no thread mill in the document threads that hole | warning | the drills wider than their hole are threads' pre-drills, such as the 1.7 mm drill in M2's 1.623 mm hole, except 2 operations drilling 3.175 mm into 3.0 mm holes | an oversized hole from the wrong drill |
 | TH1 | a thread mill cuts conventional rather than climb | warning | all 27 thread operations climb | thread mill wear |
-| TH2 | a thread mill (error), or a bore or circular cut (warning), runs with no drill before it in its setup | as given | every thread and all 72 bores follow a drill in their setup | the tool cutting a hole into solid copper |
+| TH2 | a thread mill (error), or a bore or circular cut (warning), goes down, at a rapid or the feed, into stock that earlier passes in its setup have not cleared and that no earlier drill made a hole in as wide as the tool, as E4 checks | as given | every thread and all 72 bores follow a drill in their setup | the tool cutting a hole into solid copper |
 | TH3 | a thread mill goes more than 0.01 mm deeper than the hole it threads, along the setup's tool axis: deeper than an earlier drill cut it at full width, or than its modelled bottom if that is deeper | error | the lab's rule; its through holes are drilled 0.5 mm past the bottom and thread-milled 0.3 mm past it; a helical lead-in would start about 0.05 mm below the bottom height, so the generator uses a flat one | the thread mill cutting solid copper: a blind hole's floor, or stock the drill never reached |
 
 ### Tools and setups

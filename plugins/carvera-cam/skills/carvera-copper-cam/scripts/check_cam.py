@@ -72,29 +72,6 @@ def _mm(cm):
     return None if cm is None else cm * 10
 
 
-def _entry_count(p):
-    """How many entry positions a 2D contour has selected."""
-    x = p.itemByName('entryPositions')
-    try:
-        return len(x.value.value) if x is not None else 0
-    except Exception:
-        return 0
-
-
-def _closed_contour(p):
-    """Does a 2D contour cut a closed loop? An open chain starts at its open end."""
-    x = p.itemByName('contours')
-    try:
-        sels = x.value.getCurveSelections()
-    except Exception:
-        return True
-    for i in range(sels.count):
-        c = adsk.cam.ChainSelection.cast(sels.item(i))
-        if c is None or not c.isOpen:
-            return True
-    return False
-
-
 class Report:
     def __init__(self):
         self.items = []
@@ -206,16 +183,16 @@ def _check_op(rep, s, o, t, earlier, lab, threaded=frozenset()):
     if not t['rpm']:
         rep.add('F0', 'error', sn, on, 'spindle speed is 0')
         return
-    # feeds
-    if milling and t['feed']:
-        fz = t['feed'] / t['rpm'] / t['flutes']
-        if fz > CHIP_LOAD_MILL:
-            rep.add('F2', 'warning', sn, on, 'chip load %.4f mm/tooth is above the lab\'s %.4f'
-                    % (fz, CHIP_LOAD_MILL), feed=t['feed'], rpm=t['rpm'])
+    # feeds: against the tool's preset, or, with none, against the lab's chip load
     preset = lab.get(_ascii(t['desc']))
     if preset is None:
         rep.add('N5', 'warning', sn, on, '%s is not in the skill\'s tool library, so its feeds '
                 'are unchecked against a Copper 101-H02 preset' % _ascii(t['desc']))
+        if milling and t['feed']:
+            fz = t['feed'] / t['rpm'] / t['flutes']
+            if fz > CHIP_LOAD_MILL:
+                rep.add('F2', 'warning', sn, on, 'chip load %.4f mm/tooth is above the lab\'s %.4f'
+                        % (fz, CHIP_LOAD_MILL), feed=t['feed'], rpm=t['rpm'])
     else:
         diffs = {}
         for key, val in (('n', t['rpm']), ('v_f', t['feed']), ('v_f_plunge', t['plunge'])):
@@ -254,31 +231,20 @@ def _check_op(rep, s, o, t, earlier, lab, threaded=frozenset()):
             if so and so > POCKET_STEPOVER * d + 1e-3:
                 rep.add('D6', 'warning', sn, on, 'pocket stepover %.2f mm is above 0.6 x tool '
                         'diameter' % so)
+            # a plunge, wherever it lands, is checked in the G-code (E4)
             ramp = _v(p, 'rampType', '')
-            # rest machining plunges only into what a larger tool left, such as pocket corners
-            if ramp == 'plunge' and not rest:
-                rep.add('E2', 'warning', sn, on, 'the %.3g mm end mill plunges into the pocket '
-                        'instead of entering a pre-drilled hole' % d)
-            elif ramp == 'disabled':
+            if ramp == 'disabled':
                 rep.add('E1', 'warning', sn, on, 'pocket entry ramp is disabled')
             elif ramp and ramp != 'predrill' and ramp != 'plunge':
                 rep.add('E1', 'warning', sn, on, 'the %.3g mm end mill ramps into the pocket '
                         '(%s) instead of entering a pre-drilled hole' % (d, ramp))
-        if strat == 'contour2d':
-            if _v(p, 'doRamp', False):
-                rep.add('E1', 'warning', sn, on, 'the %.3g mm end mill ramps into the contour '
-                        'instead of entering a pre-drilled hole' % d)
-            elif not _entry_count(p) and _closed_contour(p):
-                rep.add('E5', 'warning', sn, on, 'the %.3g mm end mill plunges at the start of '
-                        'the contour instead of entering a pre-drilled hole: it has no entry '
-                        'position' % d)
+        if strat == 'contour2d' and _v(p, 'doRamp', False):
+            rep.add('E1', 'warning', sn, on, 'the %.3g mm end mill ramps into the contour '
+                    'instead of entering a pre-drilled hole' % d)
     if strat == 'bore':
         so = _mm(_v(p, 'stepover'))
         if so and so > BORE_STEPOVER + 1e-6:
             rep.add('D8', 'warning', sn, on, 'bore stepover %.2f mm is above %.2f mm' % (so, BORE_STEPOVER))
-    if strat in ('bore', 'thread', 'circular') and not any(e['type'] == 'drill' for e in earlier):
-        rep.add('TH2', 'error' if strat == 'thread' else 'warning', sn, on,
-                'no drill runs before this %s in its setup' % strat)
     if strat == 'thread':
         if _v(p, 'threadingDirection', _v(p, 'direction')) not in (None, 'climb'):
             rep.add('TH1', 'warning', sn, on, 'thread milling is not climb')
@@ -448,14 +414,6 @@ def _wcs_to_world(setup):
     return f
 
 
-def _enters_by_holes(o):
-    """Does the operation enter through pre-drilled holes: a pocket with the
-    predrill ramp, or a 2D contour with entry positions?"""
-    p = o.parameters
-    return ((o.strategy == 'pocket2d' and _v(p, 'rampType', '') == 'predrill')
-            or (o.strategy == 'contour2d' and _entry_count(p) > 0))
-
-
 def _segment(to_world, x, y, z0, z1):
     """A vertical stretch of a setup's G-code, from Z z0 to Z z1 at (x, y), as
     (x, y, lowest z, highest z) in the design's frame, in mm."""
@@ -480,40 +438,57 @@ def _drilled(moves, t, to_world, top, sn):
             for (x, y), z in deepest.items() if z + tip < top]
 
 
-def _swept(x, y, z, r, milled):
-    """Has an earlier milling pass in this setup swept a tool of radius r at
-    (x, y) clear, down to z? `milled` holds (moves, tool radius) per operation."""
+def _cleared_to(x, y, r, top, milled):
+    """How deep earlier milling passes in this setup cleared the whole footprint
+    of a tool of radius r at (x, y): the WCS z, or `top` where they left some of
+    it uncut. The footprint is sampled at its centre and at eight points 0.05 mm
+    inside its edge (a sliver at the edge is harmless); a point is cut down to
+    the deepest pass whose tool covered it. `milled` holds (moves, tool radius)
+    per operation."""
+    rs = max(r - 0.05, 0.0)
+    pts = [(x, y)] + [(x + rs * math.cos(a * math.pi / 4), y + rs * math.sin(a * math.pi / 4))
+                      for a in range(8)]
+    depth = [top] * len(pts)
     for moves, rm in milled:
-        if rm < r - 1e-6:
-            continue
-        reach = rm - r + 0.05  # a sliver at the edge of the cleared path is harmless
         for m in moves:
-            if m[0] == 0 or None in m[1:] or max(m[3], m[6]) > z + 0.01:
-                continue
             ax, ay, bx, by = m[1], m[2], m[4], m[5]
+            if min(ax, bx) > x + r + rm or max(ax, bx) < x - r - rm or \
+                    min(ay, by) > y + r + rm or max(ay, by) < y - r - rm:
+                continue
+            mz = max(m[3], m[6])
             dx, dy = bx - ax, by - ay
             ll = dx * dx + dy * dy
-            u = 0.0 if ll < 1e-12 else max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / ll))
-            if math.hypot(x - ax - u * dx, y - ay - u * dy) <= reach:
-                return True
-    return False
+            for i, (qx, qy) in enumerate(pts):
+                if mz >= depth[i]:
+                    continue
+                u = 0.0 if ll < 1e-12 else max(0.0, min(1.0, ((qx - ax) * dx + (qy - ay) * dy) / ll))
+                if math.hypot(qx - ax - u * dx, qy - ay - u * dy) <= rm + 1e-3:
+                    depth[i] = mz
+    return max(depth)
 
 
-def _check_entries(rep, sn, o, moves, t, holes, milled, to_world, top):
-    """E4: every plunge of an operation that enters by holes must go down a hole
-    drilled earlier, in this setup or an earlier one, at least as wide as the end
-    mill there and full width over the plunge's depth in the stock, or into
-    stock an earlier milling pass in this setup has cleared."""
+def _check_plunges(rep, rule, severity, sn, o, moves, t, holes, milled, to_world, top,
+                   rapids=False):
+    """E4 (pockets and contours) and TH2 (thread mills, bores and circular cuts):
+    every plunge into the stock must go into stock earlier milling passes in
+    this setup have cleared, and below that down a hole drilled earlier, in
+    this setup or an earlier one, at least as wide as the tool there and full
+    width over the rest of the plunge. A plunge is a straight move down at the
+    feed, or also at a rapid with `rapids`."""
     r = t['d'] / 2
+    kinds = (0, 1) if rapids else (1,)
     plunges = {}  # (x, y) -> deepest plunge
     for m in moves:
-        if m[0] == 1 and None not in m[1:] and abs(m[4] - m[1]) < 1e-3 \
+        if m[0] in kinds and None not in m[1:] and abs(m[4] - m[1]) < 1e-3 \
                 and abs(m[5] - m[2]) < 1e-3 and m[6] < m[3] - 1e-3 and m[6] < top - 0.01:
             k = (round(m[4], 3), round(m[5], 3))
             plunges[k] = min(plunges.get(k, m[6]), m[6])
     bad = []
     for (x, y), z in sorted(plunges.items()):
-        px, py, plo, phi = _segment(to_world, x, y, z, top)
+        cleared = _cleared_to(x, y, r, top, milled)
+        if cleared <= z + 0.01:
+            continue  # into stock an earlier cut has cleared
+        px, py, plo, phi = _segment(to_world, x, y, z, cleared)
         ok, why = False, 'no hole is drilled there before it'
         for hx, hy, hlo, hhi, hd, hs in holes:
             e = math.hypot(px - hx, py - hy)
@@ -529,15 +504,13 @@ def _check_entries(rep, sn, o, moves, t, holes, milled, to_world, top):
             else:
                 ok = True
                 break
-        if not ok and _swept(x, y, z, r, milled):
-            ok = True  # a side entry, where an earlier cut has cleared the stock
         if not ok:
             bad.append((x, y, z, why))
     if bad:
         x, y, z, why = bad[0]
-        rep.add('E4', 'warning', sn, o.name, 'the %.3g mm end mill plunges at X%.3f Y%.3f to '
-                'Z%.3f, but %s%s' % (t['d'], x, y, z, why,
-                                    ' (%d of its %d entry plunges)' % (len(bad), len(plunges))
+        rep.add(rule, severity, sn, o.name, 'the %g mm %s plunges at X%.3f Y%.3f to '
+                'Z%.3f, but %s%s' % (t['d'], t['type'], x, y, z, why,
+                                    ' (%d of its %d plunges)' % (len(bad), len(plunges))
                                     if len(plunges) > 1 else ''),
                 plunges=len(bad))
 
@@ -603,9 +576,14 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None):
             continue
         if t['type'] == 'drill':
             holes += _drilled(moves, t, to_world, top, sn)
+        elif o.strategy in ('thread', 'bore', 'circular'):
+            _check_plunges(rep, 'TH2', 'error' if o.strategy == 'thread' else 'warning', sn, o,
+                           moves, t, holes, milled, to_world, top, rapids=True)
+            if t['type'] in MILLING:
+                milled.append((cuts, t['d'] / 2))
         elif t['type'] in MILLING:
-            if _enters_by_holes(o):
-                _check_entries(rep, sn, o, moves, t, holes, milled, to_world, top)
+            if o.strategy in ('pocket2d', 'contour2d') and t['type'] != 'chamfer mill':
+                _check_plunges(rep, 'E4', 'warning', sn, o, moves, t, holes, milled, to_world, top)
             milled.append((cuts, t['d'] / 2))
         if o.strategy == 'thread':
             _check_thread_depth(rep, sn, o, cuts, s, holes)
