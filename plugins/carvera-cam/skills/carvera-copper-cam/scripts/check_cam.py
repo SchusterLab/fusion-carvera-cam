@@ -140,7 +140,7 @@ def _tool(o):
 
 # --------------------------------------------------------- parameter rules
 
-def _check_op(rep, s, o, t, earlier, lab, through_before=False):
+def _check_op(rep, s, o, t, earlier, lab):
     """Rules read from the operation's and the tool's parameters."""
     p = o.parameters
     sn, on = s.name, o.name
@@ -178,8 +178,6 @@ def _check_op(rep, s, o, t, earlier, lab, through_before=False):
 
     multi = _v(p, 'doMultipleDepths')
     rest = _v(p, 'useRestMachining', False)
-    # an entry hole is full width to its bottom only with the drill's tip through it
-    predrilled = any(e['tip_through'] for e in earlier) or through_before
     if strat in ('pocket2d', 'contour2d', 'adaptive2d', 'face', 'slot', 'trace') and milling \
             and t['type'] != 'chamfer mill':
         limit = STEPDOWN_LARGE if d >= 3 - 1e-6 else min(STEPDOWN_SMALL, 0.2 * d)
@@ -207,20 +205,11 @@ def _check_op(rep, s, o, t, earlier, lab, through_before=False):
                         'instead of entering a pre-drilled hole' % d)
             elif ramp == 'disabled':
                 rep.add('E1', 'warning', sn, on, 'pocket entry ramp is disabled')
-            elif ramp == 'predrill' and not predrilled:
-                rep.add('E4', 'warning', sn, on, 'predrill entry, but no drill with "drill tip '
-                        'through bottom" runs before it in this setup: check that the entry '
-                        'holes exist and are full width to the pocket floor')
         if strat == 'contour2d':
-            entries = _entry_count(p)
-            if not entries and not _v(p, 'doRamp', False) and _closed_contour(p):
+            if not _entry_count(p) and not _v(p, 'doRamp', False) and _closed_contour(p):
                 rep.add('E5', 'warning', sn, on, 'the %.3g mm end mill plunges at the start of '
                         'the contour instead of entering a pre-drilled hole: it has no entry '
                         'position and no ramp' % d)
-            elif entries and not predrilled:
-                rep.add('E4', 'warning', sn, on, 'the contour enters at entry positions, but no '
-                        'drill with "drill tip through bottom" runs before it in this setup: '
-                        'check that the entry holes exist and are full width to its bottom')
     if strat == 'bore':
         so = _mm(_v(p, 'stepover'))
         if so and so > BORE_STEPOVER + 1e-6:
@@ -354,7 +343,103 @@ def _wcs_to_world(setup):
     return f
 
 
-def _check_gcode(rep, cam, s, ops, tools, sections, deadline):
+def _enters_by_holes(o):
+    """Does the operation enter through pre-drilled holes: a pocket with the
+    predrill ramp, or a 2D contour with entry positions?"""
+    p = o.parameters
+    return ((o.strategy == 'pocket2d' and _v(p, 'rampType', '') == 'predrill')
+            or (o.strategy == 'contour2d' and _entry_count(p) > 0))
+
+
+def _segment(to_world, x, y, z0, z1):
+    """A vertical stretch of a setup's G-code, from Z z0 to Z z1 at (x, y), as
+    (x, y, lowest z, highest z) in the design's frame, in mm."""
+    a, b = to_world(x, y, z0), to_world(x, y, z1)
+    return a.x * 10, a.y * 10, min(a.z, b.z) * 10, max(a.z, b.z) * 10
+
+
+def _drilled(moves, t, to_world, top, sn):
+    """[(x, y, lowest z, highest z, diameter, setup)] in the design's frame, for
+    each hole a drill operation makes: full width from the stock top down to the
+    drill's deepest point at that spot, raised by the length of its point."""
+    tip = 0.0
+    if t['tip_angle']:
+        tip = t['d'] / 2 / math.tan(math.radians(t['tip_angle']) / 2)
+    deepest = {}
+    for m in moves:
+        if None in m[1:]:
+            continue
+        k = (round(m[4], 3), round(m[5], 3))
+        deepest[k] = min(deepest.get(k, m[6]), m[6])
+    return [_segment(to_world, x, y, z + tip, top) + (t['d'], sn)
+            for (x, y), z in deepest.items() if z + tip < top]
+
+
+def _swept(x, y, z, r, milled):
+    """Has an earlier milling pass in this setup swept a tool of radius r at
+    (x, y) clear, down to z? `milled` holds (moves, tool radius) per operation."""
+    for moves, rm in milled:
+        if rm < r - 1e-6:
+            continue
+        reach = rm - r + 0.05  # a sliver at the edge of the cleared path is harmless
+        for m in moves:
+            if m[0] == 0 or None in m[1:] or max(m[3], m[6]) > z + 0.01:
+                continue
+            ax, ay, bx, by = m[1], m[2], m[4], m[5]
+            dx, dy = bx - ax, by - ay
+            ll = dx * dx + dy * dy
+            u = 0.0 if ll < 1e-12 else max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / ll))
+            if math.hypot(x - ax - u * dx, y - ay - u * dy) <= reach:
+                return True
+    return False
+
+
+def _check_entries(rep, sn, o, moves, t, holes, milled, to_world, top):
+    """E4: every plunge of an operation that enters by holes must go down a hole
+    drilled earlier, in this setup or an earlier one, at least as wide as the end
+    mill there and full width over the plunge's depth in the stock, or into
+    stock an earlier milling pass in this setup has cleared."""
+    r = t['d'] / 2
+    plunges = {}  # (x, y) -> deepest plunge
+    for m in moves:
+        if m[0] == 1 and None not in m[1:] and abs(m[4] - m[1]) < 1e-3 \
+                and abs(m[5] - m[2]) < 1e-3 and m[6] < m[3] - 1e-3 and m[6] < top - 0.01:
+            k = (round(m[4], 3), round(m[5], 3))
+            plunges[k] = min(plunges.get(k, m[6]), m[6])
+    bad = []
+    for (x, y), z in sorted(plunges.items()):
+        px, py, plo, phi = _segment(to_world, x, y, z, top)
+        ok, why = False, 'no hole is drilled there before it'
+        for hx, hy, hlo, hhi, hd, hs in holes:
+            e = math.hypot(px - hx, py - hy)
+            if e > hd / 2:
+                continue
+            where = '' if hs == sn else ' (drilled in %s)' % hs
+            if e + r > hd / 2 + 0.02:
+                why = ('the %.3g mm hole there%s is too narrow for it, or off its centre by '
+                       '%.3f mm' % (hd, where, e))
+            elif hlo > plo + 0.01 or hhi < phi - 0.01:
+                short = max(hlo - plo, phi - hhi)
+                why = 'the hole there%s is not full width over %.2f mm of it' % (where, short)
+            else:
+                ok = True
+                break
+        if not ok and _swept(x, y, z, r, milled):
+            ok = True  # a side entry, where an earlier cut has cleared the stock
+        if not ok:
+            bad.append((x, y, z, why))
+    if bad:
+        x, y, z, why = bad[0]
+        rep.add('E4', 'warning', sn, o.name, 'the %.3g mm end mill plunges at X%.3f Y%.3f to '
+                'Z%.3f, but %s%s' % (t['d'], x, y, z, why,
+                                    ' (%d of its %d entry plunges)' % (len(bad), len(plunges))
+                                    if len(plunges) > 1 else ''),
+                plunges=len(bad))
+
+
+def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None):
+    """The rules read from the setup's G-code. `holes` lists the holes earlier
+    setups drilled (see _drilled); this setup's holes are added to it."""
     sn = s.name
     sp = s.parameters
     top = _mm(_v(sp, 'stockZHigh', 0))
@@ -370,7 +455,9 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline):
         elif i and (i - 1) in by_op:
             by_op[i - 1] += moves  # a comment inside the operation
     fixture = _fixture_bodies(s)
-    to_world = _wcs_to_world(s) if fixture else None
+    to_world = _wcs_to_world(s)
+    holes = holes if holes is not None else []
+    milled = []  # (moves, tool radius) of the milling operations so far in this setup
     fx_boxes = []
     for b in fixture:
         bb = b.boundingBox
@@ -385,6 +472,12 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline):
         cuts = [m for m in moves if m[0] != 0 and None not in m[1:]]
         if not cuts:
             continue
+        if t['type'] == 'drill':
+            holes += _drilled(moves, t, to_world, top, sn)
+        elif t['type'] in MILLING:
+            if _enters_by_holes(o):
+                _check_entries(rep, sn, o, moves, t, holes, milled, to_world, top)
+            milled.append((cuts, t['d'] / 2))
         # the toolpath's retract plane against the operation's current heights: a
         # toolpath computed for another stock or model keeps its old heights
         p = o.parameters
@@ -508,11 +601,6 @@ def check(args=None):
             rep.add('M2', 'warning', sn, None, 'no fixture is set, so simulation cannot check '
                     'the vise')
         ops = [o for o in s.allOperations if not o.isSuppressed]
-        # entry holes drilled through the stock in an earlier setup serve this one too
-        through_before = any(
-            o.strategy == 'drill' and _v(o.parameters, 'drillTipThroughBottom', False)
-            and _v(o.parameters, 'bottomHeight_mode') == 'from stock bottom'
-            for e in setups[:setups.index(s)] for o in e.allOperations if not o.isSuppressed)
         earlier, slots, tools, ok = [], {}, [], []
         for o in ops:
             t = _tool(o)
@@ -533,15 +621,15 @@ def check(args=None):
                             % getattr(o, 'warning', ''))
                 ok.append(o)
                 tools.append(t)
-            _check_op(rep, s, o, t, earlier, lab, through_before)
+            _check_op(rep, s, o, t, earlier, lab)
             earlier.append({'strategy': o.strategy, 'type': t['type'], 'd': t['d'] or 0,
-                            'multi': bool(_v(o.parameters, 'doMultipleDepths')),
-                            'tip_through': o.strategy == 'drill'
-                            and bool(_v(o.parameters, 'drillTipThroughBottom', False))})
+                            'multi': bool(_v(o.parameters, 'doMultipleDepths'))})
         if ok:
             folder = tempfile.mkdtemp(prefix='carvera-check-')
             text = _post_setup(cam, s, ok, post, folder)
-            _check_gcode(rep, cam, s, ok, tools, parse_gcode(text), deadline)
+            # holes drilled in an earlier setup can serve this one's entries too
+            _check_gcode(rep, cam, s, ok, tools, parse_gcode(text), deadline,
+                         state.setdefault('holes', []))
         state['done'].append(sn)
         state['items'] = rep.items
         with open(STATE, 'w', encoding='utf-8') as f:
