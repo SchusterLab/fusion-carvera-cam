@@ -78,12 +78,13 @@ A roughing pass below means a multi-depth pass that cuts the feature to size in 
 
 The lab's end mills enter pockets through holes a drill makes first (Fusion's `predrill` entry), not by ramping into solid metal.
 The checker warns about every other entry, whatever the feed, since an end mill plunging into copper can stall or break.
+It allows one exception: an end mill rest machining a pocket may plunge, since it cuts only what a larger end mill left, such as the pocket's corners.
 An entry hole counts only if its drill has "drill tip through bottom" set, so that the hole is full width down to its bottom.
 
 | Id | Finding when | Severity | Evidence | Guards against |
 |---|---|---|---|---|
 | E1 | a pocket's entry (Fusion's ramp type) is set to none | warning | 259 of 263 pockets enter by `predrill` (213) or by plunging (46) | an entry Fusion chooses, into solid stock |
-| E2 | a pocket enters by plunging | warning | — (46 of the lab's 263 pockets plunge, 39 of them with a 1 or 2 mm end mill or into a pocket already roughed) | stall and broken end mills from plunging into solid copper |
+| E2 | a pocket enters by plunging, other than in rest machining | warning | — (46 of the lab's 263 pockets plunge, 39 of them with a 1 or 2 mm end mill or into a pocket already roughed) | stall and broken end mills from plunging into solid copper |
 | E4 | a pocket enters by `predrill`, but no drill with "drill tip through bottom" runs before it in its setup, nor a drill through the stock in an earlier setup | warning | 86 of 111 `predrill` pockets in the current parts have a drill before them in their setup (whether its tip goes through was not counted); most of the rest are bottom-side pockets, which the check accepts when an earlier setup drilled through | the end mill plunging where the entry hole should be |
 
 ### Heights, depth and reach

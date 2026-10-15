@@ -178,7 +178,8 @@ def _check_op(rep, s, o, t, earlier, lab, through_before=False):
             ramp = _v(p, 'rampType', '')
             # an entry hole is full width to its bottom only with the drill's tip through it
             predrilled = any(e['tip_through'] for e in earlier) or through_before
-            if ramp == 'plunge':
+            # rest machining plunges only into what a larger tool left, such as pocket corners
+            if ramp == 'plunge' and not rest:
                 rep.add('E2', 'warning', sn, on, 'the %.3g mm end mill plunges into the pocket '
                         'instead of entering a pre-drilled hole' % d)
             elif ramp == 'disabled':
