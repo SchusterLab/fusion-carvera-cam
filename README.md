@@ -17,7 +17,7 @@ In Claude Code:
 
 The skill drives Fusion through the Fusion MCP server, so Claude Code needs that server connected, and Fusion must be running and signed in.
 
-- **Tools** come with the skill, in `assets/carvera-tools.json`: only the tools it assigns, to buy from Makera and McMaster-Carr. From Makera: the Spiral O Metal end mills of 1 to 3.175 mm, the M2 to M4 thread mills and the 1/8″ chamfering bit. From McMaster-Carr: all 122 uncoated [expanded-shank carbide drills](https://www.mcmaster.com/products/drill-bits/expanded-shank-carbide-drill-bits~~/), 0.152 to 3.175 mm. Each has a `Copper 101-H02` feed preset.
+- **Tools** come with the skill, in `assets/carvera-tools.json`: only the tools it assigns, to buy from Makera and McMaster-Carr. From Makera: the Spiral O Metal end mills of 1 to 3.175 mm, the M2 to M4 thread mills and the 1/8″ chamfering bit. From McMaster-Carr: all 122 uncoated [expanded-shank carbide drills](https://www.mcmaster.com/products/drill-bits/expanded-shank-carbide-drill-bits~~/), 0.152 to 3.175 mm. Each has a `Copper` feed preset.
 - **The machine and post processor** are the latest Carvera 3-axis machine and `Carvera.cps` in the [Carvera Community profiles](https://github.com/Carvera-Community/Carvera_Community_Profiles/tree/main/CAM_Post_Processors/Fusion360-profiles), which the skill downloads. The first build uploads the machine's 3D model to a Fusion project named `carvera-cam` in your hub, so that simulation shows the machine.
 - **The fixture plate and vise** are Saunders Machine Works' published models of the Carvera fixture plate, the Gen3 hobby mod vise and its smooth insert bars, which the skill downloads from saundersmachineworks.com and assembles as the lab mounts them.
 

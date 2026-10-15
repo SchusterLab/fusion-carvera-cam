@@ -8,7 +8,7 @@ learned from the parts in the project 2026-01-06_smpm-sample-package-6port:
   Carvera Community's profiles repository on GitHub;
 - the skill's tools, Makera's end mills, thread mills and chamfering bit and
   McMaster-Carr's drills, in assets/carvera-tools.json (tool_library.py builds
-  it), each with the feed preset "Copper 101-H02" (aluminum runs the same
+  it), each with the feed preset "Copper" (aluminum runs the same
   program at 200% override);
 - a top setup and a flipped bottom setup, the part held to the stock by four
   tabs that a separate "_tabs" program cuts last.
@@ -48,7 +48,7 @@ CACHE_DIR = os.path.join(os.environ.get('LOCALAPPDATA') or os.path.expanduser('~
                          'carvera-cam', 'community')
 # Fusion project that holds the machine's uploaded 3D model; see _model_urn().
 MODEL_PROJECT = 'carvera-cam'
-PRESET_NAMES = ('Copper 101-H02', 'Copper')
+PRESET_NAMES = ('Copper',)
 SETUP_TAG = '(carvera-cam)'
 
 DRILL_3175 = '3.175*7.4mm Drill (1/8")'

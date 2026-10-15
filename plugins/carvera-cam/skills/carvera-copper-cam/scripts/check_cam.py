@@ -31,7 +31,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.join(tempfile.gettempdir(), 'carvera-cam-check.json')
 
 # Thresholds, in mm and mm/min, from the lab's setups (see rules.md for the evidence).
-CHIP_LOAD_MILL = 0.034       # mm/tooth, end mills and chamfer bits (lab: 0.0333)
 STEPDOWN_LARGE = 0.3         # end mills of 3 mm and up
 STEPDOWN_SMALL = 0.2         # smaller end mills, at most 0.2 x diameter
 POCKET_STEPOVER = 0.6        # x diameter
@@ -84,7 +83,7 @@ class Report:
 # ------------------------------------------------------------- the tools
 
 def _library_presets():
-    """{description: Copper 101-H02 preset values} from the skill's tool library."""
+    """{description: Copper preset values} from the skill's tool library."""
     tl = runpy.run_path(os.path.join(HERE, 'tool_library.py'))
     out = {}
     for t in tl['read']()['data']:
@@ -183,16 +182,12 @@ def _check_op(rep, s, o, t, earlier, lab, threaded=frozenset()):
     if not t['rpm']:
         rep.add('F0', 'error', sn, on, 'spindle speed is 0')
         return
-    # feeds: against the tool's preset, or, with none, against the lab's chip load
+    # feeds: against the tool's preset
     preset = lab.get(_ascii(t['desc']))
     if preset is None:
-        rep.add('N5', 'warning', sn, on, '%s is not in the skill\'s tool library, so its feeds '
-                'are unchecked against a Copper 101-H02 preset' % _ascii(t['desc']))
-        if milling and t['feed']:
-            fz = t['feed'] / t['rpm'] / t['flutes']
-            if fz > CHIP_LOAD_MILL:
-                rep.add('F2', 'warning', sn, on, 'chip load %.4f mm/tooth is above the lab\'s %.4f'
-                        % (fz, CHIP_LOAD_MILL), feed=t['feed'], rpm=t['rpm'])
+        rep.add('N5', 'warning', sn, on, "%s is not in the skill's tool library, so its feeds "
+                "are unchecked: use a library tool, whose Copper preset holds the lab's "
+                "feeds" % _ascii(t['desc']))
     else:
         diffs = {}
         for key, val in (('n', t['rpm']), ('v_f', t['feed']), ('v_f_plunge', t['plunge'])):
@@ -200,7 +195,7 @@ def _check_op(rep, s, o, t, earlier, lab, threaded=frozenset()):
             if want and val and abs(val - want) > 0.5 and not (key == 'v_f' and t['type'] == 'drill'):
                 diffs[key] = (val, want)
         if diffs:
-            rep.add('F1', 'warning', sn, on, 'feeds differ from the tool\'s Copper 101-H02 preset: '
+            rep.add('F1', 'warning', sn, on, 'feeds differ from the tool\'s Copper preset: '
                     + ', '.join('%s %g (preset %g)' % (k, a, b) for k, (a, b) in diffs.items()))
     if not t['holder']:
         rep.add('N5', 'warning', sn, on, 'the tool has no holder, so simulation cannot check '

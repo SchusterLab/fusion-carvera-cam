@@ -99,7 +99,7 @@
       },
       "n": 6000,
       "n_ramp": 6000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "ramp-angle": 2,
       "stepdown": 0.1,
       "stepover": 0.1,
@@ -211,7 +211,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 4.7877872040708445,
@@ -315,7 +315,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 5.585751738082653,
@@ -419,7 +419,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 6.283185307179586,
@@ -523,7 +523,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 6.38371627209446,
@@ -627,7 +627,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 7.181680806106266,
@@ -731,7 +731,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 7.853981633974483,
@@ -835,7 +835,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 9.42477796076938,
@@ -939,7 +939,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 10.7725212091594,
@@ -1043,7 +1043,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 10.995574287564276,
@@ -1147,7 +1147,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 11.570485743171208,
@@ -1251,7 +1251,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 12.44699009352276,
@@ -1355,7 +1355,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 12.566370614359172,
@@ -1459,7 +1459,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 12.76743254418892,
@@ -1563,7 +1563,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 14.137166941154069,
@@ -1667,7 +1667,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 14.363361612212532,
@@ -1771,7 +1771,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 15.707963267948966,
@@ -1875,7 +1875,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 15.95929068023615,
@@ -1979,7 +1979,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 16.75725521424796,
@@ -2083,7 +2083,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 17.278759594743864,
@@ -2187,7 +2187,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 17.95420201526567,
@@ -2291,7 +2291,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 18.84955592153876,
@@ -2395,7 +2395,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 19.151148816283378,
@@ -2499,7 +2499,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 19.949113350295185,
@@ -2603,7 +2603,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 20.420352248333657,
@@ -2707,7 +2707,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 20.747077884306993,
@@ -2811,7 +2811,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 21.991148575128552,
@@ -2915,7 +2915,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 22.34300695233061,
@@ -3019,7 +3019,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 23.301192711675498,
@@ -3123,7 +3123,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 23.56194490192345,
@@ -3227,7 +3227,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 24.73690055436603,
@@ -3331,7 +3331,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 24.975661596038854,
@@ -3435,7 +3435,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 25.132741228718345,
@@ -3539,7 +3539,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 25.53486508837784,
@@ -3643,7 +3643,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 26.332829622389642,
@@ -3747,7 +3747,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 26.70353755551324,
@@ -3851,7 +3851,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 27.928758690413257,
@@ -3955,7 +3955,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 28.274333882308138,
@@ -4059,7 +4059,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 28.726723224425065,
@@ -4163,7 +4163,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 29.524687758436876,
@@ -4267,7 +4267,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 29.845130209103033,
@@ -4371,7 +4371,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 30.32265229244868,
@@ -4475,7 +4475,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 31.120616826460495,
@@ -4579,7 +4579,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 31.41592653589793,
@@ -4683,7 +4683,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 31.9185813604723,
@@ -4787,7 +4787,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 32.716545894484106,
@@ -4891,7 +4891,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 32.98672286269283,
@@ -4995,7 +4995,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 33.51451042849592,
@@ -5099,7 +5099,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 34.31247496250772,
@@ -5203,7 +5203,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 34.55751918948773,
@@ -5307,7 +5307,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 36.12831551628261,
@@ -5411,7 +5411,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 37.105350831549046,
@@ -5515,7 +5515,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 37.42579328221521,
@@ -5619,7 +5619,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 37.69911184307752,
@@ -5723,7 +5723,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 39.26990816987241,
@@ -5827,7 +5827,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 40.840704496667314,
@@ -5931,7 +5931,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 41.494155768613986,
@@ -6035,7 +6035,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 42.411500823462205,
@@ -6139,7 +6139,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 43.88804937064941,
@@ -6243,7 +6243,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 43.982297150257104,
@@ -6347,7 +6347,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 45.553093477052,
@@ -6451,7 +6451,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 47.1238898038469,
@@ -6555,7 +6555,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 47.47888977370255,
@@ -6659,7 +6659,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 48.69468613064179,
@@ -6763,7 +6763,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 49.87278337573796,
@@ -6867,7 +6867,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 50.26548245743669,
@@ -6971,7 +6971,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 50.67074790974977,
@@ -7075,7 +7075,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 51.83627878423159,
@@ -7179,7 +7179,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 53.40707511102648,
@@ -7283,7 +7283,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 53.4636237787911,
@@ -7387,7 +7387,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 54.97787143782138,
@@ -7491,7 +7491,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 55.857517380826515,
@@ -7595,7 +7595,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 56.548667764616276,
@@ -7699,7 +7699,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 58.119464091411174,
@@ -7803,7 +7803,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 58.25141098286195,
@@ -7907,7 +7907,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 59.690260418206066,
@@ -8011,7 +8011,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 60.64530458489736,
@@ -8115,7 +8115,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 61.26105674500097,
@@ -8219,7 +8219,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 62.319773469260724,
@@ -8323,7 +8323,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 62.64021591992689,
@@ -8427,7 +8427,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 62.83185307179586,
@@ -8531,7 +8531,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 64.40264939859075,
@@ -8635,7 +8635,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 64.6351272549564,
@@ -8739,7 +8739,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 65.43309178896821,
@@ -8843,7 +8843,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 65.97344572538566,
@@ -8947,7 +8947,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 67.54424205218055,
@@ -9051,7 +9051,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 68.62494992501544,
@@ -9155,7 +9155,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 69.11503837897546,
@@ -9259,7 +9259,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 70.68583470577035,
@@ -9363,7 +9363,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 71.01884352705086,
@@ -9467,7 +9467,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 72.25663103256522,
@@ -9571,7 +9571,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 73.82742735936014,
@@ -9675,7 +9675,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 74.60968393010398,
@@ -9779,7 +9779,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 74.84844497177681,
@@ -9883,7 +9883,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 75.39822368615503,
@@ -9987,7 +9987,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 76.60459526513351,
@@ -10091,7 +10091,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 76.96902001294994,
@@ -10195,7 +10195,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 78.20052433315712,
@@ -10299,7 +10299,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 78.53981633974482,
@@ -10403,7 +10403,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 79.39747113417484,
@@ -10507,7 +10507,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 80.11061266653972,
@@ -10611,7 +10611,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 80.99340020219844,
@@ -10715,7 +10715,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 81.68140899333463,
@@ -10819,7 +10819,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 82.98831153722797,
@@ -10923,7 +10923,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 83.2522053201295,
@@ -11027,7 +11027,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 84.82300164692441,
@@ -11131,7 +11131,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 84.9832228722575,
@@ -11235,7 +11235,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 86.39379797371932,
@@ -11339,7 +11339,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 87.29857665795316,
@@ -11443,7 +11443,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 87.77609874129882,
@@ -11547,7 +11547,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 87.96459430051421,
@@ -11651,7 +11651,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 88.57406327531064,
@@ -11755,7 +11755,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 89.53539062730911,
@@ -11859,7 +11859,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 90.16999234333423,
@@ -11963,7 +11963,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 91.106186954104,
@@ -12067,7 +12067,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 92.56388594536966,
@@ -12171,7 +12171,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 92.6769832808989,
@@ -12275,7 +12275,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 94.2477796076938,
@@ -12379,7 +12379,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 95.75574408141689,
@@ -12483,7 +12483,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 95.81857593448868,
@@ -12587,7 +12587,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 97.38937226128358,
@@ -12691,7 +12691,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 98.96016858807847,
@@ -12795,7 +12795,7 @@
        "use-hardness": false
       },
       "n": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "tool-coolant": "disabled",
       "use-feed-per-revolution": false,
       "v_c": 99.74556675147592,
@@ -12901,7 +12901,7 @@
       },
       "n": 6000,
       "n_ramp": 6000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "ramp-angle": 1.2,
       "stepdown": 0.2,
       "tool-coolant": "disabled",
@@ -13014,7 +13014,7 @@
       },
       "n": 6000,
       "n_ramp": 6000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "ramp-angle": 1.2,
       "stepdown": 0.2,
       "tool-coolant": "disabled",
@@ -13127,7 +13127,7 @@
       },
       "n": 6000,
       "n_ramp": 6000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "ramp-angle": 1.2,
       "stepdown": 0.2,
       "tool-coolant": "disabled",
@@ -13240,7 +13240,7 @@
       },
       "n": 6000,
       "n_ramp": 6000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "ramp-angle": 1.2,
       "stepdown": 0.2,
       "tool-coolant": "disabled",
@@ -13343,7 +13343,7 @@
       },
       "n": 6000,
       "n_ramp": 6000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "ramp-angle": 1.2,
       "stepdown": 0.3,
       "tool-coolant": "disabled",
@@ -13483,7 +13483,7 @@
       },
       "n": 10000,
       "n_ramp": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "ramp-angle": 2,
       "stepdown": 0.4,
       "stepover": 0.1,
@@ -13622,7 +13622,7 @@
       },
       "n": 10000,
       "n_ramp": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "ramp-angle": 2,
       "stepdown": 0.45,
       "stepover": 0.1,
@@ -13761,7 +13761,7 @@
       },
       "n": 10000,
       "n_ramp": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "ramp-angle": 2,
       "stepdown": 0.5,
       "stepover": 0.1,
@@ -13900,7 +13900,7 @@
       },
       "n": 10000,
       "n_ramp": 10000,
-      "name": "Copper 101-H02",
+      "name": "Copper",
       "ramp-angle": 2,
       "stepdown": 0.7,
       "stepover": 0.1,

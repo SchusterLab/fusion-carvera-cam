@@ -51,15 +51,13 @@ Fix these findings first: other findings on a stale toolpath mean nothing.
 ### Feeds and speeds
 
 The lab runs every end mill at 6000 rpm and 200 mm/min, every drill at 10000 rpm with a 50 mm/min plunge, and every thread mill at 100 (M2) to 200 mm/min (M3 and M4); the skill runs the thread mills at 10000 rpm, where the lab's parts ran them at 15000 rpm.
-These settings are the feed presets named "Copper 101-H02", after the copper the lab machines (C10100, H02 half-hard temper), which every tool in the skill's tool library (`assets/carvera-tools.json`) carries.
+These settings are the feed presets named "Copper", for the copper the lab machines (C10100, H02 half-hard temper), which every tool in the skill's tool library (`assets/carvera-tools.json`) carries.
 The lab cuts aluminum with the same programs, at 200% feed and spindle override.
-Chip load is the feed per cutting edge per revolution: feed ÷ (rpm × flutes).
 
 | Id | Finding when | Severity | Evidence | Guards against |
 |---|---|---|---|---|
 | F0 | the spindle speed is 0 | error | — | feeding a stopped tool into the stock |
-| F1 | the spindle speed, cutting feed or plunge feed differs from the tool's Copper 101-H02 preset | warning | the feeds match the tool's Copper 101-H02 preset in all 916 operations whose tool had one; the other 88 use tools without one (rule N5) | settings the lab has not used with that tool |
-| F2 | an end mill or chamfering bit with no Copper 101-H02 preset in the skill's library (N5) cuts at more than 0.034 mm chip load; a tool with a preset is checked against it by F1 | warning | all 647 end-mill operations cut at 0.033 mm (one flute) or 0.017 mm (two flutes), and all 112 chamfering operations at 0.017 mm | stall and broken small end mills |
+| F1 | the spindle speed, cutting feed or plunge feed differs from the tool's Copper preset | warning | the feeds match the tool's Copper preset in all 916 operations whose tool had one; the other 88 use tools without one (rule N5) | settings the lab has not used with that tool |
 
 ### How much the tool cuts at once
 

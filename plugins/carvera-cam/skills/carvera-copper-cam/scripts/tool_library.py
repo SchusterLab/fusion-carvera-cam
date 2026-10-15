@@ -9,7 +9,7 @@ assets/carvera-tools.json is built from two public sources:
     2841A..., from a copy of the catalogue's table (MCMASTER_DRILLS). Each is
     Makera's 1/8" shank drill (DRILL_TEMPLATE) given the catalogue's diameter,
     maximum drilling depth, overall length and point angle.
-Every tool gets one feed preset, Copper 101-H02, by the skill's rule for its
+Every tool gets one feed preset, Copper, by the skill's rule for its
 kind of tool (copper_values).
 
 Run it with plain Python to rebuild the file:
@@ -32,7 +32,7 @@ TOOLS_FILE = os.path.join(os.path.dirname(HERE), 'assets', 'carvera-tools.json')
 MAKERA_TOOLS = ('https://raw.githubusercontent.com/Carvera-Community/Carvera_Community_Profiles/'
                 'main/CAM_Post_Processors/Fusion360-profiles/Tool%20Files/')
 MCMASTER_DRILLS = os.path.join(os.path.dirname(HERE), 'assets', 'mcmaster-expanded-shank-carbide-drills.csv')
-PRESET = 'Copper 101-H02'
+PRESET = 'Copper'
 PRESET_NOTE = ('carvera-cam\'s settings for C10100 copper, half hard (H02); aluminum 6063-T5 '
                'runs the same programs at 200% feed and spindle override.')
 
@@ -49,7 +49,7 @@ DRILL_TEMPLATE = ('Makera Drill Bits', '3.175*12mm Drill')
 
 
 def copper_values(tool, makera_copper):
-    """The skill's Copper 101-H02 settings for a tool of this kind and size.
+    """The skill's Copper settings for a tool of this kind and size.
 
     Spiral O end mills run at 6000 rpm and 200 mm/min with 200 mm/min plunge,
     stepping down 0.3 mm (ramp 300 mm/min) for the 3.175 mm one and
@@ -73,7 +73,7 @@ def copper_values(tool, makera_copper):
     if kind == 'chamfer mill':
         return {'n': 6000, 'v_f': 200, 'v_f_plunge': 200, 'v_f_ramp': 300,
                 'stepdown': 0.1, 'stepover': 0.1, 'ramp-angle': 2}
-    raise ValueError('no Copper 101-H02 rule for a %s' % kind)
+    raise ValueError('no Copper rule for a %s' % kind)
 
 
 def _fmt(v):
@@ -81,7 +81,7 @@ def _fmt(v):
 
 
 def with_preset(tool):
-    """`tool` with the Copper 101-H02 preset as its only preset, made from
+    """`tool` with the Copper preset as its only preset, made from
     Makera's own Copper preset with copper_values."""
     presets = tool.get('start-values', {}).get('presets', [])
     makera = next((p for p in presets if p['name'] == 'Copper'), presets[0])

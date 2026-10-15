@@ -20,13 +20,13 @@ That machine's settings differ from upstream 1.4.6 only in its tool change time 
 Its 3D model differs in the bed, where the fixture plate sits: the wasteboard and its anchors are gone, the bed is 18 mm lower (z = −21.175 mm) for x < 342 mm, and a construction point `Point1` at (−15, −15, −21.175) mm marks the corner of that recess.
 Before uploading the upstream model, `build` makes the same three changes to it (`_slab_model` in `carvera_cam.py`).
 
-Every tool has one feed preset, **Copper 101-H02** (C10100 oxygen-free copper, H02 half-hard temper).
+Every tool has one feed preset, **Copper** (C10100 oxygen-free copper, H02 half-hard temper).
 Aluminum (6063-T5) runs the same programs at 200% feed and spindle override on the Carvera, so there is one set of toolpaths per part.
 No coolant.
 
 The library holds only the tools `build` assigns, so a user can buy them all:
 
-| Tools | Source | Copper 101-H02 |
+| Tools | Source | Copper |
 |---|---|---|
 | Spiral O Metal end mills of 1, 1.5, 2, 2.5 and 3.175 mm | Makera | 6000 rpm, 200 mm/min, plunge 200 mm/min; stepdown 0.3 mm and ramp 300 mm/min for the 3.175 mm end mill, 0.2 mm and 200 mm/min for the smaller ones |
 | Carvera thread mills, M2, M2.5, M3 and M4 | Makera | 10000 rpm and 0.1 mm stepover; the rest is Makera's own copper preset: M2 100, M2.5 150, M3 and M4 200 mm/min, stepping down one pitch |
@@ -50,7 +50,7 @@ It stops with an error if a tool it picks is no longer in Makera's files.
 The Carvera's automatic tool changer holds six tools.
 T1, T2 and T3 are always the same three tools; every other tool takes the next slot in the order the programs first use it, the top program's operations first, then the bottom's.
 
-| Slot | Tool | Copper 101-H02 preset |
+| Slot | Tool | Copper preset |
 |---|---|---|
 | T1 | 3.175 × 7.4 mm drill (McMaster 2841A98) | 10000 rpm, plunge 50 mm/min, retract 500 mm/min |
 | T2 | Spiral O Metal 3.175 × 12 mm, one flute: roughing | 6000 rpm, 200 mm/min, ramp 300 mm/min, stepdown 0.3 mm |
