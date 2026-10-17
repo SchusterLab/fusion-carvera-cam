@@ -228,7 +228,12 @@ def _check_op(rep, s, o, t, earlier, lab, threaded=frozenset()):
             # a plunge, wherever it lands, is checked in the G-code (E4)
             ramp = _v(p, 'rampType', '')
             if ramp == 'disabled':
-                rep.add('E1', 'warning', sn, on, 'pocket entry ramp is disabled')
+                # plunge outside stock: outside the setup's stock box, unless stock
+                # contours say where the stock ends
+                sc = p.itemByName('stockContours')
+                if not (sc and len(sc.value.getCurveSelections())):
+                    rep.add('E1', 'warning', sn, on, 'the pocket plunges outside the setup\'s '
+                            'stock box and feeds in from there: select stock contours')
             elif ramp and ramp != 'predrill' and ramp != 'plunge':
                 rep.add('E1', 'warning', sn, on, 'the %.3g mm end mill ramps into the pocket '
                         '(%s) instead of entering a pre-drilled hole' % (d, ramp))
@@ -309,11 +314,14 @@ def _norm(name):
 
 
 def parse_gcode(text):
-    """[(comment, moves)] per section; a move is (G, x0, y0, z0, x1, y1, z1)."""
+    """[(comment, moves)] per section; a move is (G, x0, y0, z0, x1, y1, z1). An
+    arc in the XY plane comes as straight moves at most 5 degrees round, so a
+    cut round a corner sweeps the corner, not its chord."""
     sections = []
     moves = None
     x = y = z = None
     g = 0
+    plane = 17
     started = False
     for raw in text.splitlines():
         line = raw.strip()
@@ -330,19 +338,45 @@ def parse_gcode(text):
             started = True
         words = _WORD.findall(line)
         nx, ny, nz = x, y, z
+        ci = cj = None
         moved = False
         for k, v in words:
             v = float(v)
             if k == 'G' and v in (0, 1, 2, 3):
                 g = int(v)
+            elif k == 'G' and v in (17, 18, 19):
+                plane = int(v)
             elif k == 'X':
                 nx, moved = v, True
             elif k == 'Y':
                 ny, moved = v, True
             elif k == 'Z':
                 nz, moved = v, True
+            elif k == 'I':
+                ci = v
+            elif k == 'J':
+                cj = v
         if moved and moves is not None:
-            moves.append((g, x, y, z, nx, ny, nz))
+            if g in (2, 3) and plane == 17 and ci is not None and cj is not None \
+                    and None not in (x, y, z, nx, ny, nz):
+                cx, cy = x + ci, y + cj
+                rad = math.hypot(x - cx, y - cy)
+                a0 = math.atan2(y - cy, x - cx)
+                a1 = math.atan2(ny - cy, nx - cx)
+                sweep = (a0 - a1) if g == 2 else (a1 - a0)
+                sweep %= 2 * math.pi
+                if sweep < 1e-9:
+                    sweep = 2 * math.pi  # a full circle
+                n = max(1, int(math.ceil(sweep / math.radians(5))))
+                px, py, pz = x, y, z
+                for i in range(1, n + 1):
+                    a = a0 + (sweep * i / n) * (-1 if g == 2 else 1)
+                    qx, qy = (nx, ny) if i == n else (cx + rad * math.cos(a), cy + rad * math.sin(a))
+                    qz = z + (nz - z) * i / n
+                    moves.append((g, px, py, pz, qx, qy, qz))
+                    px, py, pz = qx, qy, qz
+            else:
+                moves.append((g, x, y, z, nx, ny, nz))
         x, y, z = nx, ny, nz
     return sections
 
@@ -400,11 +434,35 @@ def _wcs_to_world(setup):
         if adsk.fusion.Design.cast(_app().activeProduct) else None
     k = um.convert(1, um.defaultLengthUnits, 'cm') if um else 0.1
 
+    # read once: each API property read is slow, and this runs for every tool point
+    ox, oy, oz = o.x * k, o.y * k, o.z * k
+    xx, xy, xz, yx, yy, yz, zx, zy, zz = x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z
+
     def f(px, py, pz):
         px, py, pz = px / 10, py / 10, pz / 10
-        return adsk.core.Point3D.create(o.x * k + px * x.x + py * y.x + pz * z.x,
-                                        o.y * k + px * x.y + py * y.y + pz * z.y,
-                                        o.z * k + px * x.z + py * y.z + pz * z.z)
+        return adsk.core.Point3D.create(ox + px * xx + py * yx + pz * zx,
+                                        oy + px * xy + py * yy + pz * zy,
+                                        oz + px * xz + py * yz + pz * zz)
+    f.coords = lambda px, py, pz: (ox + (px * xx + py * yx + pz * zx) / 10,
+                                   oy + (px * xy + py * yy + pz * zy) / 10,
+                                   oz + (px * xz + py * yz + pz * zz) / 10)
+    return f
+
+
+def _world_to_wcs(setup):
+    """Function mapping a world point (mm, the design's frame) to the setup's WCS (mm)."""
+    m = setup.workCoordinateSystem
+    o, x, y, z = m.getAsCoordinateSystem()
+    um = adsk.fusion.Design.cast(_app().activeProduct).unitsManager \
+        if adsk.fusion.Design.cast(_app().activeProduct) else None
+    k = um.convert(1, um.defaultLengthUnits, 'cm') if um else 0.1
+    ox, oy, oz = o.x * k * 10, o.y * k * 10, o.z * k * 10
+    xx, xy, xz, yx, yy, yz, zx, zy, zz = x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z
+
+    def f(px, py, pz):
+        dx, dy, dz = px - ox, py - oy, pz - oz
+        return (dx * xx + dy * xy + dz * xz, dx * yx + dy * yy + dz * yz,
+                dx * zx + dy * zy + dz * zz)
     return f
 
 
@@ -432,17 +490,31 @@ def _drilled(moves, t, to_world, top, sn):
             for (x, y), z in deepest.items() if z + tip < top]
 
 
-def _cleared_to(x, y, r, top, milled):
-    """How deep earlier milling passes in this setup cleared the whole footprint
-    of a tool of radius r at (x, y): the WCS z, or `top` where they left some of
-    it uncut. The footprint is sampled at its centre and at eight points 0.05 mm
-    inside its edge (a sliver at the edge is harmless); a point is cut down to
-    the deepest pass whose tool covered it. `milled` holds (moves, tool radius)
-    per operation."""
+def _cleared_to(x, y, r, top, milled, other=()):
+    """How deep earlier milling passes cleared the whole footprint of a tool of
+    radius r at (x, y): the WCS z, or `top` where they left some of it uncut.
+    The footprint is sampled at its centre and at eight points 0.05 mm inside
+    its edge (a sliver at the edge is harmless); a point is cut down to the
+    deepest pass in this setup whose tool covered it. `milled` holds (moves,
+    tool radius) per operation. `other` holds the cuts of earlier setups, each
+    as (ax, ay, bx, by, lo, hi, tool radius) in this setup's WCS: the tool swept
+    the column from lo to hi along the line from (ax, ay) to (bx, by). A point
+    is also cleared as deep as those columns join the stock this setup cleared."""
     rs = max(r - 0.05, 0.0)
     pts = [(x, y)] + [(x + rs * math.cos(a * math.pi / 4), y + rs * math.sin(a * math.pi / 4))
                       for a in range(8)]
     depth = [top] * len(pts)
+    cols = [[] for _ in pts]
+    for ax, ay, bx, by, lo, hi, rm in other:
+        if min(ax, bx) > x + r + rm or max(ax, bx) < x - r - rm or \
+                min(ay, by) > y + r + rm or max(ay, by) < y - r - rm:
+            continue
+        dx, dy = bx - ax, by - ay
+        ll = dx * dx + dy * dy
+        for i, (qx, qy) in enumerate(pts):
+            u = 0.0 if ll < 1e-12 else max(0.0, min(1.0, ((qx - ax) * dx + (qy - ay) * dy) / ll))
+            if math.hypot(qx - ax - u * dx, qy - ay - u * dy) <= rm + 1e-3:
+                cols[i].append((lo, hi))
     for moves, rm in milled:
         for m in moves:
             ax, ay, bx, by = m[1], m[2], m[4], m[5]
@@ -458,16 +530,25 @@ def _cleared_to(x, y, r, top, milled):
                 u = 0.0 if ll < 1e-12 else max(0.0, min(1.0, ((qx - ax) * dx + (qy - ay) * dy) / ll))
                 if math.hypot(qx - ax - u * dx, qy - ay - u * dy) <= rm + 1e-3:
                     depth[i] = mz
+    for i, cs in enumerate(cols):
+        # down through the columns that join what is already cleared
+        moved = True
+        while moved:
+            moved = False
+            for lo, hi in cs:
+                if hi >= depth[i] - 0.01 and lo < depth[i]:
+                    depth[i] = lo
+                    moved = True
     return max(depth)
 
 
 def _check_plunges(rep, rule, severity, sn, o, moves, t, holes, milled, to_world, top,
-                   rapids=False):
+                   rapids=False, other=()):
     """E4 (pockets and contours) and TH2 (thread mills, bores and circular cuts):
-    every plunge into the stock must go into stock earlier milling passes in
-    this setup have cleared, and below that down a hole drilled earlier, in
-    this setup or an earlier one, at least as wide as the tool there and full
-    width over the rest of the plunge. A plunge is a straight move down at the
+    every plunge into the stock must go into stock earlier milling passes have
+    cleared, in this setup or an earlier one, and below that down a hole drilled
+    earlier, in this setup or an earlier one, at least as wide as the tool there
+    and full width over the rest of the plunge. A plunge is a straight move down at the
     feed, or also at a rapid with `rapids`."""
     r = t['d'] / 2
     kinds = (0, 1) if rapids else (1,)
@@ -479,7 +560,7 @@ def _check_plunges(rep, rule, severity, sn, o, moves, t, holes, milled, to_world
             plunges[k] = min(plunges.get(k, m[6]), m[6])
     bad = []
     for (x, y), z in sorted(plunges.items()):
-        cleared = _cleared_to(x, y, r, top, milled)
+        cleared = _cleared_to(x, y, r, top, milled, other)
         if cleared <= z + 0.01:
             continue  # into stock an earlier cut has cleared
         px, py, plo, phi = _segment(to_world, x, y, z, cleared)
@@ -533,9 +614,12 @@ def _check_thread_depth(rep, sn, o, cuts, setup, holes):
                     z_min=round(min(inside), 3), hole_bottom=round(hole_bottom, 3))
 
 
-def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None):
+def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=None):
     """The rules read from the setup's G-code. `holes` lists the holes earlier
-    setups drilled (see _drilled); this setup's holes are added to it."""
+    setups drilled (see _drilled), and `swept` the stock their end mills cut, as
+    (ax, ay, az, bx, by, bz, cz, tool radius) in the design's frame, in mm: the
+    tool swept the column from z = az to z = cz along the line from a to b.
+    This setup's holes and cuts are added to them."""
     sn = s.name
     sp = s.parameters
     top = _mm(_v(sp, 'stockZHigh', 0))
@@ -553,11 +637,18 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None):
     fixture = _fixture_bodies(s)
     to_world = _wcs_to_world(s)
     holes = holes if holes is not None else []
+    swept = swept if swept is not None else []
+    to_wcs = _world_to_wcs(s)
+    other = []  # the earlier setups' cuts, in this setup's WCS
+    for ax, ay, az, bx, by, bz, cz, rm in swept:
+        a, b, c = to_wcs(ax, ay, az), to_wcs(bx, by, bz), to_wcs(ax, ay, cz)
+        other.append((a[0], a[1], b[0], b[1], min(a[2], c[2]), max(a[2], c[2]), rm))
     milled = []  # (moves, tool radius) of the milling operations so far in this setup
     fx_boxes = []
     for b in fixture:
         bb = b.boundingBox
-        fx_boxes.append((b, bb))
+        lo, hi = bb.minPoint, bb.maxPoint
+        fx_boxes.append((b, (lo.x, lo.y, lo.z, hi.x, hi.y, hi.z)))
     hits = 0
     for idx, o in enumerate(ops):
         moves = by_op.get(idx)
@@ -572,13 +663,22 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None):
             holes += _drilled(moves, t, to_world, top, sn)
         elif o.strategy in ('thread', 'bore', 'circular'):
             _check_plunges(rep, 'TH2', 'error' if o.strategy == 'thread' else 'warning', sn, o,
-                           moves, t, holes, milled, to_world, top, rapids=True)
+                           moves, t, holes, milled, to_world, top, rapids=True, other=other)
             if t['type'] in MILLING:
                 milled.append((cuts, t['d'] / 2))
         elif t['type'] in MILLING:
             if o.strategy in ('pocket2d', 'contour2d') and t['type'] != 'chamfer mill':
-                _check_plunges(rep, 'E4', 'warning', sn, o, moves, t, holes, milled, to_world, top)
+                _check_plunges(rep, 'E4', 'warning', sn, o, moves, t, holes, milled, to_world, top,
+                               other=other)
             milled.append((cuts, t['d'] / 2))
+        if t['type'] in MILLING and t['type'] != 'chamfer mill':
+            # what this cut clears, for the setups after this one: the column
+            # from the move's shallower end up to the stock top
+            for m in cuts:
+                a = to_world.coords(m[1], m[2], max(m[3], m[6]))
+                b = to_world.coords(m[4], m[5], max(m[3], m[6]))
+                c = to_world.coords(m[1], m[2], top)
+                swept.append(tuple(round(v * 10, 4) for v in a + b + (c[2],)) + (t['d'] / 2,))
         if o.strategy == 'thread':
             _check_thread_depth(rep, sn, o, cuts, s, holes)
         # the toolpath's retract plane against the operation's current heights: a
@@ -639,10 +739,11 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None):
                                     py + r * math.sin(a * math.pi / 4), pz + 0.05))
             hit = None
             for px, py, pz in pts:
-                w = to_world(px, py, pz)
-                for b, bb in fx_boxes:
-                    if not bb.contains(w):
+                wx, wy, wz = to_world.coords(px, py, pz)
+                for b, (x0, y0, z0, x1, y1, z1) in fx_boxes:
+                    if not (x0 <= wx <= x1 and y0 <= wy <= y1 and z0 <= wz <= z1):
                         continue
+                    w = adsk.core.Point3D.create(wx, wy, wz)
                     if b.pointContainment(w) == adsk.fusion.PointContainment.PointInsidePointContainment:
                         hit = (px, py, pz, '%s/%s' % (b.parentComponent.name, b.name))
                         break
@@ -735,9 +836,10 @@ def check(args=None):
         if ok:
             folder = tempfile.mkdtemp(prefix='carvera-check-')
             text = _post_setup(cam, s, ok, post, folder)
-            # holes drilled in an earlier setup can serve this one's entries too
+            # holes drilled and stock cut in an earlier setup can serve this
+            # one's entries too
             _check_gcode(rep, cam, s, ok, tools, parse_gcode(text), deadline,
-                         state.setdefault('holes', []))
+                         state.setdefault('holes', []), state.setdefault('swept', []))
         state['done'].append(sn)
         state['items'] = rep.items
         with open(STATE, 'w', encoding='utf-8') as f:

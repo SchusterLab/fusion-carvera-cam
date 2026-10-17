@@ -1,6 +1,6 @@
 {
   "name": "carvera-cam",
   "description": "Generate Fusion CAM toolpaths for copper parts on SchusterLab's Makera Carvera, with the lab's tools, feeds, setups and tab scheme.",
-  "version": "0.22.1",
+  "version": "0.23.0",
   "author": { "name": "SchusterLab" }
 }
