@@ -17,7 +17,7 @@ Call `build` with the same arguments as the script's build, and with `"recipes":
 
 1. **Read the part.**
    `features({})` lists what this recipe works from (see "What features gives").
-   Look at the part in Fusion too, with a screenshot aimed as SKILL.md's "Follow the recipes" shows.
+   Look at the part in Fusion too, with a screenshot aimed as SKILL.md's "Follow the recipes" shows, to see any pocket open to the side or tight corner the recipes for those would cut.
 2. **Sort the holes** (see "Holes").
 3. **Add the top setup's operations**, in the order of "The operations in order", each with `add_operation` (see "Calling add_operation").
    Each operation goes last in its setup, so add them in run order.
@@ -37,7 +37,7 @@ Call `build` with the same arguments as the script's build, and with `"recipes":
 - `floors`: every pocket floor and both outer faces, with `side`, `role` (`pocket` or `face`), `depth` below that side's face, `corner_radius`, `side_open`, `shelf`, and what build made for it: `entry` (its entry point, whether it is `drilled`, and the hole's depth), `narrow` (too little room round the end mill for a pocket to enter), `region` (the shelf region it is pocketed in), `slot` and `fed_by_slot`.
 - `holes`: each hole on its own, with `dia_mm`, `depth_mm`, `side` (`top`, `bottom`, or `none` when closed at both ends), `through`, `thread`, `point_angle` (a modelled drill point), `opens_in` (`face`, the index of the pocket floor its rim lies in, or `other`), `hole_below` (the narrower hole that goes on down from its floor, for a counterbore) and `centre` (its centre point).
 - `windows`: each through opening that is not a round hole, with `z` (where it opens), `corner_radius`, `entry` (its point, and `pocket_fits`: whether a pocket can enter there) and `starts_at_floor` (the shelf floor over it, which the pockets clear it down to).
-- `library`: the drills (`dia_mm`, `flute_mm`, `point_mm`, how far the point reaches below the full diameter), the 3.175 mm end mill, the small end mills, the chamfering bit and the thread mills.
+- `library`: the drills (`dia_mm`, `flute_mm`, `point_mm`, how far the point reaches below the full diameter), the 3.175 mm end mill, the small end mills, the chamfering bit and the thread mills (`tool`, `dia_mm`).
 
 ## Names
 
@@ -48,7 +48,7 @@ Call `build` with the same arguments as the script's build, and with `"recipes":
 
 **What it cuts**, in `select`:
 - `pockets`, `contours` and `stock_contours`, lists of: `floor:<i>`, `floor_outline:<i>` (the floor's outer loop, the tool inside), `floor_inner:<i>` (its inner loops), `hole_floor_inner:<i>` (the inner loops of a counterbore's floor), `face:<top|bottom>`, `face_deburr:<top|bottom>` (the edges of the face a deburr takes; see Deburr), `patch:<name>`, `patch_outline:<top|bottom>` (a patch's outer edge as a closed boundary), `region:<k>`, `window:<j>`, `hole_rim:<i>`, `chains:<corner|tabs|ends>`, `slot:<k>`, `silhouette`, `path:<id>`.
-- `holes`: hole indices, for a drill, bore or thread mill.
+- `holes`: hole indices as integers (`[2, 3]`), for a drill, bore or thread mill, which then keeps its default hole mode.
 - `points` (a drill's points), `predrill` (a pocket's entry holes) and `entries` (a contour's entry points): point names, `entry`, `corner:<k>`, `pocket:<floor>`, `window:<j>`, `hole:<i>`, `slot_end:<k>`.
 
 ## Heights
@@ -91,7 +91,7 @@ T1, the 3.175 mm drill, reaches 6.9 mm (its 7.4 mm flute less 0.5 mm) into the m
 Parameters take Fusion expressions as strings: a length with its unit (`'0.2mm'`), an enumeration in single quotes inside the string (`"'from point'"`), a flag as `'true'` or `'false'`, a count as `'2'`.
 `add_operation` puts the lab's settings for each strategy under them (see the end of "The operations in order"), so leave out what this recipe does not name.
 A tool is named by its description as `tools({})` or features' `library` gives it; the start of a description is enough when only one tool begins with it, as features' truncated `Chamfering Bit - 1/8`.
-An operation's diameter goes in its name with two decimals (`Bore 4.20`, `Hole pocket 7.00`), an M4 tap hole's with three (`Bore M4 3.332`), a drill's as the drill's own description begins (`Drill 2.7`).
+An operation's diameter goes in its name with two decimals (`Bore 4.20`, `Hole pocket 7.00`), an M4 tap hole's with three (`Bore M4 3.332`), a drill's as the drill's own description begins (`Drill 2.7`; T1's is `Drill 3.175`, whatever the hole).
 Operations of the same name, such as one `Window` per window, take Fusion's suffixes (`Window (2)`, …) in the order they are added.
 
 ## The operations in order
@@ -135,7 +135,7 @@ Each name below is the operation's name; the multi-depth ones (`doMultipleDepths
 12. **Narrow pocket**: T2, `contour2d`, multi-depth, `contours` `[floor_outline:<i>]`, `entries` `[pocket:<i>]`, top at H, bottom at the floor (offset 0).
 13. **Window**, one per window: top at H when it opens in the face, at its `starts_at_floor` floor when it has one, else at `window_top:<j>`; bottom through the part.
     T2, multi-depth: a `pocket2d` (default `'predrill'` ramp) with `pockets` `[window:<j>]` and `predrill` `[window:<j>]` when `pocket_fits` (or it has no entry), else a `contour2d` with `contours` `[window:<j>]` and `entries` `[window:<j>]`.
-14. **Outline between tabs** (window machining, top setup): T2, `contour2d`, multi-depth, `contours` `[chains:corner]`, top at `tab:top` (offset 0), bottom at `tab:bottom` with offset −`overlap`.
+14. **Outline between tabs** (window machining, top setup): T2, `contour2d`, multi-depth, `contours` `[chains:corner]`, no entry points (each chain starts beside its corner entry, which Tab entry holes and the main entry drilled), top at `tab:top` (offset 0), bottom at `tab:bottom` with offset −`overlap`.
 
 ### Finishing passes
 
@@ -157,23 +157,23 @@ T3, each in one pass, in this order, with the drills of step 16a among them:
     The heights it needs: a pocket's corner cut starts at H, or, for a floor inside a shelf region, at that region's floor; its bottom is `'from contour'`; a window's runs from H through the part.
 24. **Bore <diameter>** for the holes small end mills bore: that end mill, `bore`, `stepover` `0.2mm`, `numberOfStepovers` `2`, top at the hole top, `bottomHeight_offset` `-0.5mm` through, `0mm` blind.
 25. **Drill <diameter>**, one per drill and through or blind (` (blind)`), for the holes not drilled before the finishing passes: the plain drilled holes first, then the tap drills of threads.toml.
-    `drill`, `holes`, top at the hole top, the `[drill]` cycle, through holes `breakThroughDepth` `0.5mm` and `drillTipThroughBottom` `true`, blind holes `breakThroughDepth` `0mm` and `drillTipThroughBottom` `true` (full diameter to the bottom: the point goes its length deeper).
+    `drill`, `holes` (T1's with `"T": 1`), top at the hole top (so `topHeight_offset` 0.2 mm while the face carries its allowance, which it does until Face (finish)), the `[drill]` cycle, through holes `breakThroughDepth` `0.5mm` and `drillTipThroughBottom` `true`, blind holes `breakThroughDepth` `0mm` and `drillTipThroughBottom` `true` (full diameter to the bottom: the point goes its length deeper).
     Warn about each blind hole with no modelled point, or one whose `point_angle` differs from the drill's by more than 0.5°.
 26. **Thread <size>**, one per size and through or blind: the size's thread mill, `thread`, `holes`, with
     `direction` `'climb'`, `threadPitch` the pitch, `pitchDiameterOffset`, `stepover` `0.1mm`, `useHelicalLeads` `false`, `doMultiplePasses` `true`,
-    `numberOfStepovers` ⌊h / 0.1⌋ + 1 with h = (modelled hole + pitch diameter offset − the thread mill's diameter) / 2 (the thread mill's diameter from `tools({})`),
+    `numberOfStepovers` ⌊h / 0.1⌋ + 1 with h = (modelled hole + pitch diameter offset − the thread mill's diameter) / 2 (the thread mill's `dia_mm` in features' `library`),
     `topHeight_offset` threads.toml's `top_offset` plus 0.2 mm while the face carries its allowance,
     `bottomHeight_offset` its `through_bottom_offset` or `blind_bottom_offset`.
 27. **Bore <diameter> (finish)**, for each group of Bores and hole pockets, in the same order: T3, `bore`, `doMultiplePasses` `false`, with `stepover` `0.3mm` and `numberOfStepovers` ⌈r / 0.3⌉ as for a rough bore (a hole pocket's finishing bore too); top at H for a hole that opens in the face, else `'from hole top'` with offset 0; `bottomHeight_offset` `-0.5mm` through, `0mm` blind.
-28. **Face (finish)**: T3, `pocket2d`, one pass, `pockets` `[patch:<side> finish]`, `predrill` `[entry]`, top at H (0.2 mm above the face), `bottomHeight_mode` `'from contour'`, no allowance.
+28. **Face (finish)**: T3, `pocket2d` (default `'predrill'` ramp), one pass, `pockets` `[patch:<side> finish]`, `predrill` `[entry]`, top at H (0.2 mm above the face), `bottomHeight_mode` `'from contour'`, no allowance.
     H is now the face.
 
 ### Deburring and the tabs
 
-29. **Deburr** (when `chamfer` and the setup's side has a flat face): the chamfering bit, `chamfer2d`, `contours` `[face_deburr:<side>]`, `chamferTipOffset` t.
+29. **Deburr** (when `chamfer` and the setup's side has a flat face): the chamfering bit, `chamfer2d`, `contours` `[face_deburr:<side>]`, `chamferTipOffset` t, and no heights: a chamfer sits at the edges it follows.
     `face_deburr` takes every edge of the face, but where the stock fits the part and the face is not faced, it leaves out the edges on the stock's own sides: no tool cuts them, so they have no burrs.
     The bit's point sits t below the 0.1 mm chamfer, and Fusion leaves out an edge where the point would go below a floor.
-    Room: the smallest of the setup's pocket depths, its blind holes' depths, in window machining the depth of the tab band's near face below the part's face, and 0.7 mm.
+    Room: the smallest of the setup's pocket depths, its blind holes' depths, in window machining the depth below the part's face of the tab band's face on this setup's side (the band's top in the top setup, its bottom in the bottom one), and 0.7 mm.
     t = room − 0.2 mm, kept between 0.1 and 0.5 mm; warn when even 0.1 mm leaves the point within 0.02 mm of a floor or the tabs.
 30. **Deburr counterbores**, for each hole with a `hole_below`: the chamfering bit, `chamfer2d`, `contours` `[hole_floor_inner:<i>]`, `chamferTipOffset` 0.5 mm when the lower hole is through, else its depth less 0.2 mm, kept between 0.1 and 0.5 mm; one operation per tip offset.
 31. **Cut tabs** (window machining, in the last setup: the bottom one with two sides, the top with one): T2, `contour2d`, multi-depth, `maximumStepdown` `0.2mm`, `contours` `[chains:tabs]`, `"program": "tabs"`.
@@ -227,7 +227,7 @@ call('add_operation', {
     'select': {'pockets': ['floor:0', 'floor:1'], 'predrill': ['pocket:0', 'pocket:1']}})
 ```
 
-A call adds one operation and takes about a second, so a part's operations fit in a few MCP calls of ten to twenty each.
+A call adds one operation and takes about a second, so a part's operations fit in a few MCP calls of ten to fifteen each, inside the minute an MCP call may take.
 It prints `rejected` when Fusion refused a point or face, which leaves that cut without its entry: fix the call before going on.
 
 ## Comparing

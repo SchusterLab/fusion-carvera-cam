@@ -181,11 +181,11 @@ With one setup the band sits on the part's bottom face instead, since the top se
 A pocket open to the side of the part is reached sideways at its own depth, so the band moves to the nearest height clear of every such opening (with one setup, the lowest).
 
 - The top setup's outline cuts from the faced stock down to the top of the band.
-- The **outline between tabs** (four corner chains, each running from one tab to the next) then cuts from the top of the band to 0.5 mm below its bottom.
+- The **outline between tabs** (four corner chains, each running from one tab to the next) then cuts from the top of the band to its overlap below its bottom: 0.5 mm, or 0.2 × the part's thickness for parts under 2.5 mm.
 - The bottom setup's outline cuts from the bottom face up to the bottom of the band.
-- `<part>_tabs`, the last program, cuts each tab span through the band and 0.5 mm past it, in 0.2 mm steps, and frees the part.
+- `<part>_tabs`, the last program, cuts each tab span through the band and the same overlap past it, in 0.2 mm steps, and frees the part.
 
-With one setup there is no bottom outline: the outline between tabs and the tab cut both run from the top of the band, on the part's bottom face, to 0.5 mm below the stock's bottom, and the tab cut is the top setup's last operation.
+With one setup there is no bottom outline: the outline between tabs and the tab cut both run from the top of the band, on the part's bottom face, to the overlap below the stock's bottom, and the tab cut is the top setup's last operation.
 
 Each tab span is 5 mm along the outline, so the bridge left after the end mill's radius on each side is about 1.8 mm wide.
 The corner chains and tab spans are curves in the `carvera-cam` sketch; the generator orients each chain so a left-compensated tool stays outside the part in both setups.

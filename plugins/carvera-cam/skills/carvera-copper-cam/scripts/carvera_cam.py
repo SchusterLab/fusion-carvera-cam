@@ -1199,7 +1199,9 @@ def features(args=None):
             'small_end_mills': [{'tool': d, 'dia_mm': dd, 'flute_mm': fl}
                                 for d, dd, fl in SMALL_ENDMILLS],
             'chamfer': CHAMFER,
-            'thread_mills': {t: v[2] for t, v in THREADS.items()}},
+            'thread_mills': {t: {'tool': v[2], 'dia_mm': round(mm(
+                lib.by_desc[v[2]].parameters.itemByName('tool_diameter').value.value), 4)}
+                for t, v in THREADS.items() if v[2] in lib.by_desc}},
     }
     print(json.dumps(out, indent=1))
     return out
