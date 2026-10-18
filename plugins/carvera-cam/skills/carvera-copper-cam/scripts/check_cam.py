@@ -805,7 +805,18 @@ def _deburr_edges(setup):
     return out
 
 
-def _check_chamfers(rep, setup, chamfers, to_world):
+def _raw_stock_edge(pts, box, top, tol=0.01):
+    """Is the edge (sample points, WCS mm) one of the stock's own, at its top and
+    on a side of the stock box? No tool cuts such an edge, where the stock fits the
+    part and its face is not faced, so it has no burr to take off."""
+    if box is None or top is None:
+        return False
+    x0, x1, y0, y1 = box
+    return all(abs(z - top) < tol and min(abs(x - x0), abs(x - x1), abs(y - y0), abs(y - y1)) < tol
+               for x, y, z in pts)
+
+
+def _check_chamfers(rep, setup, chamfers, to_world, box=None, top=None):
     """DB1: every edge _deburr_edges lists is chamfered: at each of its sample
     points, a chamfering bit's cone in this setup passes through it. Fusion
     leaves out edges where the point would go below a floor, so the G-code, not
@@ -816,6 +827,8 @@ def _check_chamfers(rep, setup, chamfers, to_world):
     cones = [(o, _chamfer_cone(t), cuts) for o, t, cuts in chamfers]
     missed = []
     for pts in _deburr_edges(setup):
+        if _raw_stock_edge(pts, box, top):
+            continue
         bad = 0
         for px, py, pz in pts:
             hit = False
@@ -1050,7 +1063,7 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
                 hits += 1
                 rep.add('X1', 'error', sn, o.name, 'the tool enters the fixture body %r at '
                         'X%.2f Y%.2f Z%.2f' % (hit[3], hit[0], hit[1], hit[2]))
-    _check_chamfers(rep, s, chamfers, to_world)
+    _check_chamfers(rep, s, chamfers, to_world, box, top)
 
 
 # ------------------------------------------------------------------ check

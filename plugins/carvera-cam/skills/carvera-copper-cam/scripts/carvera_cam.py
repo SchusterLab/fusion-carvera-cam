@@ -1000,18 +1000,32 @@ def tools(args=None):
     return out
 
 
-def _tool_for(cam, desc):
-    """(tool, preset) for the tool described `desc`: the part's own copy when an
-    operation uses it already, else the library's, numbered after the others
-    (renumber_tools puts it in its slot)."""
+def _tool_for(cam, desc, number=None):
+    """(tool, preset) for the tool described `desc` (or the one tool whose
+    description starts with it): the part's own copy when an operation uses it
+    already, in slot `number` if given, else the library's, numbered `number`,
+    or after the others (renumber_tools puts it in its slot)."""
+    descr = lambda t: t.parameters.itemByName('tool_description').value.value
+    num = lambda t: int(t.parameters.itemByName('tool_number').value.value)
+    used = [o.tool for o in _all_ops(cam) if o.tool is not None]
+    lib = None
+    if not any(descr(t) == desc for t in used):
+        lib = Tools()
+        if desc not in lib.by_desc:
+            hits = [d for d in lib.by_desc if d.startswith(desc)]
+            if len(hits) != 1:
+                raise RuntimeError('tool %r is not in the library (%s)' % (desc, TOOLS_FILE))
+            desc = hits[0]
     for o in _all_ops(cam):
-        if o.tool is not None and o.tool.parameters.itemByName('tool_description').value.value == desc:
+        if o.tool is not None and descr(o.tool) == desc and (number is None or num(o.tool) == number):
             return o.tool, o.toolPreset
-    src = Tools().by_desc[desc]
+    taken = {num(t): descr(t) for t in used}
+    if number is not None and number in taken:
+        raise RuntimeError('T%d already holds %s' % (number, taken[number]))
+    src = (lib or Tools()).by_desc[desc]
     tool = adsk.cam.Tool.createFromJson(src.toJson())
-    top = max([int(o.tool.parameters.itemByName('tool_number').value.value)
-               for o in _all_ops(cam) if o.tool is not None] or [0])
-    tool.parameters.itemByName('tool_number').expression = str(top + 1)
+    tool.parameters.itemByName('tool_number').expression = str(
+        number if number is not None else max(list(taken) + [0]) + 1)
     preset = None
     for name in PRESET_NAMES:
         preset = next((tool.presets.item(i) for i in range(tool.presets.count)
@@ -1021,30 +1035,396 @@ def _tool_for(cam, desc):
     return tool, preset
 
 
+LAYOUT_ATTR = ('carvera-cam', 'layout')  # on the design: what build made, for the recipes
+
+
+def _p3(p):
+    return [p.x, p.y, p.z]
+
+
+def _save_layout(design, a, plan, name, setups, threads):
+    """What build made for the operations to use, kept in the design as entity
+    tokens and as indices into the analysis (floors, holes, windows), so that
+    features and add_operation find it again in later calls."""
+    lay = plan['layout']
+    tok = lambda e: e.entityToken
+    floor_of = {f['face'].tempId: i for i, f in enumerate(a['floors'])}
+    hole_of = {h['face'].tempId: i for i, h in enumerate(a['holes'])}
+
+    def chain(ch):
+        return {'curves': [tok(c) for c in ch['curves']], 'start': _p3(ch['start']),
+                'dir': _p3(ch['dir'])}
+    regions, index = [], {}
+    for key, r in lay['shelves'].items():
+        if id(r) not in index:
+            index[id(r)] = len(regions)
+            regions.append({'curves': [tok(c) for c in r['curves']], 'clockwise': r['clockwise'],
+                            'side': r['side'], 'z_mm': r['z'], 'floors': []})
+        regions[index[id(r)]]['floors'].append(floor_of[key])
+    out = {
+        'name': name, 'setups': setups,
+        'strategy': {k: plan[k] for k in ('sides', 'outline', 'ends')},
+        'margin_top_mm': plan['margin_top'], 'margin_bottom_mm': plan['margin_bottom'],
+        'taps': plan['taps'], 'face': plan['face'], 'chamfer': plan['chamfer'],
+        'tab': dict(plan['tab']) if plan['outline'] else None,
+        'tab_faces': {k: tok(v) for k, v in (plan.get('tab_faces') or {}).items() if v is not None},
+        'patches': {k: tok(v) for k, v in (plan.get('face_patches') or {}).items()},
+        'entry': tok(lay['entry']),
+        'corner': [dict(chain(c), entry=tok(c['entry'])) for c in lay['corner']],
+        'tabs': [chain(c) for c in lay['tabs']],
+        'ends': [chain(c) for c in lay['ends']],
+        'pocket_entries': {str(floor_of[k]): {'point': tok(e['point']), 'drill': e['drill'],
+                                              'depth_mm': e['depth']}
+                           for k, e in lay['pocket_entries'].items() if k in floor_of},
+        'narrow': sorted(floor_of[k] for k in lay['narrow'] if k in floor_of),
+        'regions': regions,
+        'window_entries': [None if e is None else {'point': tok(e['point']), 'pocket': e['pocket']}
+                           for e in lay['window_entries']],
+        'window_tops': [None if f is None else floor_of[f.tempId] for f in lay['window_tops']],
+        'slots': [{'floor': floor_of[sl['floor']['face'].tempId], 'side': sl['side'],
+                   'tool': sl['tool'][0], 'width_mm': sl['tool'][1], 'line': tok(sl['line']),
+                   'end': tok(sl['end']), 'fed': [floor_of[g['face'].tempId] for g in sl['fed']]}
+                  for sl in lay['slots']],
+        'hole_centres': {str(hole_of[k]): tok(pt) for k, pt in lay['hole_centres'].items()
+                         if k in hole_of},
+        'threads': {str(i): t for i, t in threads.items()},
+    }
+    attr = design.attributes.itemByName(*LAYOUT_ATTR)
+    if attr is not None:
+        attr.deleteMe()
+    design.attributes.add(LAYOUT_ATTR[0], LAYOUT_ATTR[1], json.dumps(out))
+    return out
+
+
+def _layout(design):
+    attr = design.attributes.itemByName(*LAYOUT_ATTR)
+    if attr is None:
+        raise RuntimeError('no layout in the design: run build with "recipes": "all" first')
+    return json.loads(attr.value)
+
+
+def _entity(design, token):
+    hits = design.findEntityByToken(token)
+    if not hits:
+        raise RuntimeError('something build made is gone from the design; build again')
+    return hits[0]
+
+
+def _hole_below(a, h):
+    """The widest narrower hole that goes on down from blind hole h's floor, on its
+    axis (the hole under a counterbore), or None."""
+    if h['through']:
+        return None
+    top = h['side'] != 'bottom'
+    floor = h['z0'] if top else h['z1']
+    near = lambda u, v: abs(u - v) < 1e-3
+    below = [g for g in a['holes'] if g['dia'] < h['dia'] - 1e-3
+             and near(g['x'], h['x']) and near(g['y'], h['y'])
+             and near(g['z1'] if top else g['z0'], floor)]
+    return max(below, key=lambda g: g['dia']) if below else None
+
+
+def features(args=None):
+    """Everything a recipe needs to machine the part after build with "recipes":
+    "all": the machining strategy, the setups and the stock round the part, the
+    tab band, and every floor, hole and window with the entry points, chains and
+    regions build sketched for them, each named as add_operation takes it."""
+    args = args or {}
+    design, body, a = _built(args)
+    L = _layout(design)
+    floor_of = {f['face'].tempId: i for i, f in enumerate(a['floors'])}
+    faces = {getattr(a['top_face'], 'tempId', None): 'face', getattr(a['bottom_face'], 'tempId', None): 'face'}
+    thickness = a['ztop'] - a['zbot']
+    region_of = {i: k for k, r in enumerate(L['regions']) for i in r['floors']}
+    slot_of = {sl['floor']: k for k, sl in enumerate(L['slots'])}
+    floors = []
+    for i, f in enumerate(a['floors']):
+        e = L['pocket_entries'].get(str(i))
+        floors.append(dict(_strip(f), floor=i, **{
+            'entry': None if e is None else {'point': 'pocket:%d' % i, 'drilled': e['drill'],
+                                             'hole_depth_mm': e['depth_mm']},
+            'narrow': i in L['narrow'], 'region': region_of.get(i), 'slot': slot_of.get(i),
+            'fed_by_slot': next((k for k, sl in enumerate(L['slots']) if i in sl['fed']), None)}))
+    holes = []
+    for i, h in enumerate(a['holes']):
+        rim, bottom = _hole_ends(h, h['side'] != 'bottom')
+        rf = rim.face.tempId if rim is not None else None
+        g = _hole_below(a, h)
+        holes.append({
+            'hole': i, 'dia_mm': h['dia'], 'depth_mm': h['depth'], 'z0': h['z0'], 'z1': h['z1'],
+            'side': h['side'], 'through': h['through'], 'x': h['x'], 'y': h['y'],
+            'thread': L['threads'].get(str(i)) or L['taps'].get('%g' % h['dia']),
+            'point_angle': h['point_angle'],
+            # where its rim lies: the part's face, a pocket floor, or another face
+            'opens_in': None if rf is None else faces.get(rf, floor_of.get(rf, 'other')),
+            'has_bottom_face': bottom is not None,
+            'hole_below': None if g is None else a['holes'].index(g),
+            'centre': 'hole:%d' % i if str(i) in L['hole_centres'] else None})
+    windows = []
+    for j, w in enumerate(a['windows']):
+        e = L['window_entries'][j]
+        windows.append({'window': j, 'z': w['z'], 'depth_mm': w['depth'],
+                        'corner_radius': w['corner_radius'],
+                        'entry': None if e is None else {'point': 'window:%d' % j,
+                                                         'pocket_fits': e['pocket']},
+                        'starts_at_floor': L['window_tops'][j]})
+    lib = Tools()
+    out = {
+        'name': L['name'], 'setups': L['setups'], 'strategy': L['strategy'],
+        'part': {'size_mm': a['size'], 'ztop': a['ztop'], 'zbot': a['zbot'],
+                 'thickness_mm': round(thickness, 4), 'has_top_face': a['top_face'] is not None,
+                 'has_bottom_face': a['bottom_face'] is not None},
+        'stock_above_mm': {'top': L['margin_top_mm'], 'bottom': L['margin_bottom_mm']},
+        'face': L['face'], 'chamfer': L['chamfer'], 'taps': L['taps'],
+        'tab': None if L['tab'] is None else dict(
+            L['tab'], top_z=L['tab']['z'] + L['tab']['band'] / 2,
+            bottom_z=L['tab']['z'] - L['tab']['band'] / 2, faces=sorted(L['tab_faces'])),
+        'patches': sorted(L['patches']),
+        'layout': {
+            'entry': 'entry',
+            'corner_chains': len(L['corner']), 'tab_chains': len(L['tabs']),
+            'end_chains': len(L['ends']),
+            'corner_entries': ['corner:%d' % k for k in range(len(L['corner']))],
+            'regions': [{'region': k, 'side': r['side'], 'z': r['z_mm'], 'floors': r['floors']}
+                        for k, r in enumerate(L['regions'])],
+            'slots': [{'slot': k, 'floor': sl['floor'], 'side': sl['side'], 'tool': sl['tool'],
+                       'width_mm': sl['width_mm'], 'fed': sl['fed'], 'end': 'slot_end:%d' % k}
+                      for k, sl in enumerate(L['slots'])]},
+        'floors': floors, 'holes': holes, 'windows': windows,
+        'library': {
+            'drills': [{'tool': d, 'dia_mm': round(dia, 4), 'flute_mm': round(fl, 3),
+                        'point_mm': round(lib.tip_length(d), 4),
+                        'point_angle': round(lib.tip_angle(d), 2)} for d, dia, fl in lib.drills()],
+            'end_mill': ENDMILL,
+            'small_end_mills': [{'tool': d, 'dia_mm': dd, 'flute_mm': fl}
+                                for d, dd, fl in SMALL_ENDMILLS],
+            'chamfer': CHAMFER,
+            'thread_mills': {t: v[2] for t, v in THREADS.items()}},
+    }
+    print(json.dumps(out, indent=1))
+    return out
+
+
+def _chain(design, c):
+    return {'curves': [_entity(design, t) for t in c['curves']],
+            'start': adsk.core.Point3D.create(*c['start']),
+            'dir': adsk.core.Vector3D.create(*c['dir'])}
+
+
+def _ref(design, a, L, name):
+    """The model face a height is measured from, by name: 'face:<top|bottom>',
+    'floor:<i>', 'hole_bottom:<i>', 'window_top:<j>' (the face a window opens
+    in), 'patch:<top|bottom>[ finish]' or 'tab:<top|bottom>'."""
+    kind, _, rest = name.partition(':')
+    if kind == 'face':
+        f = a['top_face' if rest == 'top' else 'bottom_face']
+        if f is None:
+            raise RuntimeError('the part has no flat %s face' % rest)
+        return f
+    if kind == 'floor':
+        return a['floors'][int(rest)]['face']
+    if kind == 'hole_bottom':
+        h = a['holes'][int(rest)]
+        bottom = _hole_ends(h, h['side'] != 'bottom')[1]
+        if bottom is None:
+            raise RuntimeError('hole %s has no flat bottom' % rest)
+        return bottom
+    if kind == 'window_top':
+        return a['windows'][int(rest)]['face']
+    if kind == 'patch':
+        return _entity(design, L['patches'][rest])
+    if kind == 'tab':
+        return _entity(design, L['tab_faces'][rest])
+    raise RuntimeError('unknown reference %r' % name)
+
+
+def _point(design, L, name):
+    """A sketched point by name: 'entry', 'corner:<k>' (the entry beside corner
+    chain k), 'pocket:<floor>', 'window:<j>', 'hole:<i>' (its centre) or
+    'slot_end:<k>'."""
+    kind, _, rest = name.partition(':')
+    if kind == 'entry':
+        return _entity(design, L['entry'])
+    if kind == 'corner':
+        return _entity(design, L['corner'][int(rest)]['entry'])
+    if kind == 'pocket':
+        return _entity(design, L['pocket_entries'][rest]['point'])
+    if kind == 'window':
+        return _entity(design, L['window_entries'][int(rest)]['point'])
+    if kind == 'hole':
+        return _entity(design, L['hole_centres'][rest])
+    if kind == 'slot_end':
+        return _entity(design, L['slots'][int(rest)]['end'])
+    raise RuntimeError('unknown point %r' % name)
+
+
+def _sel_items(design, a, L, param, items, top):
+    """One curve-selection parameter from named items, in one apply (a second
+    apply on a parameter drops the pocket selections the first made):
+      floor:<i>          a pocket floor (pockets), or its loops (contours)
+      floor_outline:<i>  the floor's outer loop, the tool inside it
+      floor_inner:<i>    the floor's inner loops (the holes through it)
+      hole_floor_inner:<i>  the inner loops of blind hole i's bottom face (the
+                         hole that goes on down from a counterbore's floor)
+      face:<top|bottom>  the part's face, its loops as Fusion picks them
+      face_deburr:<top|bottom>  the face's edges a deburr takes: all of them, but
+                         where the stock fits the part and the face is not faced,
+                         not the edges on the stock's own sides, which no tool cuts
+      patch:<name>       a face patch (pockets)
+      patch_outline:<n>  a patch's outer loop, as a closed boundary (pockets)
+      region:<k>         a shelf region's closed chain
+      window:<j>         a window's loop, the tool inside it
+      hole_rim:<i>       a hole's rim where the setup enters it, the tool inside it
+      chains:<corner|tabs|ends>  the outline runs build sketched, the tool outside
+      slot:<k>           a slot's centreline, open
+      silhouette         the setup model's outline, the tool outside it
+      path:<id>          a pass sketched by pass_path, followed exactly"""
+    def f(params):
+        v = params.itemByName(param).value
+        sels = v.getCurveSelections()
+
+        def loop_chain(loop):  # as _sel_chains
+            s = sels.createNewChainSelection()
+            s.inputGeometry = [c.edge for c in loop.coEdges]
+            s.isOpen = False
+            opposed = loop.coEdges.item(0).isOpposedToEdge
+            s.isReverted = not opposed if _normal(loop.face).z > 0 else opposed
+
+        def face_contour(face, loop=None, side=None):
+            s = sels.createNewFaceContourSelection()
+            s.inputGeometry = [face]
+            if loop is not None:
+                s.loopType = loop
+            if side is not None:
+                s.sideType = side
+        for it in items:
+            kind, _, rest = it.partition(':')
+            if kind == 'floor':
+                face = a['floors'][int(rest)]['face']
+                if param == 'pockets':
+                    sels.createNewPocketSelection().inputGeometry = [face]
+                else:
+                    face_contour(face)
+            elif kind == 'floor_outline':
+                face_contour(a['floors'][int(rest)]['face'], adsk.cam.LoopTypes.OnlyOutsideLoops,
+                             adsk.cam.SideTypes.AlwaysInsideSideType)
+            elif kind == 'floor_inner':
+                face_contour(a['floors'][int(rest)]['face'], adsk.cam.LoopTypes.OnlyInsideLoops)
+            elif kind == 'hole_floor_inner':
+                face_contour(_ref(design, a, L, 'hole_bottom:' + rest),
+                             adsk.cam.LoopTypes.OnlyInsideLoops)
+            elif kind == 'face':
+                face_contour(_ref(design, a, L, it))
+            elif kind == 'face_deburr':
+                st = L['strategy']
+                faced = L['face'] and L['margin_%s_mm' % rest] > 1e-6
+                axes = [] if st['outline'] or faced else ['y'] if st['ends'] else ['x', 'y']
+                face = _ref(design, a, L, 'face:' + rest)
+                _add_deburr(sels, face, _raw_edges(face, a['body'], axes) if axes else set())
+            elif kind == 'patch':
+                sels.createNewPocketSelection().inputGeometry = [_ref(design, a, L, it)]
+            elif kind == 'patch_outline':
+                face_contour(_ref(design, a, L, 'patch:' + rest),
+                             adsk.cam.LoopTypes.OnlyOutsideLoops,
+                             adsk.cam.SideTypes.AlwaysInsideSideType)
+            elif kind == 'region':
+                r = L['regions'][int(rest)]
+                s = sels.createNewChainSelection()
+                s.inputGeometry = [_entity(design, t) for t in r['curves']]
+                s.isOpen = False
+                s.isReverted = r['clockwise'] if top else not r['clockwise']
+            elif kind == 'window':
+                loop_chain(a['windows'][int(rest)]['loop'])
+            elif kind == 'hole_rim':
+                rim = _hole_ends(a['holes'][int(rest)], top)[0]
+                if rim is None:
+                    raise RuntimeError('hole %s has no flat face round its rim' % rest)
+                loop_chain(rim)
+            elif kind == 'chains':
+                for ch in (_chain(design, c) for c in L[rest]):
+                    s = sels.createNewChainSelection()
+                    s.inputGeometry = list(ch['curves'])
+                    s.isOpen = True
+                    d = ch['dir'] if top else adsk.core.Vector3D.create(-ch['dir'].x, -ch['dir'].y, 0)
+                    s.isReverted = _is_reverted(ch['curves'][0], ch['start'], d)
+            elif kind == 'slot':
+                s = sels.createNewChainSelection()
+                s.inputGeometry = [_entity(design, L['slots'][int(rest)]['line'])]
+                s.isOpen = True
+                s.isReverted = False
+            elif kind == 'silhouette':
+                s = sels.createNewSilhouetteSelection()
+                s.isSetupModelSelected = True
+                s.loopType = adsk.cam.LoopTypes.OnlyOutsideLoops
+                s.sideType = adsk.cam.SideTypes.AlwaysOutsideSideType
+            elif kind == 'path':
+                curves = _path_curves(design, [rest])[0]
+                s = sels.createNewChainSelection()
+                s.inputGeometry = list(curves)
+                s.isOpen = True
+                nxt = curves[1] if len(curves) > 1 else None
+                s.isReverted = nxt is not None and any(
+                    curves[0].startSketchPoint.geometry.distanceTo(q.geometry) < 1e-5
+                    for q in (nxt.startSketchPoint, nxt.endSketchPoint))
+            else:
+                raise RuntimeError('unknown selection %r' % it)
+        v.applyCurveSelections(sels)
+    return f
+
+
+def _program(cam, L, which, warnings):
+    """The NC program '<name>_<which>', made with the post on first use."""
+    name = '%s_%s' % (L['name'], which)
+    nc = next((n for n in cam.ncPrograms if n.name == name + ' ' + SETUP_TAG), None)
+    if nc is None:
+        nc = _nc_program(cam, name, [], _post(_fetch_community(warnings)['post']))
+    return nc
+
+
 def add_operation(args):
-    """An operation made after build: `strategy` (pocket2d or contour2d) in setup
-    `setup`, right after the operation `after` and in the NC program that holds
-    it, named `name`. The tool is the operation `tool_from`'s, or the tool
-    described `tool` from the part's tools or the library. `params` (Fusion
-    parameter expressions, or a height's reference faces as {"entity_tokens":
-    [...]}) go on top of the lab's settings for the strategy; `bottom_at_floor`
-    puts the bottom at that floor. What it cuts, `select`: {"pocket_floors":
-    [floor, ...]}, {"window_loops": [window, ...]} or {"paths": [path id, ...]}
-    (sketched by pass_path, cut in that order, with no tool-radius offset)."""
+    """Add one operation to a setup build made, after build.
+
+    setup:     the setup's name, or "top" / "bottom"
+    strategy:  pocket2d, contour2d, drill, bore, thread or chamfer2d (default contour2d)
+    name:      the operation's name
+    tool:      the tool's description, from the part's tools or the library; with
+               T, that slot (T2 and T3 are both the 3.175 mm end mill); or
+    tool_from: an operation whose tool and preset it copies
+    params:    Fusion parameter expressions on top of the lab's settings for the
+               strategy; a height's reference is {"ref": "<name>"} (see _ref) or
+               {"entity_tokens": [...]}
+    select:    what it cuts: {"pockets": [...], "contours": [...], "stock_contours":
+               [...]} of named items (see _sel_items); {"holes": [hole, ...]} for a
+               drill, bore or thread; {"points": [...]} for a drill, {"predrill":
+               [...]} and {"entries": [...]}, of named points (see _point); or, as
+               the first recipes named them, {"pocket_floors": [...]},
+               {"window_loops": [...]}, {"paths": [...]}
+    after:     the operation it goes right after, and into the NC program holding
+               that; else it goes last in the setup
+    program:   "top", "bottom" or "tabs": the NC program '<name>_<program>' it goes
+               in, made on first use; after `after` if that is in it, else last
+    bottom_at_floor: the floor its bottom height sits at
+    """
     design, body, a = _built(args)
     cam = adsk.cam.CAM.cast(_app().activeDocument.products.itemByProductType('CAMProductType'))
-    setup = _setup_named(cam, args['setup'])
+    L = _layout(design) if design.attributes.itemByName(*LAYOUT_ATTR) is not None else None
+    sname = args['setup']
+    if L is not None and sname in L['setups']:
+        sname = L['setups'][sname]
+    setup = _setup_named(cam, sname)
+    top = not sname.startswith('Bottom')
     by_name = {o.name: o for o in setup.allOperations}
-    after = by_name[args['after']]
+    after = by_name[args['after']] if args.get('after') else None
     if args.get('tool_from'):
         like = by_name.get(args['tool_from']) or next(o for o in _all_ops(cam)
                                                       if o.name == args['tool_from'])
         tool, preset = like.tool, like.toolPreset
     else:
-        tool, preset = _tool_for(cam, args['tool'])
+        tool, preset = _tool_for(cam, args['tool'], args.get('T'))
     strategy = args.get('strategy', 'contour2d')
     sel = args.get('select', {})
-    base = dict(POCKET if strategy == 'pocket2d' else CONTOUR)
+    base = dict({'pocket2d': POCKET, 'contour2d': CONTOUR, 'drill': DRILL, 'bore': BORE,
+                 'thread': THREAD, 'chamfer2d': CHAMFER_OP}[strategy])
     if 'paths' in sel:
         base['compensationType'] = "'off'"
     oi = setup.operations.createInput(strategy)
@@ -1061,37 +1441,72 @@ def add_operation(args):
     for k, v in params.items():
         if not isinstance(v, dict):
             _set(oi.parameters, k, v)
-    for k, v in params.items():  # a height's reference faces, by entity token
+    for k, v in params.items():  # a height's reference faces
         if isinstance(v, dict):
-            oi.parameters.itemByName(k).value.value = [
-                design.findEntityByToken(t)[0] for t in v['entity_tokens']]
+            ents = ([_ref(design, a, L, v['ref'])] if 'ref' in v else
+                    [design.findEntityByToken(t)[0] for t in v['entity_tokens']])
+            oi.parameters.itemByName(k).value.value = ents
     if args.get('bottom_at_floor') is not None:
         face = a['floors'][args['bottom_at_floor']]['face']
         _set(oi.parameters, 'bottomHeight_mode', "'from point'")
         _set(oi.parameters, 'bottomHeight_offset', '0mm')
         oi.parameters.itemByName('bottomHeight_ref').value.value = [face]
+    picked = False
+    for key, param in (('pockets', 'pockets'), ('contours', 'contours'),
+                       ('stock_contours', 'stockContours')):
+        if key in sel:
+            _sel_items(design, a, L, param, sel[key], top)(oi.parameters)
+            picked = True
+    if 'holes' in sel:
+        _sel_faces('holeFaces' if strategy == 'drill' else 'circularFaces',
+                   [a['holes'][i]['face'] for i in sel['holes']])(oi.parameters)
+        picked = True
+    for key, param in (('points', 'holePoints'), ('predrill', 'predrillPositions'),
+                       ('entries', 'entryPositions')):
+        if sel.get(key):
+            _sel_faces(param, [_point(design, L, n) for n in sel[key]])(oi.parameters)
+            picked = picked or key == 'points'
     if 'paths' in sel:
         _sel_paths(_path_curves(design, sel['paths']))(oi.parameters)
+        picked = True
     elif 'pocket_floors' in sel:
         _sel_pocket([a['floors'][i]['face'] for i in sel['pocket_floors']])(oi.parameters)
+        picked = True
     elif 'window_loops' in sel:
         _sel_chains([a['windows'][j]['loop'] for j in sel['window_loops']], 'pockets')(oi.parameters)
-    else:
-        raise RuntimeError('select: give paths, pocket_floors or window_loops')
+        picked = True
+    if not picked:
+        raise RuntimeError('select: give what the operation cuts')
     op = setup.operations.add(oi)
-    op.moveAfter(after)
-    # into the NC program that holds the operation it follows, right after it
-    programs = []
-    for nc in cam.ncPrograms:
+    if after is not None:
+        op.moveAfter(after)
+    programs, warnings = [], []
+    if args.get('program'):
+        nc = _program(cam, L, args['program'], warnings)
         ops = list(nc.operations)
         ids = [o.operationId for o in ops]
-        if after.operationId in ids:
+        if after is not None and after.operationId in ids:
             ops.insert(ids.index(after.operationId) + 1, op)
-            nc.operations = ops
-            programs.append(nc.name)
-    out = {'operation': op.name, 'setup': setup.name, 'after': after.name,
+        else:
+            ops.append(op)
+        nc.operations = ops
+        programs.append(nc.name)
+    elif after is not None:
+        # into the NC program that holds the operation it follows, right after it
+        for nc in cam.ncPrograms:
+            ops = list(nc.operations)
+            ids = [o.operationId for o in ops]
+            if after.operationId in ids:
+                ops.insert(ids.index(after.operationId) + 1, op)
+                nc.operations = ops
+                programs.append(nc.name)
+    out = {'operation': op.name, 'setup': setup.name, 'after': after.name if after else None,
            'T': int(tool.parameters.itemByName('tool_number').value.value),
            'nc_programs': programs}
+    if REJECTED:
+        out['rejected'] = list(REJECTED)
+    if warnings:
+        out['warnings'] = warnings
     print(json.dumps(out, indent=1))
     return out
 
@@ -1504,6 +1919,67 @@ def _sel_face_contours(faces):
         for face in faces:
             s = sels.createNewFaceContourSelection()
             s.inputGeometry = [face]
+        v.applyCurveSelections(sels)
+    return f
+
+
+def _raw_edges(face, body, axes):
+    """The edges of the face's outline that lie on the stock's own sides: straight
+    edges at the body's extent along each of `axes` ('x', 'y'), where the stock
+    fits the part. With the face not faced, no tool cuts them."""
+    bb = body.boundingBox
+    out = set()
+    for loop in face.loops:
+        if not loop.isOuter:
+            continue
+        for e in loop.edges:
+            if not isinstance(e.geometry, adsk.core.Line3D):
+                continue
+            p, q = e.startVertex.geometry, e.endVertex.geometry
+            for ax in axes:
+                for v in (getattr(bb.minPoint, ax), getattr(bb.maxPoint, ax)):
+                    if abs(getattr(p, ax) - v) < 1e-4 and abs(getattr(q, ax) - v) < 1e-4:
+                        out.add(e.tempId)
+    return out
+
+
+def _add_deburr(sels, face, raw):
+    """Add to `sels` the face's edges but those in `raw` (tempIds): the whole face
+    when none are raw, else its inner loops and the runs of its outer loop between
+    the raw edges, as open chains with the bit outside the part. The chain's side
+    follows its first edge's direction seen along the tool axis: the outer loop's
+    co-edges run counter-clockwise seen from the face's normal, which faces the
+    tool, so the chain runs against them."""
+    s = sels.createNewFaceContourSelection()
+    s.inputGeometry = [face]
+    if not raw:
+        return
+    s.loopType = adsk.cam.LoopTypes.OnlyInsideLoops
+    outer = [lp for lp in face.loops if lp.isOuter][0]
+    ces = list(outer.coEdges)
+    k0 = next(k for k, ce in enumerate(ces) if ce.edge.tempId in raw)
+    runs, run = [], []
+    for ce in ces[k0:] + ces[:k0]:
+        if ce.edge.tempId in raw:
+            if run:
+                runs.append(run)
+            run = []
+        else:
+            run.append(ce)
+    if run:
+        runs.append(run)
+    for run in runs:
+        s = sels.createNewChainSelection()
+        s.inputGeometry = [ce.edge for ce in run]
+        s.isOpen = True
+        s.isReverted = not run[0].isOpposedToEdge
+
+
+def _sel_deburr(face, raw):
+    def f(params):
+        v = params.itemByName('contours').value
+        sels = v.getCurveSelections()
+        _add_deburr(sels, face, raw)
         v.applyCurveSelections(sels)
     return f
 
@@ -3104,10 +3580,9 @@ def _make_layout(design, a, plan, warnings):
                 if c.isValid:
                     c.deleteMe()
         open_passes[f['face'].tempId] = paths
-    # the centres of holes too wide to bore, where their pockets enter (hole_pocket)
+    # the holes' centres, where a pocket that cuts a hole enters (hole_pocket)
     hole_centres = {h['face'].tempId: sk.sketchPoints.add(adsk.core.Point3D.create(
-                        h['x'] / 10, h['y'] / 10, 0))
-                    for h in a['holes'] if (h['dia'] - ENDMILL_D) / 2 > BORE_MAX_RADIAL + 1e-6}
+                        h['x'] / 10, h['y'] / 10, 0)) for h in a['holes']}
     return {'sketch': sk, 'corner': corner, 'tabs': tab_chains, 'shelves': shelves,
             'entry': entry, 'hole_centres': hole_centres, 'ends': ends, 'pocket_entries': pocket_entries, 'narrow': narrow,
             'outline': pieces,
@@ -4303,8 +4778,12 @@ def _side_ops(b, setup, a, side, plan, warnings):
             warnings.append('a floor or the tabs lie %.2f mm below the %s face, too close for '
                             'a %g mm chamfer: the Deburr leaves those edges out or cuts the tabs'
                             % (min(room), side, width))
+        # the stock's own sides, where it fits the part, are left as they are when
+        # the face is not faced: no tool cuts them, so they have no burrs
+        axes = [] if plan['outline'] or facing else ['y'] if plan['ends'] else ['x', 'y']
+        raw = _raw_edges(face, body, axes) if axes else set()
         ops['main'].append(b.op(setup, 'chamfer2d', CHAMFER, 'Deburr', dict(
-            CHAMFER_OP, chamferTipOffset='%gmm' % round(tip, 3)), _sel_face_contours([face])))
+            CHAMFER_OP, chamferTipOffset='%gmm' % round(tip, 3)), _sel_deburr(face, raw)))
 
     # the edges of the holes under counterbores, at the counterbore's floor, which
     # the face's deburr does not reach; the point goes down the hole below
@@ -4360,6 +4839,9 @@ def _delete_previous(cam, design):
     for occ in [o for o in root.occurrences if o.component.name.startswith(VISE_PREFIX)
                 or o.component.name in (TABS_COMPONENT, FACES_COMPONENT, PART_COMPONENT)]:
         occ.deleteMe()
+    attr = design.attributes.itemByName(*LAYOUT_ATTR)
+    if attr is not None:
+        attr.deleteMe()
     for attr in design.findAttributes(*HIDDEN_ATTR):
         body = adsk.fusion.BRepBody.cast(attr.parent)
         attr.deleteMe()
@@ -4496,7 +4978,10 @@ def build(args):
       face:      face the top and bottom from stock (default true)
       chamfer:   deburr the outer faces (default true)
       recipes:   leave the features that have a recipe (references/recipes/) to it,
-                 and list them under "recipes" (default false: build cuts them)
+                 and list them under "recipes" (default false: build cuts them);
+                 "all" leaves every operation to the recipes: build makes the
+                 setups, the layout, the tabs, the face patches and the vise, and
+                 no operations or NC programs (see features and add_operation)
       tab_width: tab width along the outline in mm (default 5)
       tab_z:     model Z of the tab band's centre in mm (default: the mid-plane,
                  or the nearest height clear of pockets that open to the side)
@@ -4578,6 +5063,7 @@ def build(args):
         'face': args.get('face', True),
         'chamfer': args.get('chamfer', True),
         'recipes': bool(args.get('recipes', False)),
+        'all': args.get('recipes') == 'all',
         'sides': sides,
         'outline': outline,
         'ends': ends,
@@ -4590,11 +5076,12 @@ def build(args):
     # choices as the real one
     plan['layout'] = _make_layout(design, a, plan, warnings)
     # dry run to learn which tools the part needs, then number them in slot order
-    dry = Builder(cam, tools, [], dry=True)
-    for side in side_names:
-        _side_ops(dry, None, a, side, plan, [])
-    for desc, key in _slot_order(dry.needed):
-        tools.get(desc, key)
+    if not plan['all']:
+        dry = Builder(cam, tools, [], dry=True)
+        for side in side_names:
+            _side_ops(dry, None, a, side, plan, [])
+        for desc, key in _slot_order(dry.needed):
+            tools.get(desc, key)
     plan.pop('corner_endmills', None)
     b = Builder(cam, tools, log)
     community = _fetch_community(warnings)
@@ -4632,6 +5119,19 @@ def build(args):
                 'cut ends in it')
     x_axis = _axis_line(design)
     top = _setup(cam, 'Top ' + SETUP_TAG, body, machine, stock, True, x_axis, vises[0], warnings)
+    if plan['all']:
+        # every operation is left to the recipes (references/recipes/part.md)
+        setups = {'top': top.name}
+        if sides == 2:
+            setups['bottom'] = _setup(cam, 'Bottom ' + SETUP_TAG, body, machine, stock, False,
+                                      x_axis, vises[1], warnings).name
+        _save_layout(design, a, plan, name, setups,
+                     {i: h['thread'] for i, h in enumerate(a['holes']) if h['thread']})
+        print(json.dumps({
+            'turned_over': flipped, 'quarter_turned': quarter, 'strategy': strategy,
+            'setups': setups, 'operations': log, 'recipes': 'all: see features()',
+            'warnings': warnings, 'seconds': round(time.time() - t0, 1)}, indent=1))
+        return
     top_ops = _side_ops(b, top, a, 'top', plan, warnings)
     programs = [(name + '_top', top_ops['main'])]
     tab_ops = top_ops['tabs']

@@ -43,6 +43,7 @@ The part's outline must then be the rectangle the stock is; a part with rounded 
 
 **One setup** is enough when nothing opens at the bottom face (no pocket floor facing down, no hole open only at the bottom): through holes and windows are cut from the top.
 The part's bottom face is then the stock's bottom, left as it is, and its edges, and the holes and windows where they come out at the bottom, are not deburred.
+Likewise, where the stock fits the part and its face is not faced, the edges on the stock's own sides are not deburred: no tool cuts them.
 Stock thicker than the part is faced on top only.
 Pass `"sides": 2` to machine the bottom face anyway, for example to face it or to deburr its edges.
 When every feature opens at the design's bottom face, the part is turned over and machined from that face, in one setup.
@@ -64,12 +65,13 @@ The check's rule X1 then tests the G-code itself, every 0.5 mm along each move.
 | `analyze(args)` | Recognizes the part's holes, tapped holes, pocket floors, through windows and faces, and prints them as JSON. Changes nothing. |
 | `build(args)` | Deletes what an earlier build made (setups ending in `(carvera-cam)`, and the `carvera-cam` sketches and planes), then creates the setups, tools, operations and NC programs. Does not compute toolpaths. |
 | `generate(args)` | Computes the toolpaths within a time budget and reports each operation's errors, warnings and machining time. |
-| `recipes`, `walls`, `pass_path`, `coverage`, `tools`, `add_operation`, `add_contour`, `renumber_tools` | The primitives the recipes use; each recipe says which it needs and how to call them. |
+| `features`, `recipes`, `walls`, `pass_path`, `coverage`, `tools`, `add_operation`, `add_contour`, `renumber_tools` | The primitives the recipes use; each recipe says which it needs and how to call them. |
 
 `scripts/check_cam.py` has `check(args)`, the toolpath check, and `summary(args)`, which lists each operation's tool, time, cut length, depth, extent and plunge points from the G-code, for comparing two builds.
 
-Some features can be cut two ways: by `build` itself, the script's way, or by a recipe, a written method in [references/recipes/](references/recipes/) that you carry out with smaller functions in the same script, the primitives, such as `walls`, `pass_path` and `add_operation`.
-A recipe covers a feature whose shapes vary too much for one fixed method; each says when it applies, how to cut the feature, and which shapes it does not cover.
+The whole part can be programmed two ways: by `build` itself, the script's way, or by the recipes, written methods in [references/recipes/](references/recipes/) that you carry out with smaller functions in the same script, the primitives, such as `features`, `add_operation` and `pass_path`.
+[part.md](references/recipes/part.md) makes every operation, in run order, from the lab's conventions; it hands pockets open to the side to [open-pocket.md](references/recipes/open-pocket.md) and tight inside corners to [corners.md](references/recipes/corners.md), features whose shapes vary too much for one fixed method.
+Each recipe says when it applies, how to cut the feature, and which shapes it does not cover.
 The toolpaths are likewise checked two ways: by `scripts/check_cam.py`, and by reading them as [references/review.md](references/review.md) describes.
 By default the skill does both, compares the results, and improves whichever falls short (see "Improving the skill").
 
@@ -137,13 +139,13 @@ def run(_context: str):
     })
 ```
 
-Other arguments: `body`, `sides` (1 or 2 setups; by default 2 when the bottom has features to cut or stock to face, else 1), `face` (face off the stock above and below the part, default true), `chamfer` (deburr the outer faces' edges, default true), `fixture` (model the vise, default true), `tab_width` (default 5 mm), `tab_z` (model Z of the tab band's centre, in mm), `recipes` (default false), and in `stock`, `y_mode` (default `back`), `y_offset` (default 10 mm) and `bottom`.
+Other arguments: `body`, `sides` (1 or 2 setups; by default 2 when the bottom has features to cut or stock to face, else 1), `face` (face off the stock above and below the part, default true), `chamfer` (deburr the outer faces' edges, default true), `fixture` (model the vise, default true), `tab_width` (default 5 mm), `tab_z` (model Z of the tab band's centre, in mm), `recipes` (default false; `"all"` for the recipes' way, below; `true` leaves only the open pockets and corners to their recipes), and in `stock`, `y_mode` (default `back`), `y_offset` (default 10 mm) and `bottom`.
 `bottom` is the stock left below the part, in mm; the default centres the part in the stock's thickness with two setups, and is 0 with one.
 With two setups, it sets how long the top program runs before the operator flips the stock: more stock below the part moves facing time from the top program to the bottom one.
 `build` prints the machining strategy (`strategy`: the number of `sides`, whether there is an `outline` cut with tabs, and whether the vise holds the part by its sides while `ends` cuts free its ends), whether it turned the part a quarter (`quarter_turned`), the tool slots, the operations, the tab layout, the number of pocket entry holes and any warnings; it takes about 10 seconds.
 Call `build` and `generate` in separate MCP calls: a call that runs longer than about a minute times out.
 
-For the recipes' way, copy the part's body into a new, unsaved document and build there with `"recipes": true` and the same other arguments.
+For the recipes' way, copy the part's body into a new, unsaved document and build there with `"recipes": "all"` and the same other arguments.
 The copy keeps the shape but not the Hole features that mark tapped holes, so pass every tapped hole `analyze` found in the user's document under `taps`.
 Both documents are named "Untitled" when the part is unsaved, so tell them apart by `doc.creationId`: note each one's when you make it, and bring a document forward with `doc.activate()` before each call, since every function works on the active document.
 
@@ -168,13 +170,12 @@ def run(_context: str):
 ```
 
 The copy is a throwaway: never save it.
-`build` with `"recipes": true` cuts everything else as usual and lists the features it left to a recipe under `recipes`.
+`build` with `"recipes": "all"` makes the setups, the layout sketch, the tabs, the face patches and the vise, and no operations.
 
 ### 5. Follow the recipes
 
-In the copy, carry out each recipe `build` listed, in run order.
-`recipes({})` reads the list back from the document in a later call.
-For each kind of entry, read its recipe in [references/recipes/](references/recipes/) and carry it out: `"recipe": "open-pocket"` is [open-pocket.md](references/recipes/open-pocket.md), and `"recipe": "corners"` is [corners.md](references/recipes/corners.md).
+In the copy, follow [part.md](references/recipes/part.md): it reads the part with `features({})` and adds every operation in run order, with [open-pocket.md](references/recipes/open-pocket.md) and [corners.md](references/recipes/corners.md) where it sends you.
+After a build with `"recipes": true` instead, carry out each recipe `build` listed under `recipes`, in run order; `recipes({})` reads the list back from the document in a later call.
 Look at the feature in Fusion first (a screenshot with the MCP `read` tool), since a recipe lists the shapes it does not cover.
 When a feature fits none of them, leave it out and tell the user.
 
@@ -227,7 +228,7 @@ Where the two builds agree, and both pass both checks, the result stands.
 Where they differ, decide which is better from the evidence: the plunge points against what has cleared the stock, `coverage` for pockets cut by passes, the times, and screenshots of the operations that differ.
 The better one is the one that cuts every feature fully, never plunges into uncut copper, keeps the part held and clear of the vise, and, those being equal, takes less time.
 When the evidence does not settle it, for example a faster toolpath against a better finish, show the user the two and ask.
-Then improve whichever way fell short (see "Improving the skill"), and leave the better toolpaths in the user's document: if the recipes' way won, build the user's document again with `"recipes": true` and follow the recipes there too.
+Then improve whichever way fell short (see "Improving the skill"), and leave the better toolpaths in the user's document: if the recipes' way won, build the user's document again with `"recipes": "all"` and follow the recipes there too.
 
 In window machining, take a screenshot with the outline operation selected and check the tabs and the stock position; with stock that fits along one side, select the `Ends` operation instead and check that the end cuts run outside the jaws; to check the vise as well, show `carvera-cam vise top` for the screenshot and hide it again after.
 Ask the user to run Fusion's simulation with collision checking on each setup before machining; the API cannot run it.
