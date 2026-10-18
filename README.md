@@ -1,11 +1,11 @@
 # SchusterLab Fusion tools
 
-This repository is a Claude Code plugin marketplace with one plugin, `carvera-cam`.
-Its skill, `carvera-copper-cam`, generates Autodesk Fusion CAM toolpaths for machining copper parts on the lab's Makera Carvera.
-Given a part and the stock, it chooses how to machine it: cut out of larger stock, held by four tabs that a last program cuts; held in the vise by its own sides, from stock of its own size, or of its size along one side and longer the other way, with its ends cut free; and from the top alone when nothing opens at the bottom face, else from the top and then flipped. It checks that no cut reaches the vise.
-It creates the setups with the lab's vise modelled for collision checks, every operation with tools from Makera and McMaster-Carr and the lab's feeds, and the NC programs: `<part>_top`, `<part>_bottom` with two setups, and `<part>_tabs` with larger stock.
-The same programs machine aluminum at 200% feed and spindle override.
-The skill also checks existing Carvera toolpaths, the lab's own as well as those it generates, against rules mined from the lab's toolpaths for avoiding crashes, spindle stalls and tool wear.
+This repository holds `carvera-cam`, a Claude Code plugin that programs SchusterLab's Makera Carvera to machine copper parts.
+Open a part in Autodesk Fusion, tell Claude Code what stock you have, and it writes the programs to run on the Carvera, set up the way the lab sets up its own jobs.
+It picks the tools, the speeds and the order of the cuts, works out how the vise will hold the part, and checks that no cut runs into the vise.
+The same programs cut aluminum when run at double speed (200% feed and spindle override on the Carvera).
+
+It can also review toolpaths you already have, and points out cuts likely to break a tool, stall the spindle or crash the machine.
 
 ## Install
 
