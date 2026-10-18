@@ -3017,6 +3017,23 @@ def _shelf_regions(root, a, sk, pocket_entries):
     return out
 
 
+def _enclosing(u, units, top, bottom):
+    """The deepest shelf region among `units` that holds pocket unit `u` and
+    whose floor lies between `top` and `bottom` (None: any depth below `top`),
+    or None. A unit is (floor face or None, region or None, depth, ...)."""
+    face = u[0] if u[0] is not None else u[1]['face']
+    p = face.pointOnFace
+    best = None
+    for w in units:
+        if w is u or w[1] is None or not top + 1e-6 < w[2] < u[2] - 1e-6:
+            continue
+        if bottom is not None and w[2] > bottom + 1e-6:
+            continue
+        if _inside(w[1]['rings'][0], p.x, p.y) and (best is None or w[2] > best[2]):
+            best = w
+    return best
+
+
 def _merge_entries(entries):
     """Entries within 0.5 mm of each other share one hole, drilled to the deepest floor."""
     clusters = []
@@ -3519,11 +3536,6 @@ def _side_ops(b, setup, a, side, plan, warnings):
                           and u[4] == side_open]
                     if not us:
                         continue
-                    unique = []
-                    for u in us:
-                        for p in u[3]:
-                            if all(p is not q for q in unique):
-                                unique.append(p)
                     params = dict(POCKET, doMultipleDepths=multi,
                                   rampType="'predrill'" if has_entries else "'plunge'",
                                   **top_at(t))
@@ -3598,10 +3610,36 @@ def _side_ops(b, setup, a, side, plan, warnings):
                                     'tool_from': b.last[tk].name if tk in b.last else None,
                                     'bottom_at_floor': idx[0] if floor else None, 'params': rp})
                         continue
-                    ops['main'].append(b.op(setup, 'pocket2d', tk, name, params, _both(
-                        _sel_pocket_regions([u[0] for u in us if u[0] is not None],
-                                            [u[1] for u in us if u[1] is not None], top),
-                        _sel_faces('predrillPositions', unique))))
+                    # a region inside a shallower one (a shelf's opening holds the
+                    # deeper pockets) is roughed from that one's rough floor, since
+                    # the end mill has cleared it down to there; from the top it
+                    # would mill air. The finishing pass is one depth, so it keeps
+                    # one operation.
+                    groups = [(None, us)]  # (enclosing region's unit, units)
+                    if which == 'rough' and floor:
+                        groups = []
+                        for u in us:
+                            w = _enclosing(u, inside, t, bot)
+                            g = next((g for g in groups if g[0] is w), None)
+                            if g is None:
+                                groups.append((w, [u]))
+                            else:
+                                g[1].append(u)
+                        groups.sort(key=lambda g: -1 if g[0] is None else g[0][2])
+                    for parent, gu in groups:
+                        gp, nm = params, name
+                        if parent is not None:
+                            gp = dict(params, **at('top', parent[1]['face'], POCKET_FLOOR_ALLOWANCE))
+                            nm = name + ' from %g mm' % round(parent[2], 2)
+                        pts = []
+                        for u in gu:
+                            for p in u[3]:
+                                if all(p is not q for q in pts):
+                                    pts.append(p)
+                        ops['main'].append(b.op(setup, 'pocket2d', tk, nm, gp, _both(
+                            _sel_pocket_regions([u[0] for u in gu if u[0] is not None],
+                                                [u[1] for u in gu if u[1] is not None], top),
+                            _sel_faces('predrillPositions', pts))))
         if which == 'rough':
             end_bores(which, multi, suffix)
         # tap holes bored to size: one light pass, plus a finishing pass in blind holes
