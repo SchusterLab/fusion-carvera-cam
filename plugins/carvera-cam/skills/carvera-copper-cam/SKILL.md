@@ -239,6 +239,38 @@ Report the errors first, grouped by rule, then the warnings, with the operations
 Errors P1, P2 and P3 mean the toolpaths need regenerating before any other finding can be trusted.
 The check does not replace Fusion's simulation with collision checking, which the user still runs on each setup.
 
+## Working with Fusion
+
+**Dialogs.**
+- While the user has a command dialog open, such as Sketch or Extrude, `execute` refuses any script that is not read-only: "Cannot perform 'script' while a command dialog is open".
+- A read-only script still runs, but only `analyze` is one. `build`, `generate` and `check` all change the document, `check` by adding a temporary NC program.
+- Ask the user to close the dialog, and wait for them to say so.
+- A modal window, such as Recovered Documents after a crash, blocks every call, read-only ones included: each one times out. Ask the user to close it.
+
+**Long calls.**
+- A call that runs past about a minute times out, and one that keeps Fusion busy much longer can crash it. One call that ran `build` and then `generate` on the sample puck did both.
+- Keep `build`, `generate` and `check` in separate calls, and let `generate` resume over several.
+
+**After a crash.**
+1. Fusion's window is gone and only a "Fusion Error Report" window is left (`cer_dialog.exe`). Close it; stopping the process is fine.
+2. Unsaved documents are lost apart from Fusion's crash recovery. That includes a throwaway copy, so make a new copy for the recipes' way.
+3. Before starting Fusion again, clear the recovery entries of throwaway documents, so the Recovered Documents window does not block the next calls (user, 2026-10-17):
+   - The entries are in `%LOCALAPPDATA%\Autodesk\Autodesk Fusion 360\<user id>\CrashRecovery`. `AutoSavedFileList.xml` has one element per document, with its `Name`, its `DocGuid` (the document's `creationId`) and its `RecoveryPath`, a `.backup` file.
+   - With Fusion stopped, delete each throwaway's element and its `.backup` file. Match a throwaway by the `creationId` you noted when you made it.
+   - The documents open in a running Fusion have entries too (`Fusion_PID` is that process's id), and stopping Fusion turns them into recoveries. Clear an entry for the user's own document only if it holds no unsaved work of theirs, for example when it was opened just for this skill and only the skill changed it. Otherwise ask the user first.
+4. Start Fusion from its Start-menu shortcut, `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Autodesk\Autodesk Fusion.lnk`. A `FusionLauncher.exe` under `%LOCALAPPDATA%\Autodesk\webdeploy\production` may belong to an older version, and fails with "Configuration file … is missing or incomplete".
+5. Wait until the window title no longer starts with "Initializing" before calling the MCP tools.
+
+**API facts the skill relies on.**
+- A Part design holds only one component, so `build` switches it to Hybrid (`design.designIntent`).
+- Each setup shows or hides the machine through `setup.visibilityManager` (`machineVisible`, `machineBaseVisible`); hidden, it stays the setup's machine.
+- A new 2D pocket keeps a 0.2 mm `maximumStepdown` even with the tool's stepdown in use; set it to `tool_stepdown`.
+- A 2D pocket's rest machining (`useRestMachining`) goes by an earlier tool's diameter, not by the stock earlier operations left. It cannot skip stock that is already gone.
+- A 2D pocket's stock contours (`useStockContours` and the `stockContours` closed chains) limit it to where stock is left; a closed chain inside another one takes its area out. They work with the `predrill` ramp.
+- An operation's feed height defaults to 5 mm above its top height (`feedHeight_offset`), and the tool feeds down from there at the plunge rate.
+- A script cannot read a pattern feature's `inputEntities`: it fails with "Didn't roll editing feature back". The skill matches patterned faces by radius instead.
+- `HoleFeature` has no `isTapped`; use `holeTapType`.
+
 ## Limits
 
 - The part's machining axis must be the design's Z axis; the top setup looks down −Z at the design's top face, or at its bottom face when the part is turned over.

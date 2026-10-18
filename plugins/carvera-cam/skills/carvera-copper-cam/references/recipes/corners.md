@@ -12,6 +12,7 @@ Each entry gives `setup` and `after`, the operation the new ones go right after,
 - `floor` (for a pocket) or `window`: its index in `analyze`'s `floors` or `windows` list;
 - `corner_radius_mm`: its tightest inside corner, 0 for a sharp one;
 - `depth_mm`: how deep the cut goes: the pocket's depth, or the part's thickness for a window;
+- `top_mm` (pockets): how far below the part's face the cut starts: 0, or, for a floor inside a shelf's opening, that shelf's depth, since the shelf's pocket has cleared everything above it, corners too;
 - `params`: its heights; pass them to `add_operation` exactly as given.
 
 ## Steps
@@ -25,7 +26,7 @@ Each entry gives `setup` and `after`, the operation the new ones go right after,
    A corner tighter than the smallest end mill's radius (0.5 mm for the 1 mm end mill) cannot be cut to size: take the smallest end mill, and tell the user the corner stays at that radius.
    When no tool's flute is long enough, leave the feature out and tell the user its corners keep the 3.175 mm end mill's radius.
 3. **Add one operation per tool and kind**, in setup `setup`, after `after`:
-   - pockets: `add_operation` with `strategy` `pocket2d`, the tool's description as `tool`, `name` `Pocket corners <diameter>` (for example `Pocket corners 2`), `select` `{"pocket_floors": [...]}`, and as `params` the feature's `params` plus `doMultipleDepths` `true`, `useRestMachining` `true` and `rampType` `'plunge'`;
+   - pockets: `add_operation` with `strategy` `pocket2d`, the tool's description as `tool`, `name` `Pocket corners <diameter>` (for example `Pocket corners 2`), followed by ` from <top_mm> mm` when `top_mm` is not 0, `select` `{"pocket_floors": [...]}`, and as `params` the feature's `params` plus `doMultipleDepths` `true`, `useRestMachining` `true` and `rampType` `'plunge'`;
    - windows: the same, with `name` `Window corners <diameter>` and `select` `{"window_loops": [...]}`.
    Features of one kind that share a tool and the same `params` go in one operation.
    Put windows' operations after the pockets' ones: pass the name of the pocket operation as `after`.
@@ -56,12 +57,12 @@ for e in [e for e in call('recipes', {}) if e['recipe'] == 'corners']:
                 continue
             t = max([t for t in fits if t['tool'] in used] or fits, key=lambda t: t['diameter_mm'])
             used.add(t['tool'])
-            groups.setdefault(t['tool'], []).append(f)
-        for tool, fs in groups.items():
+            groups.setdefault((t['tool'], f.get('top_mm', 0)), []).append(f)
+        for (tool, top), fs in sorted(groups.items(), key=lambda g: g[0][1]):
             d = [t['diameter_mm'] for t in small if t['tool'] == tool][0]
             o = call('add_operation', {
                 'setup': e['setup'], 'after': after, 'strategy': 'pocket2d', 'tool': tool,
-                'name': '%s corners %g' % (kind.capitalize(), d),
+                'name': '%s corners %g' % (kind.capitalize(), d) + (' from %g mm' % top if top else ''),
                 'params': dict(fs[0]['params'], doMultipleDepths='true', useRestMachining='true',
                                rampType="'plunge'"),
                 'select': {sel: [f[key] for f in fs]}})
@@ -69,7 +70,7 @@ for e in [e for e in call('recipes', {}) if e['recipe'] == 'corners']:
 call('renumber_tools', {})
 ```
 
-The example puts features of one kind and tool in one operation with the first feature's `params`; give a feature whose `params` differ (another depth, say) its own operation.
+The example puts features of one kind, tool and `top_mm` in one operation with the first feature's `params`, shallowest first; give a feature whose `params` differ otherwise its own operation.
 
 ## Shapes the steps do not cover
 

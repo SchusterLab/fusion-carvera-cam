@@ -3760,7 +3760,22 @@ def _side_ops(b, setup, a, side, plan, warnings):
 
     # corners the 3.175 can't reach, in pockets and windows, with small end mills:
     # by build itself, or after build by the corners recipe
-    # (references/recipes/corners.md), which build records what it needs for
+    # (references/recipes/corners.md), which build records what it needs for.
+    # A floor inside a shelf region has walls only up to that region's floor:
+    # above it the region's pocket has cleared everything, its corners too, so
+    # its corner cut starts there
+    shelves = lay['shelves'] if lay else {}
+    regions = []
+    for f in pockets:
+        c = shelves.get(f['face'].tempId)
+        if c is not None and all(c is not w[1] for w in regions):
+            regions.append((None, c, f['depth']))
+
+    def corner_top(f):
+        """The enclosing shelf region (or None) and the corner cut's top height."""
+        w = _enclosing((f['face'], None, f['depth']), regions, 0.0, None)
+        return w, (at('top', w[1]['face']) if w else top_at(0))
+
     if not plan.get('recipes'):
         # small end mills: rest machining in pockets whose corners the 3.175 can't reach,
         # one operation per tool
@@ -3792,11 +3807,15 @@ def _side_ops(b, setup, a, side, plan, warnings):
                 warnings.append('pocket at z=%g mm: corner radius %.2f mm needs a smaller tool '
                                 'than the library has, or is deeper than its flute' % (f['z'], r))
                 continue
-            corners.setdefault((em, d), []).append(f['face'])
-        for (em, d), faces in corners.items():
-            ops['main'].append(b.op(setup, 'pocket2d', em, 'Pocket corners %g' % d, dict(
+            w, top_h = corner_top(f)
+            corners.setdefault((em, d, w[2] if w else 0.0), (w, top_h, []))[2].append(f['face'])
+        for (em, d, z), (w, top_h, faces) in sorted(corners.items(), key=lambda kv: kv[0][2]):
+            name = 'Pocket corners %g' % d
+            if w is not None:
+                name += ' from %g mm' % round(z, 2)
+            ops['main'].append(b.op(setup, 'pocket2d', em, name, dict(
                 POCKET, doMultipleDepths='true', rampType="'plunge'", useRestMachining='true',
-                bottomHeight_mode="'from contour'", **top_at(0)),
+                bottomHeight_mode="'from contour'", **top_h),
                 _sel_pocket(faces)))
         # windows' corners likewise, from the part's face (the shelf pockets above a
         # window leave the same corners) through the part
@@ -3828,10 +3847,12 @@ def _side_ops(b, setup, a, side, plan, warnings):
             r = f['corner_radius']
             if f['face'].tempId in slotted or r is None or r >= ENDMILL_D / 2 - 1e-3:
                 continue
+            w, top_h = corner_top(f)
             feats.append({'kind': 'pocket', 'floor': next(k for k, g in enumerate(a['floors'])
                                                           if g is f),
                           'corner_radius_mm': r, 'depth_mm': f['depth'],
-                          'params': tokens(dict(bottomHeight_mode="'from contour'", **top_at(0)))})
+                          'top_mm': round(w[2], 3) if w else 0.0,
+                          'params': tokens(dict(bottomHeight_mode="'from contour'", **top_h))})
         for w in windows:
             r = w['corner_radius']
             if r is None or r >= ENDMILL_D / 2 - 1e-3:
