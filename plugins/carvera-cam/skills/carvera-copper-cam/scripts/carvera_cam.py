@@ -296,6 +296,27 @@ def _point_angle(hole, edge):
     return math.degrees(2 * other.geometry.halfAngle)
 
 
+def _hole_ends(h, top):
+    """The hole's rim where the setup's tool enters it, as the loop of the flat
+    face round it, and, for a blind hole, the face at its bottom."""
+    face = h['face']
+    z_in, z_far = (h['z1'], h['z0']) if top else (h['z0'], h['z1'])
+    rim = bottom = None
+    for e in face.edges:
+        if not isinstance(e.geometry, adsk.core.Circle3D):
+            continue
+        other = _other_face(e, face)
+        if other is None:
+            continue
+        z = mm(e.geometry.center.z)
+        if abs(z - z_in) < 1e-3:
+            rim = next((lp for lp in other.loops
+                        if any(c.edge.tempId == e.tempId for c in lp.coEdges)), rim)
+        elif abs(z - z_far) < 1e-3 and not h['through']:
+            bottom = other
+    return rim, bottom
+
+
 def _classify_hole(face, ztop, zbot, threads):
     g = face.geometry
     z0, z1 = _zrange(face)
@@ -1855,6 +1876,11 @@ DRILL = {  # every drill op, entry holes included, pecks as threads.toml says
     'accumulatedPeckingDepth': '%gmm' % THREAD_COMMON['drill']['accumulated_peck'],
     'chipBreakDistance': '%gmm' % THREAD_COMMON['drill']['chip_break'],
 }
+# The most a rough bore takes off the wall: two 0.3 mm passes, as the lab bores
+# its 4.2 mm holes. A wider hole is pocketed, as the lab cuts its 7 mm holes
+# (hanger-for-chris, 2026-10-18): a 7 mm bore takes seven passes and four times
+# as long.
+BORE_MAX_RADIAL = 0.6
 BORE = {
     'tolerance': '0.01mm',
     'direction': "'climb'",
@@ -3078,8 +3104,12 @@ def _make_layout(design, a, plan, warnings):
                 if c.isValid:
                     c.deleteMe()
         open_passes[f['face'].tempId] = paths
+    # the centres of holes too wide to bore, where their pockets enter (hole_pocket)
+    hole_centres = {h['face'].tempId: sk.sketchPoints.add(adsk.core.Point3D.create(
+                        h['x'] / 10, h['y'] / 10, 0))
+                    for h in a['holes'] if (h['dia'] - ENDMILL_D) / 2 > BORE_MAX_RADIAL + 1e-6}
     return {'sketch': sk, 'corner': corner, 'tabs': tab_chains, 'shelves': shelves,
-            'entry': entry, 'ends': ends, 'pocket_entries': pocket_entries, 'narrow': narrow,
+            'entry': entry, 'hole_centres': hole_centres, 'ends': ends, 'pocket_entries': pocket_entries, 'narrow': narrow,
             'outline': pieces,
             'window_entries': window_entries, 'window_tops': window_tops, 'slots': slots,
             'open_passes': open_passes}
@@ -3609,6 +3639,8 @@ def _side_ops(b, setup, a, side, plan, warnings):
         fits = [d for d in drills if d[1] <= h['dia'] - DRILL_UNDER + 1e-6 and d[2] >= h['depth'] + 0.5]
         return max(fits, key=lambda d: d[1])[0] if fits else None
     deep_bore = lambda h: h['depth'] > reach + 1e-6
+    # holes whose rough bore would need more passes than the lab's are pocketed
+    pocketed = lambda h: not deep_bore(h) and (h['dia'] - ENDMILL_D) / 2 > BORE_MAX_RADIAL + 1e-6
 
     def later_drills():
         """T1 after the rough face and outline: tab entries from the tab band's
@@ -3753,10 +3785,37 @@ def _side_ops(b, setup, a, side, plan, warnings):
                    if sl['side'] == side for g in [sl['floor']] + sl['fed']}
     passes = (('rough', 'true', ''), ('finish', 'false', ' (finish)'))
 
+    def hole_pocket(hs, multi, suffix):
+        """The rough cut of holes too wide for the lab's bore: a pocket entered
+        down the hole T1 pre-drilled at its centre, as the lab cuts its 7 mm
+        holes; the finishing bore then cleans the wall."""
+        h = hs[0]
+        t0 = depth_of(h['z1'] if top else h['z0'])
+        rims, bottoms = zip(*(_hole_ends(x, top) for x in hs))
+        centres = [(lay or {}).get('hole_centres', {}).get(x['face'].tempId) for x in hs]
+        if None in rims or None in centres or (not h['through'] and None in bottoms):
+            return None  # no flat face round the rim or at the bottom: bored instead
+        params = dict(POCKET, doMultipleDepths=multi)
+        # a hole in a floor starts at that floor, where the rough pocket left the allowance
+        params.update(top_at(0) if t0 < 1e-6 else at('top', rims[0].face, POCKET_FLOOR_ALLOWANCE))
+        if h['through']:
+            params.update(through_part('bottom'))
+        else:
+            # the finishing bore takes the allowance off the floor
+            params.update(at('bottom', bottoms[0], POCKET_FLOOR_ALLOWANCE))
+        return b.op(setup, 'pocket2d', (ENDMILL, 'rough'), 'Hole pocket %.2f%s' % (h['dia'], suffix),
+                    params, _both(_sel_chains(list(rims), 'pockets'),
+                                  _sel_faces('predrillPositions', centres)))
+
     def end_bores(which, multi, suffix):
         for hs in _group(end_bored):
             h = hs[0]
             radial = max(0.1, (h['dia'] - ENDMILL_D) / 2)
+            if which == 'rough' and pocketed(h):
+                op = hole_pocket(hs, multi, suffix)
+                if op is not None or b.dry:
+                    ops['main'].append(op)
+                    continue
             # the finishing bore is a single pass at the wall; in a blind hole the
             # rough bore stops the floor allowance above the floor for it to take
             # off (user, 2026-10-17); a bore has no axial stock to leave
