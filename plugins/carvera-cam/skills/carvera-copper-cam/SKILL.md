@@ -267,7 +267,7 @@ The check does not replace Fusion's simulation with collision checking, which th
 - A new 2D pocket keeps a 0.2 mm `maximumStepdown` even with the tool's stepdown in use; set it to `tool_stepdown`.
 - A 2D pocket's rest machining (`useRestMachining`) goes by an earlier tool's diameter, not by the stock earlier operations left. It cannot skip stock that is already gone.
 - A 2D pocket's stock contours (`useStockContours` and the `stockContours` closed chains) limit it to where stock is left; a closed chain inside another one takes its area out. They work with the `predrill` ramp.
-- An operation's feed height defaults to 5 mm above its top height (`feedHeight_offset`), and the tool feeds down from there at the plunge rate.
+- An operation's feed height defaults to 5 mm above its top height (`feedHeight_offset`), and the tool feeds down from there at the plunge rate. `build` sets 1 mm. Fusion raises the feed height to the ramp clearance height (`rampClearanceHeight`, 2.5 mm by default) plus the vertical lead-in radius, so `build` sets the ramp clearance to 0.5 mm.
 - A script cannot read a pattern feature's `inputEntities`: it fails with "Didn't roll editing feature back". The skill matches patterned faces by radius instead.
 - `HoleFeature` has no `isTapped`; use `holeTapType`.
 

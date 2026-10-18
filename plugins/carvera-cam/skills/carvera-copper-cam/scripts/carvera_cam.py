@@ -999,6 +999,7 @@ def add_operation(args):
     skip = [getattr(modes, n) for n in dir(modes) if 'Skip' in n] if modes else []
     if skip:
         oi.generationMode = skip[0]
+    _feed_height(oi.parameters)
     params = dict(base, **args.get('params', {}))
     for k, v in params.items():
         if not isinstance(v, dict):
@@ -1350,6 +1351,7 @@ class Builder:
         skip = [getattr(modes, n) for n in dir(modes) if 'Skip' in n] if modes else []
         if skip:
             oi.generationMode = skip[0]
+        _feed_height(oi.parameters)
         for k, v in params.items():
             if not isinstance(v, list):
                 _set(oi.parameters, k, v)
@@ -1841,6 +1843,21 @@ POCKET_FLOOR_ALLOWANCE = 0.2
 # The main entry is the outline cut's, one radius outside the outline, and Fusion
 # wants about 5 x the pocket tolerance of room round an entry hole.
 FACE_MARGIN = ENDMILL_D + 5 * POCKET_TOL
+# Every operation rapids down to this far above its top height and feeds from
+# there; the top height sits at the stock the operation starts on. Fusion's
+# default, 5 mm, fed each entry and each drilled hole through 5 mm of air at the
+# plunge or drill feed (user, 2026-10-17).
+FEED_HEIGHT = 1.0  # mm
+
+
+def _feed_height(params):
+    if params.itemByName('feedHeight_offset') is not None:
+        _set(params, 'feedHeight_mode', "'from top'")
+        _set(params, 'feedHeight_offset', '%gmm' % FEED_HEIGHT)
+    # Fusion raises the feed height to the ramp clearance height plus the
+    # vertical lead-in radius (0.1 x the tool diameter) when they reach above it
+    if params.itemByName('rampClearanceHeight') is not None:
+        _set(params, 'rampClearanceHeight', '%gmm' % (FEED_HEIGHT / 2))
 
 
 def _drill_ends(through):
