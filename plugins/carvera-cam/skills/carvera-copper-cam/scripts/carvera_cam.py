@@ -59,6 +59,10 @@ SETUP_TAG = '(carvera-cam)'
 
 DRILL_3175 = '3.175*7.4mm Drill (1/8")'
 DRILL_D = 3.175
+# a hole is drilled by a library drill from DRILL_UNDER mm under its diameter to
+# DRILL_OVER mm over it: a 3.2 mm clearance hole takes T1, as the lab drills kiutra-beam's
+DRILL_UNDER = 0.03
+DRILL_OVER = 0.05
 ENDMILL = 'Spiral O Metal 3.175*12mm'
 ENDMILL_D = 3.175
 # the end mill enters copper only down a drilled hole at least half its width,
@@ -471,11 +475,13 @@ def _tab_points(a, width):
             for i, cs in tabs.items() for c in cs for k in range(5)]
 
 
-def _tab_height(a, band, overlap, requested=None, tab_points=None):
+def _tab_height(a, band, overlap, requested=None, tab_points=None, lowest=False):
     """Model Z (mm) of the tab band's centre: the mid-plane unless a side opening
     is there, beside a tab. An opening counts when it comes within an end mill's
     width of a tab: the tab is the strip of stock that wide outside the outline.
-    With tab_points None, every opening counts."""
+    With tab_points None, every opening counts. With lowest (one side, where the
+    tab cut comes from the top too), the band sits on the part's bottom, or the
+    lowest height above it clear of the openings."""
     ztop, zbot = a['ztop'], a['zbot']
     reach = ENDMILL_D / 10 + 0.05
     openings = []
@@ -496,6 +502,13 @@ def _tab_height(a, band, overlap, requested=None, tab_points=None):
 
     if requested is not None:
         return requested, clear(requested), openings
+    if lowest:
+        lo, hi = zbot + band / 2, ztop - band / 2 - overlap
+        for k in range(int((hi - lo) / 0.05) + 2):
+            zc = lo + k * 0.05
+            if zc <= hi + 1e-6 and clear(zc):
+                return round(zc, 3), True, openings
+        return round(lo, 3), False, openings
     mid = (ztop + zbot) / 2
     lo, hi = zbot + band / 2 + overlap, ztop - band / 2 - overlap
     for k in range(int((hi - lo) / 0.05) + 2):
@@ -645,12 +658,21 @@ def _flip_matrix(body):
     return m
 
 
-def _turned_threads(body, turned, m, threads):
-    """The thread map of `turned` (body turned over by m): each threaded face of
-    body matched to the turned body's face on the same cylinder."""
-    out = {}
+def _quarter_matrix(body):
+    """A quarter turn about the Z axis through the body's centre: the part's X
+    and Y swap, so that the side to grip lies across the vise's jaws."""
     bb = body.boundingBox
-    s = bb.minPoint.z + bb.maxPoint.z  # z turns into s - z
+    c = adsk.core.Point3D.create(*[(p + q) / 2 for p, q in
+                                   zip(bb.minPoint.asArray(), bb.maxPoint.asArray())])
+    m = adsk.core.Matrix3D.create()
+    m.setToRotation(math.pi / 2, adsk.core.Vector3D.create(0, 0, 1), c)
+    return m
+
+
+def _turned_threads(body, turned, m, threads):
+    """The thread map of `turned` (body moved by m): each threaded face of body
+    matched to the turned body's face on the same cylinder."""
+    out = {}
     cyls = [f for f in turned.faces if isinstance(f.geometry, adsk.core.Cylinder)]
     for f in body.faces:
         name = threads.get(f.tempId)
@@ -659,23 +681,27 @@ def _turned_threads(body, turned, m, threads):
         g = f.geometry
         o = g.origin.copy()
         o.transformBy(m)
-        z0, z1 = _zrange(f)
+        ends = []
+        for z in _zrange(f):
+            p = adsk.core.Point3D.create(g.origin.x, g.origin.y, z)
+            p.transformBy(m)
+            ends.append(p.z)
+        z0, z1 = min(ends), max(ends)
         for t in cyls:
             tz0, tz1 = _zrange(t)
-            if abs(t.geometry.radius - g.radius) < EPS and \
-                    math.hypot(t.geometry.origin.x - o.x, t.geometry.origin.y - o.y) < EPS and \
-                    abs(tz0 - (s - z1)) < EPS and abs(tz1 - (s - z0)) < EPS:
+            if abs(t.geometry.radius - g.radius) < EPS and                     math.hypot(t.geometry.origin.x - o.x, t.geometry.origin.y - o.y) < EPS and                     abs(tz0 - z0) < EPS and abs(tz1 - z1) < EPS:
                 out[t.tempId] = name
     return out
 
 
-def _machined_body(args, design, make):
+def _machined_body(args, design, make, quarter=False):
     """The body the setups machine, its analysis, whether it is the design's body
     turned over, and the feature counts per face.
 
     The face with more features is machined first, as the top: when the design's
     bottom face has more (see _feature_counts), or args['flip'] is true, the part
-    is turned over. With make, the turned copy is added to the design in
+    is turned over. With quarter, it is also given a quarter turn about Z (see
+    _quarter_matrix). With make, the moved copy is added to the design in
     PART_COMPONENT and the design's body hidden behind it (the next build shows it
     again); otherwise the copy is a temporary body, for analyze.
     """
@@ -685,15 +711,17 @@ def _machined_body(args, design, make):
     flip = args.get('flip')
     if flip is None:
         flip = n['bottom'] > n['top']
-    if not flip:
+    if not flip and not quarter:
         return body, a, False, n
-    m = _flip_matrix(body)
+    m = _flip_matrix(body) if flip else adsk.core.Matrix3D.create()
+    if quarter:
+        m.transformBy(_quarter_matrix(body))
     tb = adsk.fusion.TemporaryBRepManager.get()
     temp = tb.copy(body)
     tb.transform(temp, m)
     threads = _thread_faces(design)
     if not make:
-        return temp, analyze_body(temp, design, _turned_threads(body, temp, m, threads)), True, n
+        return temp, analyze_body(temp, design, _turned_threads(body, temp, m, threads)), flip, n
     occ = design.rootComponent.occurrences.addNewComponent(adsk.core.Matrix3D.create())
     comp = occ.component
     comp.name = PART_COMPONENT
@@ -705,10 +733,11 @@ def _machined_body(args, design, make):
     else:
         comp.bRepBodies.add(temp)
     turned = occ.bRepBodies.item(0)  # in the root's context, as the setups need it
-    turned.name = body.name + ' (turned over)'
+    turned.name = body.name + ' (%s)' % ' and '.join(
+        w for w, on in (('turned over', flip), ('quarter-turned', quarter)) if on)
     body.attributes.add(HIDDEN_ATTR[0], HIDDEN_ATTR[1], '1')
     body.isLightBulbOn = False
-    return turned, analyze_body(turned, design, _turned_threads(body, turned, m, threads)), True, n
+    return turned, analyze_body(turned, design, _turned_threads(body, turned, m, threads)), flip, n
 
 
 def analyze(args=None):
@@ -738,6 +767,10 @@ def analyze(args=None):
         'windows': [_strip(w) for w in a['windows']],
         'tab_z': _tab_height(a, min(1.0, 0.4 * a['size'][2]), min(0.5, 0.2 * a['size'][2]),
                              tab_points=_tab_points(a, 0.5))[0],
+        # with one side: the tab band on the part's bottom (see _strategy)
+        'tab_z_one_sided': _tab_height(a, min(1.0, 0.4 * a['size'][2]),
+                                       min(0.5, 0.2 * a['size'][2]),
+                                       tab_points=_tab_points(a, 0.5), lowest=True)[0],
         'has_top_face': a['top_face'] is not None,
         'has_bottom_face': a['bottom_face'] is not None,
     }
@@ -1983,6 +2016,7 @@ FIXTURE_CACHE = os.path.join(os.path.dirname(CACHE_DIR), 'fixture')
 FX_FIXED_FACE = 242.93
 FX_ADJ_FACE = 186.72
 FX_JAW_CENTRE = (124.64 + 220.14) / 2
+FX_JAW_WIDTH = 220.14 - 124.64  # the insert bars' length, across the vise
 FX_JAW_TOP = 29.53
 FX_PLATE_CORNER = (0.0, 0.0, -17.78)
 FX_MAX_OPENING = 185.0  # the adjustable base reaches the plate's edge beyond this
@@ -2163,6 +2197,102 @@ def _add_vise(design, name, bodies, fixed, adj):
     cp.name = 'table attach'
     sk.isVisible = False
     return occ, cp.createForAssemblyContext(occ)
+
+
+def _drill_tip(d):
+    """Length (mm) of a 130 degree drill point of diameter d mm."""
+    return d / 2 / math.tan(math.radians(65))
+
+
+def _planned_cuts(a, plan, box):
+    """Where each setup's cuts reach, for the check against the vise: per side,
+    (what, (x0, y0, x1, y1), z) in model cm, the footprint of the tool's cutting
+    end and the deepest Z it reaches: the lowest for the top setup, the highest
+    for the bottom setup, whose tool comes from below. The footprints are
+    boxes round the features, which is exact for the jaws, straight strips
+    along the stock's X edges."""
+    lay = plan['layout']
+    bb = a['body'].boundingBox
+    lo, hi = bb.minPoint, bb.maxPoint
+    tab = plan['tab']
+    band_top, band_bot = (tab['z'] + tab['band'] / 2) / 10, (tab['z'] - tab['band'] / 2) / 10
+    ztop, zbot = a['ztop'] / 10, a['zbot'] / 10
+    D = ENDMILL_D / 10
+    deburr = (float(CHAMFER_OP['chamferWidth'][:-2]) + CHAMFER_TIP_MAX) / 10
+
+    def ring(m):  # the part's footprint grown by m cm
+        return (lo.x - m, lo.y - m, hi.x + m, hi.y + m)
+
+    def circle(x, y, r):
+        return (x - r, y - r, x + r, y + r)
+    cuts = {'top': [], 'bottom': []}
+    for side in ('top', 'bottom')[:plan['sides']]:
+        top = side == 'top'
+        margin = plan['margin_top'] if top else plan['margin_bottom']
+        face = ztop if top else zbot
+        if plan['face'] and margin > 1e-6:
+            cuts[side].append(('the facing', ring(FACE_MARGIN / 10), face))
+        if plan['chamfer']:
+            cuts[side].append(('the deburr', ring(TOOL_R), face - deburr if top else face + deburr))
+        if plan['outline']:
+            cuts[side].append(('the outline cut', ring(D), band_top if top else band_bot))
+    for e in (lay['ends'] if plan.get('ends') else []):
+        x0, y0, x1, y1 = e['box']
+        cuts['top'].append(("the cut at the part's end", (x0 - D, y0 - TOOL_R, x1 + D, y1 + TOOL_R),
+                            box[0][2] - 0.05))
+    if plan['outline']:
+        chain_bot = band_bot - tab['overlap'] / 10
+        cuts['top'].append(('the outline between the tabs', ring(D), chain_bot))
+        p = lay['entry'].geometry
+        cuts['top'].append(('the entry hole', circle(p.x, p.y, DRILL_D / 20),
+                            box[0][2] - (0.5 + _drill_tip(DRILL_D)) / 10))
+    for w in a['windows']:
+        wb = w['loop'].boundingBox
+        cuts['top'].append(('a window', (wb.minPoint.x, wb.minPoint.y, wb.maxPoint.x,
+                                         wb.maxPoint.y), zbot - 0.05))
+    for h in a['holes']:
+        if h['through'] and h['side'] == 'top':
+            cuts['top'].append(('the %.2f mm hole at (%g, %g) mm' % (h['dia'], h['x'], h['y']),
+                                circle(h['x'] / 10, h['y'] / 10, h['dia'] / 20),
+                                zbot - (0.5 + _drill_tip(min(h['dia'], DRILL_D))) / 10))
+    return cuts
+
+
+def _vise_conflicts(cuts, vises, box):
+    """The planned cuts (see _planned_cuts) whose tool would enter the vise:
+    the jaws beside the stock, or their ledges under its Y edges, where a cut
+    through the stock's bottom goes on into the jaw. Each cut is tested as a
+    box from its footprint and deepest Z out past the stock's far side."""
+    tb = adsk.fusion.TemporaryBRepManager.get()
+    out = []
+    reach = 5.0  # cm past the stock, for the tool's shank above the cut
+    for side, items in cuts.items():
+        occ = vises.get(side)
+        if occ is None:
+            continue
+        bodies = list(occ.bRepBodies)
+        for what, (x0, y0, x1, y1), z in items:
+            z0, z1 = (z, box[1][2] + reach) if side == 'top' else (box[0][2] - reach, z)
+            obb = adsk.core.OrientedBoundingBox3D.create(
+                adsk.core.Point3D.create((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2),
+                adsk.core.Vector3D.create(1, 0, 0), adsk.core.Vector3D.create(0, 1, 0),
+                x1 - x0, y1 - y0, z1 - z0)
+            for b in bodies:
+                bb = b.boundingBox
+                if bb.maxPoint.x < x0 or bb.minPoint.x > x1 or bb.maxPoint.y < y0 or \
+                        bb.minPoint.y > y1 or bb.maxPoint.z < z0 or bb.minPoint.z > z1:
+                    continue
+                c = tb.copy(b)
+                tb.booleanOperation(c, tb.createBox(obb), adsk.fusion.BooleanTypes.IntersectionBooleanType)
+                if c.volume > 1e-6:
+                    q = c.boundingBox
+                    out.append('in the %s setup, %s would cut into the vise at model x %.1f..%.1f, '
+                               'y %.1f..%.1f, z %.2f..%.2f mm'
+                               % (side, what, q.minPoint.x * 10, q.maxPoint.x * 10,
+                                  q.minPoint.y * 10, q.maxPoint.y * 10, q.minPoint.z * 10,
+                                  q.maxPoint.z * 10))
+                    break
+    return out
 
 
 # The stock box corner each setup's origin sits on, as in the lab's setups:
@@ -2755,16 +2885,19 @@ def _make_layout(design, a, plan, warnings):
         warnings.append('the part is wider in the middle than at its top and bottom faces; '
                         'the tab chains follow the face outline, so check them')
     pieces = _clockwise(_loop_pieces(loop))
-    tabs = _place_tabs(pieces, width)
-    if tabs is None:
-        raise RuntimeError('no straight or arc edge of the outline is long enough for a '
-                           '%g mm tab' % plan['tab']['width'])
+    if plan['outline']:
+        tabs = _place_tabs(pieces, width)
+        if tabs is None:
+            raise RuntimeError('no straight or arc edge of the outline is long enough for a '
+                               '%g mm tab' % plan['tab']['width'])
+    else:
+        tabs = {i: [] for i in range(len(pieces))}
 
     sk = root.sketches.add(root.xYConstructionPlane)
     sk.name = LAYOUT_SKETCH
     sk.isVisible = False
     segs = []  # (curves, is_tab, start point, direction)
-    for i, pc in enumerate(pieces):
+    for i, pc in enumerate(pieces if plan['outline'] else []):
         pos = 0.0
         for c in sorted(tabs[i]):
             lo, hi = c - width / 2, c + width / 2
@@ -2779,15 +2912,16 @@ def _make_layout(design, a, plan, warnings):
                          _flat(_point_on(pc, pos)), _direction(pc, pos, pc['len'])))
 
     # corner chains: the runs of outline between tabs, each starting just after a tab
-    first_tab = [k for k, sg in enumerate(segs) if sg[1]][0]
     chains, run = [], []
-    for sg in segs[first_tab + 1:] + segs[:first_tab + 1]:
-        if sg[1]:
-            if run:
-                chains.append(run)
-            run = []
-        else:
-            run.append(sg)
+    if segs:
+        first_tab = [k for k, sg in enumerate(segs) if sg[1]][0]
+        for sg in segs[first_tab + 1:] + segs[:first_tab + 1]:
+            if sg[1]:
+                if run:
+                    chains.append(run)
+                run = []
+            else:
+                run.append(sg)
 
     def outside(pt, d):
         # a clockwise loop has its outside on the left of the direction of travel
@@ -2796,6 +2930,19 @@ def _make_layout(design, a, plan, warnings):
     corner = [{'curves': [c for sg in ch for c in sg[0]], 'start': ch[0][2], 'dir': ch[0][3],
                'entry': sk.sketchPoints.add(outside(ch[0][2], ch[0][3]))} for ch in chains]
     tab_chains = [{'curves': sg[0], 'start': sg[2], 'dir': sg[3]} for sg in segs if sg[1]]
+    if corner:
+        entry = corner[0]['entry']
+    else:
+        # no outline cut: the facing enters beside the part, where the stock
+        # ends, one radius out from the middle of the longest edge running along
+        # Y, away from the jaws, which grip the edges running along X
+        def along_y(pc):
+            d = _direction(pc, pc['len'] / 2, pc['len'])
+            return abs(d.y) > 0.9, pc['len']
+        pc = max(pieces, key=along_y)
+        entry = sk.sketchPoints.add(outside(_flat(_point_on(pc, pc['len'] / 2)),
+                                            _direction(pc, pc['len'] / 2, pc['len'])))
+    ends = _end_chains(sk, a, pieces) if plan.get('ends') else []
 
     pocket_entries = {}
     narrow = set()  # closed pockets the end mill fits, too narrow for a pocket toolpath's entry
@@ -2929,10 +3076,70 @@ def _make_layout(design, a, plan, warnings):
                     c.deleteMe()
         open_passes[f['face'].tempId] = paths
     return {'sketch': sk, 'corner': corner, 'tabs': tab_chains, 'shelves': shelves,
-            'entry': corner[0]['entry'], 'pocket_entries': pocket_entries, 'narrow': narrow,
+            'entry': entry, 'ends': ends, 'pocket_entries': pocket_entries, 'narrow': narrow,
             'outline': pieces,
             'window_entries': window_entries, 'window_tops': window_tops, 'slots': slots,
             'open_passes': open_passes}
+
+
+def _end_chains(sk, a, pieces):
+    """The cuts that free the ends of a part the vise holds by its sides (the
+    sides the stock fits, along the design's X; see _strategy): the runs of the
+    outline between those sides, sketched, each run on straight past the
+    stock's sides far enough that the end mill starts and ends clear of it. The
+    outline must lie on the gripped sides wherever the jaws reach."""
+    bb = a['body'].boundingBox
+    ylo, yhi = bb.minPoint.y, bb.maxPoint.y
+    ends = lambda pc: (_flat(_point_on(pc, 0)), _flat(_point_on(pc, pc['len'])))
+
+    def side_of(pc):  # the gripped side a straight piece lies on, or None
+        if not isinstance(pc['edge'].geometry, adsk.core.Line3D):
+            return None
+        p, q = ends(pc)
+        return next((y for y in (ylo, yhi) if abs(p.y - y) < 1e-4 and abs(q.y - y) < 1e-4), None)
+    sides = [side_of(pc) for pc in pieces]
+    cx = (bb.minPoint.x + bb.maxPoint.x) / 2
+    lo, hi = cx - FX_JAW_WIDTH / 20, cx + FX_JAW_WIDTH / 20
+    for y in (ylo, yhi):
+        spans = sorted(tuple(sorted((p.x, q.x))) for pc, sy in zip(pieces, sides) if sy == y
+                       for p, q in [ends(pc)])
+        reach = lo
+        for x0, x1 in spans:
+            if x0 <= reach + 1e-4:
+                reach = max(reach, x1)
+        if reach < hi - 1e-4:
+            raise RuntimeError("the part's side at y = %g mm is not straight over the jaws' "
+                               '%.1f mm width, so the vise cannot hold it there; give stock '
+                               'larger than the part on every side' % (mm(y), FX_JAW_WIDTH))
+    k0 = next(k for k, sy in enumerate(sides) if sy is not None)
+    runs, run = [], []
+    for i in list(range(k0, len(pieces))) + list(range(k0)):
+        if sides[i] is not None:
+            if run:
+                runs.append(run)
+            run = []
+        else:
+            run.append(i)
+    if run:
+        runs.append(run)
+    off = 2 * TOOL_R + 0.1  # cm: the tool's edge 1 mm clear of the stock
+    out = []
+    for run in runs:
+        curves = [c for i in run for c in _sketch_curve(sk, pieces[i], 0, pieces[i]['len'])]
+        p0, p1 = ends(pieces[run[0]])[0], ends(pieces[run[-1]])[1]
+
+        def past(p):
+            s = 1 if abs(p.y - yhi) < abs(p.y - ylo) else -1
+            return adsk.core.Point3D.create(p.x, p.y + s * off, 0)
+        a0, a1 = past(p0), past(p1)
+        lines = sk.sketchCurves.sketchLines
+        first, last = lines.addByTwoPoints(a0, p0), lines.addByTwoPoints(p1, a1)
+        d = adsk.core.Vector3D.create(p0.x - a0.x, p0.y - a0.y, 0)
+        d.normalize()
+        xs = [a0.x, a1.x] + [q.x for i in run for q in ends(pieces[i])]
+        out.append({'curves': [first] + curves + [last], 'start': a0, 'dir': d,
+                    'box': (min(xs), min(a0.y, a1.y), max(xs), max(a0.y, a1.y))})
+    return out
 
 
 def _profile_rings(profile):
@@ -3150,7 +3357,8 @@ def _side_ops(b, setup, a, side, plan, warnings):
     # stock above the part's face this setup machines: the top margin, or the bottom one
     m = plan['margin_top'] if top else plan['margin_bottom']
     ops = {'main': [], 'tabs': []}
-    facing = [f for f in floors if f['role'] == 'face'] if plan['face'] else []
+    # faced only where the stock stands above the part's face
+    facing = [f for f in floors if f['role'] == 'face'] if plan['face'] and m > 1e-6 else []
     # the material the rough face leaves on the face, until the finishing face
     allow = FACE_ALLOWANCE if facing else 0.0
     # the stock's highest point in this setup, in mm above the part's face: the
@@ -3234,7 +3442,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
                 continue
             tapped.append((h, t))
             continue
-        match = [d for d in drills if h['dia'] - 0.02 <= d[1] <= h['dia'] + 0.05
+        match = [d for d in drills if h['dia'] - DRILL_UNDER - 1e-6 <= d[1] <= h['dia'] + DRILL_OVER
                  and d[2] >= h['depth'] + 0.5]
         if match:
             best = min(match, key=lambda d: abs(d[1] - h['dia']))  # the closest in diameter
@@ -3280,16 +3488,22 @@ def _side_ops(b, setup, a, side, plan, warnings):
     # deeper than the drill reaches, it drills and cuts the outline in stages,
     # and if the drill still cannot get through, the bottom setup drills the
     # entry from its own side, staged with its outline.
+    # Stock of the part's own size has no outline cut: the facing enters beside
+    # the part, where there is no stock, so there is no entry hole to drill.
     outline_depth = {True: plan['margin_top'] + a['ztop'] - band_top,  # from the stock top
                      False: plan['margin_bottom'] + band_bot - a['zbot']}
     entry_seq, through = _stage_plan(0, stock_z, outline_depth[True], reach)
-    if not top:
+    if not plan['outline']:
+        entry_seq = []
+    elif not top:
         if through:
             entry_seq = [('mill', 0, outline_depth[False])]
         else:
             entry_seq, ok = _stage_plan(0, outline_depth[False], outline_depth[False], reach)
             if not ok:
                 warnings.append('the entry hole cannot be drilled to the outline depth')
+    elif not through and plan['sides'] == 1:
+        warnings.append('the entry hole cannot be drilled through the stock')
     staged_entry = sum(k == 'mill' for k, _, _ in entry_seq) > 1
 
     def entry_drill(s, e):
@@ -3307,7 +3521,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
         name = 'Entry hole %g to %g mm' % (round(s, 2), round(e, 2)) if staged_entry else 'Entry hole'
         return b.op(setup, 'drill', DRILL_3175, name, params, points([lay['entry']] if lay else []))
 
-    if entry_seq[0][0] == 'drill':
+    if entry_seq and entry_seq[0][0] == 'drill':
         ops['main'].append(entry_drill(*entry_seq[0][1:]))
         if plan['face'] and m > entry_seq[0][2] + 1e-6:
             warnings.append('the facing (%.1f mm) is deeper than the first stage of the entry hole'
@@ -3384,6 +3598,13 @@ def _side_ops(b, setup, a, side, plan, warnings):
     # bores deeper than the drill reaches are pre-drilled in stages with their
     # rough bore, at the bore; the others are pre-drilled with the entries
     end_bored = [h for h, rough, _ in bored if rough[0] == ENDMILL]
+    small_bored = [h for h, rough, _ in bored if rough[0] != ENDMILL]
+
+    def small_pre_drill(h):
+        """The widest library drill no wider than the hole less DRILL_UNDER that
+        reaches its depth, or None."""
+        fits = [d for d in drills if d[1] <= h['dia'] - DRILL_UNDER + 1e-6 and d[2] >= h['depth'] + 0.5]
+        return max(fits, key=lambda d: d[1])[0] if fits else None
     deep_bore = lambda h: h['depth'] > reach + 1e-6
 
     def later_drills():
@@ -3391,7 +3612,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
         top, which the outline has cut down to there, and pocket entries and
         bore pre-drills from the face, on the material left for its finish."""
         out = []
-        if top and (lay is None or len(lay['corner']) > 1):
+        if top and plan['outline'] and (lay is None or len(lay['corner']) > 1):
             depth = a['ztop'] - chain_bot
             params = dict(DRILL, holeMode="'selection-points'", breakThroughDepth='0mm',
                           drillTipThroughBottom='true')
@@ -3412,15 +3633,28 @@ def _side_ops(b, setup, a, side, plan, warnings):
             params.update(through_part('bottom'))
             out.append(b.op(setup, 'drill', drill_for(thickness + 0.5), 'Window entry holes',
                             params, points(pts)))
-        # pre-drill everything the 3.175 end mill will bore
-        pre = [h for h in end_bored + [h for h, _ in tap_bored] if not deep_bore(h)]
+        # pre-drill every bore: T1 for those the 3.175 end mill bores, and for those
+        # a small end mill bores, the widest drill that fits the hole, so that no
+        # end mill enters solid copper (rule TH4)
+        pre = [(h, DRILL_3175) for h in end_bored + [h for h, _ in tap_bored] if not deep_bore(h)]
+        for h in small_bored:
+            d = small_pre_drill(h)
+            if d is None:
+                warnings.append('no drill fits the %.2f mm hole at (%g, %g) and reaches its depth: '
+                                'its bore enters solid copper' % (h['dia'], h['x'], h['y']))
+            else:
+                pre.append((h, d))
         groups = {}
-        for h in pre:
+        for h, d in pre:
             ends = pre_drill_ends(h)
-            groups.setdefault((h['through'], tuple(sorted(ends.items()))), (ends, []))[1].append(h)
-        for (through, _), (ends, hs) in sorted(groups.items(), key=lambda kv: not kv[0][0]):
-            out.append(b.op(setup, 'drill', drill_for(max(h['depth'] for h in hs)),
-                            'Pre-drill bores' + ('' if through else ' (blind)'),
+            groups.setdefault((d, h['through'], tuple(sorted(ends.items()))), (ends, []))[1].append(h)
+        for (d, through, _), (ends, hs) in sorted(groups.items(),
+                                                  key=lambda kv: (kv[0][0] != DRILL_3175,
+                                                                  kv[0][0], not kv[0][1])):
+            name = 'Pre-drill bores' if d == DRILL_3175 else 'Pre-drill bores %s' % d.split('*')[0]
+            out.append(b.op(setup, 'drill',
+                            drill_for(max(h['depth'] for h in hs)) if d == DRILL_3175 else d,
+                            name + ('' if through else ' (blind)'),
                             dict(DRILL, **ends, **from_hole_top()),
                             _sel_faces('holeFaces', [h['face'] for h in hs])))
         return out
@@ -3457,6 +3691,19 @@ def _side_ops(b, setup, a, side, plan, warnings):
         high[0] = leave  # the face is now the stock's highest point
         return op
 
+    def end_cut(which, multi, suffix):
+        """The cut that frees the part's ends, when the vise holds it by its
+        sides: through the whole stock from its top, starting and ending in the
+        air past the stock's sides (see _end_chains), first of all, so that the
+        facing enters at the end of the part through its groove."""
+        params = dict(CONTOUR, doMultipleDepths=multi, topHeight_mode="'from stock top'",
+                      topHeight_offset='0mm', bottomHeight_mode="'from stock bottom'",
+                      bottomHeight_offset='-0.5mm')
+        return b.op(setup, 'contour2d', (ENDMILL, which), 'Ends' + suffix, params,
+                    _sel_layout_chains(lay['ends'] if lay else [], True))
+
+    if plan.get('ends') and top:
+        ops['main'].append(end_cut('rough', 'true', ''))
     if facing:
         ops['main'].append(face_op('rough', 'true', '', allow))
 
@@ -3522,7 +3769,9 @@ def _side_ops(b, setup, a, side, plan, warnings):
         tk = (ENDMILL, which)
         # outline: the top setup cuts down to the tab band, the bottom setup up to it
         bands = entry_seq if which == 'rough' else [('mill', 0, outline_depth[top])]
-        for kind, s, e in bands:
+        if plan.get('ends') and top and which == 'finish':
+            ops['main'].append(end_cut(which, multi, suffix))
+        for kind, s, e in bands if plan['outline'] else []:
             if kind == 'drill':
                 ops['main'].append(entry_drill(s, e))
                 continue
@@ -3740,7 +3989,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
                         _sel_chains([w['loop']]),
                         _sel_faces('entryPositions', [e['point']]) if e else None)))
         # top setup: the outline between the tabs, down through the tab band
-        if top:
+        if top and plan['outline']:
             params = dict(CONTOUR, doMultipleDepths=multi)
             params.update(_top_below_part_top(a['ztop'] - band_top, m))
             params.update(_bottom_below_part_top(a['ztop'] - chain_bot, m))
@@ -3984,7 +4233,9 @@ def _side_ops(b, setup, a, side, plan, warnings):
         width = float(CHAMFER_OP['chamferWidth'][:-2])
         room = [f['depth'] for f in floors if f['role'] == 'pocket']
         room += [h['depth'] for h in holes if not h['through']]
-        room.append(a['ztop'] - band_top if top else band_bot - a['zbot'])
+        if plan['outline']:
+            room.append(a['ztop'] - band_top if top else band_bot - a['zbot'])
+        room.append(CHAMFER_TIP_MAX + width + CHAMFER_CLEAR)
         tip = max(CHAMFER_TIP_MIN, min(CHAMFER_TIP_MAX, min(room) - width - CHAMFER_CLEAR))
         if width + tip > min(room) - 0.02:
             warnings.append('a floor or the tabs lie %.2f mm below the %s face, too close for '
@@ -4015,16 +4266,21 @@ def _side_ops(b, setup, a, side, plan, warnings):
             ops['main'].append(b.op(setup, 'chamfer2d', CHAMFER, 'Deburr counterbores', dict(
                 CHAMFER_OP, chamferTipOffset='%gmm' % tip), _sel_inner_contours(fl)))
 
-    # bottom side: the tab cut, last and in its own NC program
-    if not top:
+    # the last setup: the tab cut, last and in its own NC program; from the
+    # bottom with two sides, from the top with one
+    if plan['outline'] and top == (plan['sides'] == 1):
         params = dict(CONTOUR, doMultipleDepths='true', maximumStepdown='0.2mm')
-        params.update(_top_below_part_top(band_bot - a['zbot'], m))
-        params.update(_bottom_below_part_top(band_top + tab['overlap'] - a['zbot'], m))
-        hi, set_hi = _at_tab('top', tab_bottom)
-        lo, set_lo = _at_tab('bottom', tab_top, -tab['overlap'])
+        if top:
+            params.update(_top_below_part_top(a['ztop'] - band_top, m))
+            params.update(_bottom_below_part_top(a['ztop'] - chain_bot, m))
+        else:
+            params.update(_top_below_part_top(band_bot - a['zbot'], m))
+            params.update(_bottom_below_part_top(band_top + tab['overlap'] - a['zbot'], m))
+        hi, set_hi = _at_tab('top', tab_top if top else tab_bottom)
+        lo, set_lo = _at_tab('bottom', tab_bottom if top else tab_top, -tab['overlap'])
         params.update(hi, **lo)
         ops['tabs'].append(b.op(setup, 'contour2d', (ENDMILL, 'rough'), 'Cut tabs', params,
-                                _both(_sel_layout_chains(lay['tabs'] if lay else [], False),
+                                _both(_sel_layout_chains(lay['tabs'] if lay else [], top),
                                       set_hi, set_lo)))
     return ops
 
@@ -4060,6 +4316,103 @@ def _nc_program(cam, name, ops, post):
     return nc
 
 
+STOCK_FIT = 0.01  # mm: stock this close to the part's size is the part's size
+MIN_FRAME = 3.0   # mm of stock left outside the outline cut in window machining
+
+
+def _bottom_work(a):
+    """What only a bottom setup can cut: pocket floors facing down, and holes open
+    only at the bottom. Through holes and windows are cut from the top."""
+    return ([f for f in a['floors'] if f['side'] == 'bottom' and f['role'] == 'pocket'],
+            [h for h in a['holes'] if h['side'] == 'bottom'])
+
+
+def _strategy(a, stock, sides, warnings):
+    """How the stock is machined into the part.
+
+    outline: the stock is larger than the part in both X and Y, by the outline cut
+      and MIN_FRAME on every side, so the part is cut out of it (window
+      machining): an outline cut round the part, which leaves four tabs holding
+      it, and a last program that cuts the tabs. Stock of the part's own X and Y
+      size needs neither; its outline must then be the rectangle the stock is.
+      Anything between is refused.
+    sides: 2, a top and a flipped bottom setup, when the bottom has features to
+      cut or stock to face (stock["bottom"] above 0); else 1, the top setup
+      alone, with the part on the stock's bottom. `sides` (1 or 2) overrides.
+    """
+    size = {'x': a['size'][0], 'y': a['size'][1]}
+    for k, s in size.items():
+        if stock[k] < s - STOCK_FIT:
+            raise RuntimeError('the stock is %g mm along %s but the part is %g mm'
+                               % (stock[k], k.upper(), s))
+    fit = [k for k, s in size.items() if abs(stock[k] - s) <= STOCK_FIT]
+    outline = not fit
+    ends = fit == ['y']  # see _quarter_turn: a fit along X is turned to Y first
+    if fit == ['x']:
+        raise RuntimeError('the stock fits the part along X only; give the stock as the design '
+                           'has it, so that build can turn the part')
+    if ends:
+        # held by its own sides, which the jaws grip; the cuts that free its ends
+        # run outside the jaws only if the part is longer than they are wide
+        if size['x'] <= FX_JAW_WIDTH + 1e-3:
+            raise RuntimeError(
+                'the stock fits the part along one side only, so the vise must hold the part '
+                'by that side and its ends are cut free; the part is %g mm long that way, which '
+                'must exceed the width of the jaws, %.1f mm, so that the end cuts run clear of them. '
+                'Give stock larger than the part on every side, or of its own X and Y size'
+                % (size['x'], FX_JAW_WIDTH))
+    elif len(fit) == 2:
+        faces = [f for f in (a['top_face'], a['bottom_face']) if f is not None]
+        ring = _outline_loop(faces)[1] if faces else None
+        if ring is None or _ring_area(ring) * 100 < size['x'] * size['y'] * (1 - 1e-3):
+            raise RuntimeError("the stock is the part's size, but the part's outline is not "
+                               'the rectangle the stock is, so it still needs an outline cut: '
+                               'give stock larger than the part, which is then cut out of it')
+    else:
+        # window machining: the outline cut, one end mill wide, must leave a frame of
+        # stock round it on every side, to hold the part through its tabs and to
+        # take the vise's grip
+        y_off = stock.get('y_offset', 10)
+        spare_y = stock['y'] - size['y']
+        mode = stock.get('y_mode', 'back')
+        margins = {'-X': (stock['x'] - size['x']) / 2, '+X': (stock['x'] - size['x']) / 2,
+                   '+Y': y_off if mode == 'back' else spare_y - y_off if mode == 'front'
+                   else spare_y / 2,
+                   '-Y': spare_y - y_off if mode == 'back' else y_off if mode == 'front'
+                   else spare_y / 2}
+        need = ENDMILL_D + MIN_FRAME
+        short = ['%s %.2f mm' % (k, v) for k, v in margins.items() if v < need - 1e-3]
+        if short:
+            raise RuntimeError(
+                'the stock must reach at least %.2f mm past the part on every side (the %g mm '
+                'outline cut plus a %g mm frame of stock that holds the part through its tabs), '
+                'or be of the part\'s own X and Y size; it reaches %s past it'
+                % (need, ENDMILL_D, MIN_FRAME, ', '.join(short)))
+    floors, holes = _bottom_work(a)
+    if sides is None:
+        sides = 2 if floors or holes or stock.get('bottom', 0) > 1e-3 else 1
+    elif sides == 1 and (floors or holes):
+        what = [('%d pocket floor%s' % (len(floors), 's' if len(floors) > 1 else '')) if floors
+                else '', ('%d hole%s' % (len(holes), 's' if len(holes) > 1 else '')) if holes
+                else '']
+        raise RuntimeError('one side cannot cut the %s that open%s at the bottom; pass "sides": 2'
+                           % (' and '.join(w for w in what if w),
+                              's' if len(floors) + len(holes) == 1 else ''))
+    elif sides not in (1, 2):
+        raise RuntimeError('"sides" must be 1 or 2')
+    return {'sides': sides, 'outline': outline, 'ends': ends}
+
+
+def _quarter_turn(body, stock):
+    """Must the part be turned a quarter about Z? When the stock fits the part
+    along the design's X only, the vise must grip that side, and the jaws close
+    along the setups' X axis, the design's Y (see _setup)."""
+    bb = body.boundingBox
+    fx = abs(stock['x'] - mm(bb.maxPoint.x - bb.minPoint.x)) <= STOCK_FIT
+    fy = abs(stock['y'] - mm(bb.maxPoint.y - bb.minPoint.y)) <= STOCK_FIT
+    return fx and not fy
+
+
 def build(args):
     """Create setups, operations and NC programs for the part.
 
@@ -4068,7 +4421,14 @@ def build(args):
       flip:      machine the design's bottom face first, as the top (default: when
                  it has more features than the top face; see _machined_body)
       stock:     {"x": mm, "y": mm, "z": mm, "y_mode": "back", "y_offset": 10,
-                  "bottom": mm of stock below the part (default: centred)}
+                  "bottom": mm of stock below the part (default: centred with two
+                  sides, 0 with one)}, in the design's axes. Stock of the part's
+                  X and Y size, or of its size along one side for a part longer
+                  than the jaws are wide, needs no outline cut or tabs (see
+                  _strategy); build turns the part a quarter about Z when the
+                  stock fits along the design's X only (see _quarter_turn)
+      sides:     1 or 2 setups (default: 2 when the bottom has features to cut or
+                 stock to face, else 1)
       taps:      {"1.6": "M2", ...} hole diameter (as analyze prints it) -> thread
       name:      program name prefix (default: document name)
       face:      face the top and bottom from stock (default true)
@@ -4099,20 +4459,34 @@ def build(args):
             was_part = True
     except AttributeError:  # Fusion before design intents
         pass
-    body, a, flipped, counts = _machined_body(args, design, True)
+    if 'stock' in args and _quarter_turn(_find_body(args), args['stock']):
+        quarter = True
+        args = dict(args, stock=dict(args['stock'], x=args['stock']['y'], y=args['stock']['x']))
+    else:
+        quarter = False
+    body, a, flipped, counts = _machined_body(args, design, True, quarter)
     if flipped and args.get('tab_z') is not None:  # given in the design's Z
         args = dict(args, tab_z=a['ztop'] + a['zbot'] - args['tab_z'])
     stock = args['stock']
     thickness = a['ztop'] - a['zbot']
     if stock['z'] < thickness - 1e-3:
         raise RuntimeError('stock is %g mm thick but the part is %g mm' % (stock['z'], thickness))
+    log, warnings = [], []
+    strategy = _strategy(a, stock, args.get('sides'), warnings)
+    sides, outline = strategy['sides'], strategy['outline']
+    ends = strategy['ends']
+    if not outline:  # the stock fits the part across the jaws, so it sits where the part is
+        stock = dict(stock, y_mode='back', y_offset=0)
     # stock left below the part; centred by default. Moving the part up or down
     # shifts machining time between the top and bottom setups, and so when the
-    # operator has to come back to flip the stock.
+    # operator has to come back to flip the stock. One side: on the stock's bottom.
     spare = max(0.0, stock['z'] - thickness)  # stock as thick as the part is fine
-    bottom = stock.get('bottom', spare / 2)
+    bottom = stock.get('bottom', spare / 2 if sides == 2 else 0.0)
     if not -1e-3 <= bottom <= spare + 1e-3:
         raise RuntimeError('stock["bottom"] must be between 0 and %g mm' % spare)
+    if sides == 1 and bottom > 1e-3:
+        raise RuntimeError('one side leaves the stock below the part uncut: stock["bottom"] '
+                           'must be 0, or pass "sides": 2')
     bottom = min(max(bottom, 0.0), spare)
     stock = dict(stock, bottom=bottom)
     band = min(1.0, 0.4 * thickness)
@@ -4121,18 +4495,20 @@ def build(args):
     if tab_width < ENDMILL_D + 0.5:
         raise RuntimeError('tab_width must exceed the %g mm end mill by 0.5 mm' % ENDMILL_D)
     tab_z, tab_clear, openings = _tab_height(a, band, overlap, args.get('tab_z'),
-                                             _tab_points(a, tab_width / 10))
-    log, warnings = [], []
+                                             _tab_points(a, tab_width / 10) if outline else [],
+                                             lowest=sides == 1)
     if was_part:
         warnings.append('the design was a Part design, which holds only one component; it is '
                         'now a Hybrid design, so that the vise, tabs and face patches can be '
                         'components. Saving the document keeps the change')
-    if not tab_clear:
+    if outline and not tab_clear:
         warnings.append('the tab band at z=%g mm overlaps a pocket that opens to the side '
                         '(open over z %s mm); pass a clear tab_z' % (tab_z, openings))
-    elif openings and abs(tab_z - (a['ztop'] + a['zbot']) / 2) > 1e-6:
-        warnings.append('tabs moved off the mid-plane to z=%g mm, clear of the pockets that '
-                        'open to the side (open over z %s mm)' % (tab_z, openings))
+    elif outline and openings and abs(tab_z - _tab_height(a, band, overlap, lowest=sides == 1,
+                                                          tab_points=[])[0]) > 1e-6:
+        warnings.append('tabs moved off the %s to z=%g mm, clear of the pockets that open to '
+                        'the side (open over z %s mm)'
+                        % ('mid-plane' if sides == 2 else "part's bottom", tab_z, openings))
     plan = {
         'margin_top': max(0.0, stock['z'] - thickness - bottom),
         'margin_bottom': bottom,
@@ -4140,16 +4516,20 @@ def build(args):
         'face': args.get('face', True),
         'chamfer': args.get('chamfer', True),
         'recipes': bool(args.get('recipes', False)),
+        'sides': sides,
+        'outline': outline,
+        'ends': ends,
         'tab': {'band': band, 'overlap': overlap, 'width': tab_width, 'z': tab_z},
         'layout': None,
     }
+    side_names = ('top', 'bottom')[:sides]
     tools = Tools()
     # the layout first, so that the dry run sees the slots and makes the same
     # choices as the real one
     plan['layout'] = _make_layout(design, a, plan, warnings)
     # dry run to learn which tools the part needs, then number them in slot order
     dry = Builder(cam, tools, [], dry=True)
-    for side in ('top', 'bottom'):
+    for side in side_names:
         _side_ops(dry, None, a, side, plan, [])
     for desc, key in _slot_order(dry.needed):
         tools.get(desc, key)
@@ -4170,21 +4550,39 @@ def build(args):
         fixture = _fixture_bodies()
         z0, ztop = box[0][2], a['ztop'] / 10
         vises = [_add_vise(design, VISE_PREFIX + 'top', fixture,
-                           *_vise_matrices(box, z0, box[1][2], False)),
-                 _add_vise(design, VISE_PREFIX + 'bottom', fixture,
-                           *_vise_matrices(box, -ztop, -z0, True))]
+                           *_vise_matrices(box, z0, box[1][2], False))]
+        if sides == 2:
+            vises.append(_add_vise(design, VISE_PREFIX + 'bottom', fixture,
+                                   *_vise_matrices(box, -ztop, -z0, True)))
         for occ, _ in vises:  # out of the way; the setups still carry them as fixtures
             occ.isLightBulbOn = False
-    plan['tab_faces'] = _add_tabs(design, plan['layout'], plan['tab'])
+        vises += [None]
+    plan['tab_faces'] = _add_tabs(design, plan['layout'], plan['tab']) if outline else {}
     plan['face_patches'] = _add_face_patches(design, plan['layout'], a)
+    if args.get('fixture', True):
+        conflicts = _vise_conflicts(_planned_cuts(a, plan, box),
+                                    {'top': vises[0][0], 'bottom': vises[1] and vises[1][0]}, box)
+        if conflicts:
+            raise RuntimeError(
+                '; '.join(conflicts) + '. Move the part away from the jaws in larger stock '
+                '(stock "y_offset", or wider stock), or, for a cut through the stock\'s bottom '
+                'over a jaw, leave stock below the part ("sides": 2 and stock "bottom") so the '
+                'cut ends in it')
     x_axis = _axis_line(design)
     top = _setup(cam, 'Top ' + SETUP_TAG, body, machine, stock, True, x_axis, vises[0], warnings)
     top_ops = _side_ops(b, top, a, 'top', plan, warnings)
-    bottom = _setup(cam, 'Bottom ' + SETUP_TAG, body, machine, stock, False, x_axis, vises[1], warnings)
-    bottom_ops = _side_ops(b, bottom, a, 'bottom', plan, warnings)
-    _nc_program(cam, name + '_top', top_ops['main'], post)
-    _nc_program(cam, name + '_bottom', bottom_ops['main'], post)
-    _nc_program(cam, name + '_tabs', bottom_ops['tabs'], post)
+    programs = [(name + '_top', top_ops['main'])]
+    tab_ops = top_ops['tabs']
+    if sides == 2:
+        bottom = _setup(cam, 'Bottom ' + SETUP_TAG, body, machine, stock, False, x_axis,
+                        vises[1], warnings)
+        bottom_ops = _side_ops(b, bottom, a, 'bottom', plan, warnings)
+        programs.append((name + '_bottom', bottom_ops['main']))
+        tab_ops = bottom_ops['tabs']
+    if outline:
+        programs.append((name + '_tabs', tab_ops))
+    for prog, ops in programs:
+        _nc_program(cam, prog, ops, post)
     unreached = [h for h in a['holes'] if h['side'] == 'none']
     for h in unreached:
         warnings.append('hole %.2f mm at (%g, %g) is closed at both ends; skipped'
@@ -4195,6 +4593,19 @@ def build(args):
     if len(tools.order) > 6:
         warnings.append('%d tools: the Carvera ATC holds 6, so T7+ need manual changes'
                         % len(tools.order))
+    if sides == 1:
+        log.insert(0, "one side: the part's bottom face is the stock's bottom, not faced, "
+                      'and its edges and the holes and windows coming out there are not '
+                      'deburred')
+    if ends:
+        log.insert(0, "the stock fits the part along its sides, which the vise grips: no tabs, "
+                      "and the part's ends are cut free first, through the stock")
+    elif not outline:
+        log.insert(0, "the stock is the part's size: no outline cut and no tabs")
+    if quarter:
+        log.insert(0, "the part is turned a quarter about Z, so that the vise grips the sides "
+                      "the stock fits: the design's X runs across the jaws; the design's body "
+                      'is hidden behind the turned copy in "%s"' % PART_COMPONENT)
     if flipped:
         log.insert(0, 'the part is turned over: the design\'s bottom face (%d features) is '
                       'machined first, as the top (%d features); the design\'s body is hidden '
@@ -4208,11 +4619,13 @@ def build(args):
                           json.dumps(plan.get('recipe_entries', [])))
     print(json.dumps({
         'turned_over': flipped,
+        'quarter_turned': quarter,
+        'strategy': strategy,
         'tools': [{'T': n, 'tool': d, 'preset': p} for n, d, p in tools.order],
         'operations': log,
-        'nc_programs': [name + s for s in ('_top', '_bottom', '_tabs')],
+        'nc_programs': [prog for prog, _ in programs],
         'tabs': {'z_mm': tab_z, 'band_mm': band, 'width_mm': tab_width,
-                 'count': len(plan['layout']['tabs'])},
+                 'count': len(plan['layout']['tabs'])} if outline else None,
         'pocket_entries': sum(1 for e in plan['layout']['pocket_entries'].values() if e['drill']),
         # features build leaves to a recipe in references/recipes/, in run order
         'recipes': plan.get('recipe_entries', []),

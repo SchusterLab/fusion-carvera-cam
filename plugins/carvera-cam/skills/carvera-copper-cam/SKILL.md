@@ -1,17 +1,59 @@
 ---
 name: carvera-copper-cam
-description: Generate CAM toolpaths in Autodesk Fusion for machining a copper part on SchusterLab's Makera Carvera, following the lab's conventions (Makera and McMaster-Carr tools with the "Copper" preset, the Carvera Community machine and post, top and flipped bottom setups, pre-drilled entry holes, four holding tabs cut by a separate program), and check existing Carvera toolpaths for crash, spindle-stall and tool-wear risks against the lab's rules. Use when the user asks to program, CAM, toolpath or machine a part on the Carvera or Makera, in copper or aluminum, or to check, review or verify Carvera toolpaths. Needs the Fusion MCP server.
+description: Generate CAM toolpaths in Autodesk Fusion for machining a copper part on SchusterLab's Makera Carvera, following the lab's conventions (Makera and McMaster-Carr tools with the "Copper" preset, the Carvera Community machine and post, a top setup and, when the part needs it, a flipped bottom setup, pre-drilled entry holes, and, when the stock is larger than the part, four holding tabs cut by a separate program), and check existing Carvera toolpaths for crash, spindle-stall and tool-wear risks against the lab's rules. Use when the user asks to program, CAM, toolpath or machine a part on the Carvera or Makera, in copper or aluminum, or to check, review or verify Carvera toolpaths. Needs the Fusion MCP server.
 ---
 
 # Carvera copper toolpaths
 
 This skill turns a Fusion design of a 2.5-axis part into a ready-to-post Carvera program, in the lab's style.
-It makes two setups (top, then the part flipped), every operation with tools from Makera and McMaster-Carr and the lab's feeds, and three NC programs: `<part>_top`, `<part>_bottom` and `<part>_tabs`.
+It makes one setup or two (the top, then the part flipped), every operation with tools from Makera and McMaster-Carr and the lab's feeds, and one NC program per setup, `<part>_top` and `<part>_bottom`, plus `<part>_tabs` when the part is cut out of larger stock.
+How it machines the part depends on the stock (see "Machining strategy").
 The same programs machine aluminum: run them with the Carvera's feed and spindle overrides at 200%.
 It also checks existing toolpaths, the lab's own as well as those it generates, against the lab's rules for avoiding crashes, spindle stalls and tool wear (see "Checking existing toolpaths").
 
 A 2.5-axis part is one whose features are all reached straight down the Z axis from the top or from the bottom: pockets, holes, outlines and through windows.
 The skill does not cut side features, undercuts or 3D surfaces.
+
+## Machining strategy
+
+The stock decides how the part is machined, and `build` works it out from the stock's size and the part's features:
+
+| Stock | How the part is held | Programs, two setups | Programs, one setup |
+|---|---|---|---|
+| larger than the part in both X and Y, by 6.2 mm or more on every side | by four tabs to the stock round it | `_top`, `_bottom`, `_tabs` | `_top`, `_tabs` |
+| the part's own size along one side, longer along the other, and the part longer than the jaws are wide (95.5 mm) | by its own sides, in the jaws | `_top`, `_bottom` | `_top` |
+| the part's own X and Y size | by its own sides, in the jaws | `_top`, `_bottom` | `_top` |
+
+`build` refuses any other stock.
+
+**Window machining** cuts the part out of larger stock.
+An outline cut, one end mill (3.175 mm) wide, runs round the part and leaves four tabs holding it to the stock, and the last program, `_tabs`, cuts them and frees the part.
+The stock must reach at least 6.2 mm past the part on every side: the outline cut, plus a 3 mm frame of stock round it that holds the part through the tabs and takes the vise's grip.
+With two setups, the tabs sit at mid-thickness, and the bottom setup cuts them from below.
+With one, the tabs sit on the part's bottom face, and the top setup cuts them.
+
+**Stock that fits the part along one side** holds the part by those two sides in the jaws, which grip them over the jaws' 95.5 mm width.
+The part must be longer than that the other way, so that the cuts that free its ends run outside the jaws.
+Those end cuts come first, through the whole stock, each starting and ending in the air beyond the gripped sides; the offcuts beyond them fall away, and there are no tabs.
+The jaws close along the setups' X axis, the design's Y, so when the stock fits along the design's X, `build` machines a copy of the part turned a quarter about Z.
+The part's sides must be straight wherever the jaws reach.
+
+**Stock of the part's own size** needs no outline cut and no tabs: the vise holds the part itself.
+The part's outline must then be the rectangle the stock is; a part with rounded or notched outer corners needs larger stock.
+
+**One setup** is enough when nothing opens at the bottom face (no pocket floor facing down, no hole open only at the bottom): through holes and windows are cut from the top.
+The part's bottom face is then the stock's bottom, left as it is, and its edges, and the holes and windows where they come out at the bottom, are not deburred.
+Stock thicker than the part is faced on top only.
+Pass `"sides": 2` to machine the bottom face anyway, for example to face it or to deburr its edges.
+When every feature opens at the design's bottom face, the part is turned over and machined from that face, in one setup.
+
+A face with no stock above it, in stock as thick as the part, is not faced.
+
+**The tools stay out of the vise.**
+The part may be thinner than the jaws' grip, as long as no tool reaches the jaws.
+Each jaw also has a ledge under the stock along its gripped side, 1.9 mm wide, so a cut through the stock's bottom there would cut into the jaw.
+`build` tests where each planned cut reaches (the facing, the outline cut, the end cuts, the entry holes, the windows, the through holes and the deburr) against the modelled vise, and stops with an error naming the cut and where it would hit.
+The check's rule X1 then tests the G-code itself, every 0.5 mm along each move.
 
 ## What the generator does
 
@@ -63,21 +105,21 @@ The JSON lists, among other things:
 - `tap_candidate`: the hole's thread: the one its tapped Hole feature names, or, for a plain hole, a thread whose minor diameter matches it;
 - `floors`: pocket floors and the two outer faces, each with its smallest inside-corner radius (0 for a sharp corner, null when the walls have no inside corners), `side_open` for a pocket open to the side of the part, and `shelf` for a floor that steps down into a deeper pocket;
 - `windows`: through openings that are not round holes;
-- `tab_z`: the height of the tab band's centre that `build` will use: halfway between the part's top and bottom, unless a pocket open to the side is at that height and within an end mill's width of a tab.
+- `tab_z`: the height of the tab band's centre that `build` will use with two setups: halfway between the part's top and bottom, unless a pocket open to the side is at that height and within an end mill's width of a tab. `tab_z_one_sided` is the same with one setup: the band on the part's bottom face, or the lowest height above it clear of such pockets.
 - `turned_over` and `features_per_face`: the face with more features (pocket floors and blind holes; through holes and windows count for neither face) is machined first, as the top. When the design's bottom face has more, `turned_over` is true and the rest of the JSON describes the part turned over about its X axis: `top` is the design's bottom face, and y and z are mirrored about the part's centre.
 
 ### 3. Agree the plan with the user
 
 Before building, confirm with the user, briefly and in one message:
 
-- **Stock.** The lab's usual stock is a 2″ × 150 mm bar (50.8 × 150 mm) of 6.35 mm (0.25″) or 19 mm thickness, or a 150 × 150 mm copper plate about 6.2 mm thick. The part sits 10 mm from the back of the stock along Y and, by default, centred in its thickness. The stock must be thicker than the part, and the margins above and below the part are faced off. Moving the part up or down in the stock (`bottom`, below) shifts facing time between the top and bottom programs, so the user can choose when to come back to flip the stock.
+- **Stock.** Ask whether the stock has the same X and Y size as the part, and whether it has the same thickness, and, for each that differs, the stock's dimensions. The answers and `analyze`'s features decide the machining strategy (see "Machining strategy"): tell the user which one `build` will use, the setups and programs it makes, and, with one setup, that the bottom face stays as the stock left it and is not deburred. For stock of the part's size along a side, pass the part's `size_mm` value for that side, as `analyze` printed it, in the design's axes. The lab's usual stock is a 2″ × 150 mm bar (50.8 × 150 mm) of 6.35 mm (0.25″) or 19 mm thickness, or a 150 × 150 mm copper plate about 6.2 mm thick. Larger stock holds the part 10 mm from its back edge along Y, and centred along X; with `y_mode` `center` it is centred along Y too, which suits a short bar. The stock is at least as thick as the part, and stock above and below the part is faced off. With two setups the part sits, by default, centred in the stock's thickness, and moving it up or down (`bottom`, below) shifts facing time between the top and bottom programs, so the user can choose when to come back to flip the stock. With one setup it sits on the stock's bottom.
 - **Taps.** Lab parts mark tapped holes with Fusion's Hole command, Tapped type, threads not modeled, which leaves a plain hole at the minor diameter. `build` reads that thread data itself. For a plain hole with a `tap_candidate` (one whose `thread` is empty), ask whether it is tapped, and pass the answer as `taps`, keyed by the diameter exactly as `analyze` printed it, for example `{"1.623": "M2"}`. Supported threads: M2, M2.5, M3 and M4; their pre-drilling and thread-milling settings are in [references/threads.toml](references/threads.toml).
-- **Tab height**, if `analyze` moved `tab_z` off the halfway plane because a pocket opens to the side; the user may prefer another height, passed as `tab_z`.
+- **Tab height**, in window machining, if `analyze` moved `tab_z` (or, with one setup, `tab_z_one_sided`) because a pocket opens to the side; the user may prefer another height, passed as `tab_z`.
 - **A Part design becomes a Hybrid one.** A Part design holds only one component, and `build` adds several, so it switches a Part design to Hybrid, which keeps its modelling, and warns. Saving the document keeps the change.
-- **The design gets a sketch and the vise.** `build` adds a sketch named `carvera-cam` (entry points, corner chains and tab spans) to the design, plus a section sketch and construction plane per shelf height, the way the lab sketches these by hand. It adds a planar patch at its top and at its bottom, filling the part's outline and one end mill diameter (plus 0.05 mm) past it, in a `carvera-cam faces` component, for the facing to select, so that it faces over the openings in the faces and over the outline cut too. The finishing face selects a second patch at each face that stops at the outline, since the outline cut has cleared the stock past it by then. The `carvera-cam faces` component is hidden; the facing selects its patches all the same. It models the four tabs as bodies in a `carvera-cam tabs` component, and the cuts around them take their heights from the tabs' top and bottom faces. It also adds two copies of the lab's fixture, `carvera-cam vise top` and `carvera-cam vise bottom`, so that simulation checks the tool against the vise and the machine. The fixture is the Saunders Machine Works fixture plate and vise, downloaded from their site; it leaves out the 4th-axis module, so simulation does not check that. It redraws all of these on every build. The sketches, the construction planes, both vises and the machine start hidden, out of the way of the part; the setups still carry the vise and the machine for simulation.
+- **The design gets a sketch and the vise.** `build` adds a sketch named `carvera-cam` (entry points, corner chains and tab spans) to the design, plus a section sketch and construction plane per shelf height, the way the lab sketches these by hand. It adds a planar patch at its top and at its bottom, filling the part's outline and one end mill diameter (plus 0.05 mm) past it, in a `carvera-cam faces` component, for the facing to select, so that it faces over the openings in the faces and over the outline cut too. The finishing face selects a second patch at each face that stops at the outline, since the outline cut has cleared the stock past it by then. The `carvera-cam faces` component is hidden; the facing selects its patches all the same. With larger stock, it models the four tabs as bodies in a `carvera-cam tabs` component, and the cuts around them take their heights from the tabs' top and bottom faces. It also adds a copy of the lab's fixture per setup, `carvera-cam vise top` and `carvera-cam vise bottom`, so that simulation checks the tool against the vise and the machine. The fixture is the Saunders Machine Works fixture plate and vise, downloaded from their site; it leaves out the 4th-axis module, so simulation does not check that. It redraws all of these on every build. The sketches, the construction planes, both vises and the machine start hidden, out of the way of the part; the setups still carry the vise and the machine for simulation.
 - **The machine and post.** `build` fetches the latest Carvera 3-axis machine and Carvera post from the Carvera Community's profiles repository on GitHub. The first build after each new upstream machine uploads the machine's 3D model, with the lab's bed recess for the fixture plate, to a Fusion project named `carvera-cam` in the user's hub (see [references/conventions.md](references/conventions.md)); say so the first time.
 - **The stock across the vise.** The jaws grip the stock's Y edges, so the vise opens to the stock's Y size; it opens to about 185 mm. The jaws close along the Carvera's X axis, so both setups' X axis is the part's Y axis, and the G-code is in that frame; the origin is the stock top's corner at the part's +X and +Y.
-- **Which face is the top.** If `turned_over` is true, say that the design's bottom face is machined first. `build` then machines a copy of the body turned over in place, in a `carvera-cam part` component, and hides the design's body behind it; the next build shows it again. Pass `flip` (true or false) to choose the face yourself. `tab_z` is always in the design's Z.
+- **Which face is the top.** If `turned_over` is true, say that the design's bottom face is machined first. `build` then machines a copy of the body turned over in place, in a `carvera-cam part` component, and hides the design's body behind it; the next build shows it again. Pass `flip` (true or false) to choose the face yourself. `tab_z` is always in the design's Z. Likewise, when stock fits the part along the design's X only, `build` turns the copy a quarter about Z and reports `quarter_turned`; say so.
 - **Dimples in pocket floors.** Each closed pocket's entry hole is drilled at the pocket's centre where the end mill fits there, else at the point farthest from its walls, with the drill's point only as far below its floor as the end mill needs: the end mill enters copper only down a hole at least half its width, the drill's cone included (rule TH4), so the point stops where the cone is half the end mill wide at the floor. That leaves the smallest dimple the rule allows, a cone 1.59 mm across and 0.37 mm deep in the floor. `build` lists where they are. Blind drilled holes are drilled the same way, so the drill's point goes its length below the hole's bottom; `build` warns about those too, unless the hole has a modelled point that matches the drill's angle, and asks the user to model it. Say so, and go on unless the user objects.
 - **Anything skipped or doubtful**, such as sharp inside corners, holes no tool fits, or more than six tools (the Carvera's automatic tool changer holds six; the seventh and later need a manual change).
 
@@ -94,10 +136,10 @@ def run(_context: str):
     })
 ```
 
-Other arguments: `body`, `face` (face the stock off both sides, default true), `chamfer` (deburr the outer faces' edges, default true), `fixture` (model the vise, default true), `tab_width` (default 5 mm), `tab_z` (model Z of the tab band's centre, in mm), `recipes` (default false), and in `stock`, `y_mode` (default `back`), `y_offset` (default 10 mm) and `bottom`.
-`bottom` is the stock left below the part, in mm; the default centres the part in the stock's thickness.
-It sets how long the top program runs before the operator flips the stock: more stock below the part moves facing time from the top program to the bottom one.
-`build` prints the tool slots, the operations, the tab layout, the number of pocket entry holes and any warnings; it takes about 10 seconds.
+Other arguments: `body`, `sides` (1 or 2 setups; by default 2 when the bottom has features to cut or stock to face, else 1), `face` (face off the stock above and below the part, default true), `chamfer` (deburr the outer faces' edges, default true), `fixture` (model the vise, default true), `tab_width` (default 5 mm), `tab_z` (model Z of the tab band's centre, in mm), `recipes` (default false), and in `stock`, `y_mode` (default `back`), `y_offset` (default 10 mm) and `bottom`.
+`bottom` is the stock left below the part, in mm; the default centres the part in the stock's thickness with two setups, and is 0 with one.
+With two setups, it sets how long the top program runs before the operator flips the stock: more stock below the part moves facing time from the top program to the bottom one.
+`build` prints the machining strategy (`strategy`: the number of `sides`, whether there is an `outline` cut with tabs, and whether the vise holds the part by its sides while `ends` cuts free its ends), whether it turned the part a quarter (`quarter_turned`), the tool slots, the operations, the tab layout, the number of pocket entry holes and any warnings; it takes about 10 seconds.
 Call `build` and `generate` in separate MCP calls: a call that runs longer than about a minute times out.
 
 For the recipes' way, copy the part's body into a new, unsaved document and build there with `"recipes": true` and the same other arguments.
@@ -186,7 +228,7 @@ The better one is the one that cuts every feature fully, never plunges into uncu
 When the evidence does not settle it, for example a faster toolpath against a better finish, show the user the two and ask.
 Then improve whichever way fell short (see "Improving the skill"), and leave the better toolpaths in the user's document: if the recipes' way won, build the user's document again with `"recipes": true` and follow the recipes there too.
 
-Take a screenshot with the outline operation selected and check the tabs and the stock position; to check the vise as well, show `carvera-cam vise top` for the screenshot and hide it again after.
+In window machining, take a screenshot with the outline operation selected and check the tabs and the stock position; with stock that fits along one side, select the `Ends` operation instead and check that the end cuts run outside the jaws; to check the vise as well, show `carvera-cam vise top` for the screenshot and hide it again after.
 Ask the user to run Fusion's simulation with collision checking on each setup before machining; the API cannot run it.
 
 ### 8. Report
@@ -194,7 +236,7 @@ Ask the user to run Fusion's simulation with collision checking on each setup be
 Report to the user, plainly:
 
 - the tool list by slot (T1, T2, …), and which slots need a manual tool change;
-- the NC programs and their order on the machine: run `_top`, flip the part, run `_bottom`, then run `_tabs`, which cuts the four tabs and frees the part (in Fusion they are named `<part>_top (carvera-cam)` and so on; the files they write are `<part>_top.nc` and so on);
+- the NC programs and their order on the machine: run `_top`; with two setups, flip the part and run `_bottom`; in window machining, run `_tabs` last, which cuts the four tabs and frees the part (in Fusion they are named `<part>_top (carvera-cam)` and so on; the files they write are `<part>_top.nc` and so on);
 - the total machining time, and that aluminum runs the same programs at 200% feed and spindle override;
 - every warning from `build`, `generate` and the check, and every feature the generator did not machine;
 - how the two ways compared, and any change you made to the skill.
@@ -276,7 +318,8 @@ The check does not replace Fusion's simulation with collision checking, which th
 - The part's machining axis must be the design's Z axis; the top setup looks down −Z at the design's top face, or at its bottom face when the part is turned over.
 - A closed pocket less than 3.275 mm wide is too narrow for a pocket toolpath to enter, since Fusion refuses an entry with less room round the 3.175 mm end mill; a 2D contour cuts it instead, entering through the pocket's entry hole. A pocket narrower than the end mill is cut only by the small end mills, rest machining. A straight slot as wide as a small end mill and open at one end is cut along its centreline from the open end, and a pocket reached only through it is milled by that end mill entering at the slot's closed end.
 - The tabs follow the outline of the part's top or bottom face, whichever encloses more area; a part wider in the middle than at both faces gets a warning.
-- A pocket open to the side is cut by contour passes along its walls, each starting and ending in the outline cut beside it. A wall that runs within a few degrees of the outline, so that a pass along it never crosses the outline cut, and an island in such a pocket's floor are not cut; [references/recipes/open-pocket.md](references/recipes/open-pocket.md) says what to tell the user.
+- Stock of the part's own X and Y size works only for a part whose outline is that rectangle, and stock that fits along one side only for a part longer than the jaws' 95.5 mm width the other way, with straight sides where the jaws grip. A hole or window that opens in a pocket floor gets no deburr pass on its rim at that floor (the check's rule DB1 lists those rims).
+- A pocket open to the side is cut by contour passes along its walls, each starting and ending in the outline cut beside it, or, in stock of the part's size, beside the part, where there is no stock. A wall that runs within a few degrees of the outline, so that a pass along it never crosses the outline cut, and an island in such a pocket's floor are not cut; [references/recipes/open-pocket.md](references/recipes/open-pocket.md) says what to tell the user.
 - A pocket's inside corners finish at the radius of the smallest end mill that fits: 1 mm diameter leaves R0.5 in a sharp corner.
 - A through window's inside corners below R1.59 finish the same way, with a small end mill from the face through the part.
 - A hole closed at both ends, or one no tool in the library fits, is skipped with a warning.

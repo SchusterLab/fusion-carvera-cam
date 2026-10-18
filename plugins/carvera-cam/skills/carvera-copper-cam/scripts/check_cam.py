@@ -227,7 +227,9 @@ def _check_op(rep, s, o, t, earlier, lab, threaded=frozenset()):
             rep.add('D1', 'warning', sn, on, 'stepdown %.2f mm is above the lab\'s %.2f mm for '
                     'a %.3g mm end mill' % (step, limit, d), stepdown=step)
         if multi is False and not rest:
-            twin = [e for e in earlier if e['strategy'] == strat and e['multi']
+            # a contour may finish what a pocket roughed (a window's walls)
+            kinds = (strat, 'pocket2d') if strat == 'contour2d' else (strat,)
+            twin = [e for e in earlier if e['strategy'] in kinds and e['multi']
                     and abs(e['d'] - d) < 1e-3]
             if not twin:
                 rep.add('D4', 'warning', sn, on, 'single full-depth pass, with no multi-depth '
@@ -557,7 +559,7 @@ def _cleared_to(x, y, r, top, milled, other=()):
 
 
 def _check_plunges(rep, rule, severity, sn, o, moves, t, holes, milled, to_world, top,
-                   rapids=False, other=()):
+                   rapids=False, other=(), box=None):
     """E4 (pockets, faces and contours) and TH2 (thread mills, bores and circular
     cuts): every plunge into the stock must go into stock earlier milling passes
     have cleared, in this setup or an earlier one, and below that down a hole
@@ -565,7 +567,10 @@ def _check_plunges(rep, rule, severity, sn, o, moves, t, holes, milled, to_world
     tool there and full width over the rest of the plunge, but for the drill's
     cone at its bottom. TH4: where the plunge ends in the cone, the cone must be
     at least half the tool's width there, centred on it. A plunge is a straight
-    move down at the feed, or also at a rapid with `rapids`."""
+    move down at the feed, or also at a rapid with `rapids`. A plunge with the
+    whole tool outside `box`, the stock's (x0, x1, y0, y1), is in the air beside
+    the stock: stock of the part's own size has no outline cut, and the facing
+    and the cuts open to the side enter there."""
     r = t['d'] / 2
     kinds = (0, 1) if rapids else (1,)
     plunges = {}  # (x, y) -> deepest plunge
@@ -576,6 +581,9 @@ def _check_plunges(rep, rule, severity, sn, o, moves, t, holes, milled, to_world
             plunges[k] = min(plunges.get(k, m[6]), m[6])
     bad, cones = [], []
     for (x, y), z in sorted(plunges.items()):
+        if box and (x + r <= box[0] + 0.01 or x - r >= box[1] - 0.01 or
+                    y + r <= box[2] + 0.01 or y - r >= box[3] - 0.01):
+            continue
         cleared = _cleared_to(x, y, r, top, milled, other)
         if cleared <= z + 0.01:
             continue  # into stock an earlier cut has cleared
@@ -887,6 +895,8 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
     sp = s.parameters
     top = _mm(_v(sp, 'stockZHigh', 0))
     bottom = _mm(_v(sp, 'stockZLow', 0))
+    box = [_mm(_v(sp, n)) for n in ('stockXLow', 'stockXHigh', 'stockYLow', 'stockYHigh')]
+    box = None if None in box else box
     # match the sections to the operations, in order
     names = [_norm(o.name) for o in ops]
     by_op = {}
@@ -939,7 +949,7 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
         elif t['type'] in MILLING:
             if o.strategy in ('pocket2d', 'contour2d') and t['type'] != 'chamfer mill':
                 _check_plunges(rep, 'E4', 'warning', sn, o, moves, t, holes, milled, to_world, top,
-                               other=other)
+                               other=other, box=box)
             milled.append((cuts, t['d'] / 2))
         if t['type'] in MILLING and t['type'] != 'chamfer mill':
             # what this cut clears, for the setups after this one: the column
@@ -1005,16 +1015,25 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
                         'sticks out of its holder' % (reach, 100 * ratio, t['body_len']))
         # the tool against the fixture's bodies
         if fx_boxes and time.time() < deadline and hits < 3:
+            # every 0.5 mm along each move: the tip's centre, and eight points
+            # round the tool's full diameter, which a drill reaches its point's
+            # length above its tip. That also catches a cut through the stock's
+            # bottom into a jaw's ledge under the stock.
             r = t['d'] / 2
+            lift = max(0.05, tip)
             pts = []
             for m in moves:
                 if None in m[1:]:
                     continue
-                for (px, py, pz) in ((m[4], m[5], m[6]), ((m[1] + m[4]) / 2, (m[2] + m[5]) / 2,
-                                                         (m[3] + m[6]) / 2)):
+                n = max(1, int(math.ceil(math.dist(m[1:4], m[4:7]) / 0.5)))
+                for k in range(1, n + 1):
+                    f = k / n
+                    px, py, pz = (m[1] + (m[4] - m[1]) * f, m[2] + (m[5] - m[2]) * f,
+                                  m[3] + (m[6] - m[3]) * f)
+                    pts.append((px, py, pz + 0.05))
                     for a in range(8):
                         pts.append((px + r * math.cos(a * math.pi / 4),
-                                    py + r * math.sin(a * math.pi / 4), pz + 0.05))
+                                    py + r * math.sin(a * math.pi / 4), pz + lift))
             hit = None
             for px, py, pz in pts:
                 wx, wy, wz = to_world.coords(px, py, pz)

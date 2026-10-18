@@ -39,7 +39,7 @@ A preset cannot hold the drilling cycle, so `build` sets it in each drill operat
 Every drill has a 1/8″ (3.175 mm) shank for the Carvera's collet, whatever its diameter.
 `tool_library.py` makes each drill from Makera's 1/8″ drill, with the catalogue's diameter, maximum drilling depth (as the flute length), overall length and point angle (130°, checked on product pages), and names it like `1.613*9.7mm Drill (No. 52)`.
 The series also comes coated with TiN (6415N…) and TiAlN (2598N…), but every diameter comes uncoated, so the library holds only the uncoated drills.
-For a hole, `build` takes the drill closest in diameter of those that fit: within −0.02 to +0.05 mm of the hole's diameter, with a flute at least 0.5 mm longer than the hole's depth.
+For a hole, `build` takes the drill closest in diameter of those that fit: within −0.03 to +0.05 mm of the hole's diameter, with a flute at least 0.5 mm longer than the hole's depth. The 0.03 mm lets T1 (3.175 mm) drill a 3.2 mm clearance hole, as the lab drills `kiutra-beam`'s, instead of a small end mill boring it.
 The lab's smallest drill was 0.7 mm, so for smaller drills the feed of 0.005 mm per revolution has no evidence behind it.
 
 To rebuild the library, for example after Makera changes its tool files, run `python -I scripts/tool_library.py` with plain Python.
@@ -66,6 +66,19 @@ T2 roughs every feature in steps; T3, a fresh tool of the same kind, then runs e
 
 ## Setups
 
+The stock sets the machining strategy (`_strategy` in `carvera_cam.py`):
+
+- **Window machining.** Stock larger than the part in both X and Y, by at least 6.175 mm on every side (`MIN_FRAME`, 3 mm of stock outside the 3.175 mm outline cut, which holds the part through its tabs and takes the vise's grip): an outline cut round the part leaves four tabs holding it, and a last program cuts them (see "Holding tabs").
+- **Held by its sides.** Stock of the part's size along one side and longer along the other, for a part longer than the jaws' insert bars (95.5 mm, `FX_JAW_WIDTH`): the jaws grip the two fitting sides of the part itself, and the top setup first cuts the part's ends free through the whole stock ("Ends", a 2D contour along the outline between the gripped sides, run on straight past them 1 mm beyond the tool's edge, so it plunges and leaves in the air), then the rest. The jaws close along the setups' X axis, the design's Y, so stock that fits along the design's X has the part turned a quarter about Z (`_quarter_turn`), like the turned-over copy (`carvera-cam part`). The sides must be straight over the jaws' width. There are no tabs, no outline cut and no entry hole: the facing enters at the middle of a part's end, in the end cut's groove.
+- **Stock of the part's size.** Stock of the part's own X and Y size (within 0.01 mm) has no outline cut and no tabs, and the vise grips the part itself; the part's outline must be that rectangle. The facing enters beside the part, one tool radius out from the middle of its longest edge along Y, away from the jaws, where there is no stock to drill.
+- **Two setups or one.** Two when the bottom face has features (a pocket floor facing down, or a hole open only at the bottom) or there is stock below the part to face off; else one, the top setup, with the part on the stock's bottom. Through holes and windows are cut from the top either way. With one setup the bottom face is not faced or deburred. `sides` overrides the choice.
+
+Any other stock is refused.
+
+**The vise.** No tool may enter the vise: neither the jaws beside the stock nor the ledge each jaw has under the stock along its gripped side, 1.9 mm wide, which a cut through the stock's bottom there would cut into. A part may be thinner than the jaws' grip if no tool reaches them. `build` tests each planned cut's footprint and depth against the modelled vise (`_planned_cuts`, `_vise_conflicts`) before it makes the setups, and stops with an error naming the cut; the check's rule X1 tests the G-code.
+
+A face is faced only where there is stock above it.
+
 The face with more features, pocket floors and blind holes, is machined first, as the top; through holes and windows count for neither face.
 When the design's bottom face has more, `build` machines a copy of the body turned half a turn about its X axis in place (`carvera-cam part` component) and hides the design's body.
 
@@ -74,12 +87,12 @@ The top setup's X is the model's +Y; the bottom setup's is −Y.
 
 **Top setup.**
 The stock is a fixed box: commonly a 2″ × 150 mm bar 6.35 mm (0.25″) or 19 mm thick, or a 150 × 150 mm copper plate 6.2 mm thick.
-The part sits centred in X, 10 mm from the back of the stock in Y, and centred in the stock's thickness unless the user moves it.
+The part sits centred in X, 10 mm from the back of the stock in Y (at the stock's edges for stock of its own size), and centred in the stock's thickness unless the user moves it; with one setup it sits on the stock's bottom.
 The lab's parts sit at various heights in the stock; the height decides how much facing each program does, and so when the operator must come back to flip the stock.
 The work coordinate system (WCS) origin is the stock box's `top 2` corner: the corner at the model's +X and +Y, which is the setup's +X and −Y.
 The box's corners and sides follow the setup's axes, so the box is set as `stock y` long along the setup's X.
 
-**Bottom setup.**
+**Bottom setup**, when there is one.
 The stock is turned over about the setup's X axis, the axis the jaws close along, so its back edge stays on the fixed jaw: Z flipped (`flipZ`) and X kept, stock from the previous setup, WCS origin at the stock box's `top 2` corner.
 
 ## Fixture
@@ -102,7 +115,7 @@ Top setup:
 
 1. T1 drills the main entry hole through the stock, or in stages with the outline when the stock is deeper than T1 reaches (see "Entry holes").
 2. T2 faces the stock top down to 0.2 mm above the part's top face and cuts the outline down to the tab band, both entering through the main entry hole.
-3. T1 drills the other entry holes and pre-drills the holes the end mill will bore, each from where the end mill has left the stock: the corner-chain entries from the top of the tab band, the pocket and window entries and pre-drills from 0.2 mm above the face.
+3. T1 drills the other entry holes and pre-drills the holes the end mill will bore, each from where the end mill has left the stock: the corner-chain entries from the top of the tab band, the pocket and window entries and pre-drills from 0.2 mm above the face. A hole a small end mill bores (no drill matches it, and it is too narrow for the 3.175 mm end mill) is pre-drilled the same way, with the widest drill no wider than the hole less 0.03 mm, so the small end mill only bores it to size.
 4. T2 roughs the pockets, bores, through windows, and the outline between the tabs down through the band.
 5. T3 finishes the features of steps 2 and 4, except the face and the plain bores (step 9), in single full-depth passes. The pockets are finished with a 2D pocket at the floor, which takes off the 0.2 mm the roughing left there. The windows have no floor, so they are finished with a 2D contour along their walls.
 6. Small end mills cut slots the 3.175 mm end mill cannot enter and the pockets beyond them (see "Slots"), then clear the pocket and window corners it cannot reach (rest machining, plunge entry). A floor inside a shelf's opening has walls only up to that shelf, so its corner cut starts at the shelf's floor: above it, the shelf's pocket has cleared everything, corners included (`Pocket corners 1 from 0.7 mm`; user, 2026-10-17). Each corner gets the largest small end mill that fits its radius and reaches its depth, unless one already chosen for another corner fits too: that one is used again, so the part needs fewer tools.
@@ -113,6 +126,7 @@ Top setup:
 11. The chamfering bit deburrs the edges of the top face, then, in "Deburr counterbores", the edge of each hole that goes on down from a counterbore's floor, which the face's deburr does not reach (user, 2026-10-17); there the point goes down the hole below, 0.5 mm past the chamfer, or less above a blind hole's bottom.
 
 The bottom setup repeats steps 2–11 for the bottom-side features, with no corner chains, and with no main entry hole of its own when the top setup's goes through the stock; its outline stops at the bottom of the tab band.
+With stock of the part's size, or stock that holds the part by its sides, there is no main entry hole, outline, tab entry hole or outline between tabs, in either setup. A part held by its sides gets the end cut, rough, as the top setup's first operation, and its finishing pass with the other T3 passes.
 
 A drill only cuts what the end mill cannot cut first: the main entry hole is drilled from the stock top because the first end mill cut enters through it, and every other hole waits until the end mill has cleared the stock above it.
 This saves wear on the drills, at the cost of two more tool changes in the top setup and one in the bottom.
@@ -158,15 +172,18 @@ The finishing passes still cut each feature in one pass to full depth.
 
 ## Holding tabs
 
-The part stays attached to the stock by four bridges ("tabs") until a separate program cuts them.
+In window machining, the part stays attached to the stock by four bridges ("tabs") until a separate program cuts them.
 They sit on the longest straight or arc edges of the outline, one at the middle of each, 5 mm wide along the outline.
 The tab band is 1 mm thick (0.4 × the part's thickness for parts under 2.5 mm) and is centred on the plane halfway between the part's top and bottom.
-A pocket open to the side of the part is reached sideways at its own depth, so the band moves to the nearest height clear of every such opening.
+With one setup the band sits on the part's bottom face instead, since the top setup cuts everything, the tabs included.
+A pocket open to the side of the part is reached sideways at its own depth, so the band moves to the nearest height clear of every such opening (with one setup, the lowest).
 
 - The top setup's outline cuts from the faced stock down to the top of the band.
 - The **outline between tabs** (four corner chains, each running from one tab to the next) then cuts from the top of the band to 0.5 mm below its bottom.
 - The bottom setup's outline cuts from the bottom face up to the bottom of the band.
 - `<part>_tabs`, the last program, cuts each tab span through the band and 0.5 mm past it, in 0.2 mm steps, and frees the part.
+
+With one setup there is no bottom outline: the outline between tabs and the tab cut both run from the top of the band, on the part's bottom face, to 0.5 mm below the stock's bottom, and the tab cut is the top setup's last operation.
 
 Each tab span is 5 mm along the outline, so the bridge left after the end mill's radius on each side is about 1.8 mm wide.
 The corner chains and tab spans are curves in the `carvera-cam` sketch; the generator orients each chain so a left-compensated tool stays outside the part in both setups.
@@ -200,10 +217,10 @@ The generator reads it on every build, so a change there changes the next build.
 
 ## NC programs
 
-Each part gets three programs, all posted with the Carvera Community post:
+Each part gets one program per setup, plus one for the tabs in window machining, all posted with the Carvera Community post:
 
 | Program | Contents |
 |---|---|
-| `<part>_top` | the top setup |
-| `<part>_bottom` | the bottom setup except the tab cut |
-| `<part>_tabs` | the tab cut only |
+| `<part>_top` | the top setup, except the tab cut with one setup |
+| `<part>_bottom` | the bottom setup, if any, except the tab cut |
+| `<part>_tabs` | the tab cut only, from the last setup; window machining only |

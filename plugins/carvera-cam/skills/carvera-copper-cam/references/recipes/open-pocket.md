@@ -3,6 +3,7 @@
 Cut a pocket that opens to the side of the part with 2D contour passes along its walls, each pass starting and ending on the outline cut's path.
 The outline cut is the contour that cuts round the part, one end mill wide, and its path is where the centre of its tool runs.
 It has already cleared the stock there, so every plunge goes into empty space.
+In stock of the part's own size there is no outline cut, and that path lies beside the part, outside the stock, so the plunges are clear all the same.
 A pocket toolpath is the wrong tool here: Fusion picks where it enters an open pocket, whatever the ramp type or lead-in, and it plunges with the edge of the tool in copper that nothing has cut.
 
 ## When it applies

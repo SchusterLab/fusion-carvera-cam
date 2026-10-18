@@ -2,7 +2,8 @@
 
 This repository is a Claude Code plugin marketplace with one plugin, `carvera-cam`.
 Its skill, `carvera-copper-cam`, generates Autodesk Fusion CAM toolpaths for machining copper parts on the lab's Makera Carvera.
-Given a part, it creates the top and flipped bottom setups with the lab's vise modelled for collision checks, every operation with tools from Makera and McMaster-Carr and the lab's feeds, and three NC programs: `<part>_top`, `<part>_bottom` and `<part>_tabs`.
+Given a part and the stock, it chooses how to machine it: cut out of larger stock, held by four tabs that a last program cuts; held in the vise by its own sides, from stock of its own size, or of its size along one side and longer the other way, with its ends cut free; and from the top alone when nothing opens at the bottom face, else from the top and then flipped. It checks that no cut reaches the vise.
+It creates the setups with the lab's vise modelled for collision checks, every operation with tools from Makera and McMaster-Carr and the lab's feeds, and the NC programs: `<part>_top`, `<part>_bottom` with two setups, and `<part>_tabs` with larger stock.
 The same programs machine aluminum at 200% feed and spindle override.
 The skill also checks existing Carvera toolpaths, the lab's own as well as those it generates, against rules mined from the lab's toolpaths for avoiding crashes, spindle stalls and tool wear.
 
@@ -24,7 +25,7 @@ The skill drives Fusion through the Fusion MCP server, so Claude Code needs that
 ## Use
 
 Ask Claude Code, for example, "Generate Carvera toolpaths for `my-part` in copper, from a 2-inch bar 0.25 inch thick".
-The skill opens the part, reports the features it recognized, confirms the stock and any tapped holes with you, builds the setups and generates the toolpaths.
+The skill opens the part, reports the features it recognized, asks whether the stock has the part's own size and thickness and, if not, its dimensions, tells you the machining strategy that follows, confirms any tapped holes with you, builds the setups and generates the toolpaths.
 Some features, such as pockets open to the side and inside corners tighter than the main end mill, it cuts two ways: by its script, and by following a written recipe step by step in a throwaway copy of the part.
 It checks the toolpaths two ways too, with its checker and by reading the G-code, compares the results, and tells you how they compared; where one way falls short, it fixes the skill and offers the fix to this repository as a pull request, once you agree.
 It does not save the document or write G-code unless you ask.
