@@ -1755,6 +1755,27 @@ def _sel_pocket_regions(faces, regions, top):
     return f
 
 
+def _sel_stock_contours(regions, inner, faces, top):
+    """Stock contours: the closed chains of `regions`, less the closed chains
+    of `inner` and the outer loops of floor `faces` inside them. A pocket then
+    cuts only where stock is left, and runs the tool over the rest only as far
+    as its radius."""
+    def f(params):
+        v = params.itemByName('stockContours').value
+        sels = v.getCurveSelections()
+        for r in list(regions) + list(inner):
+            s = sels.createNewChainSelection()
+            s.inputGeometry = list(r['curves'])
+            s.isOpen = False
+            s.isReverted = r['clockwise'] if top else not r['clockwise']
+        for face in faces:
+            s = sels.createNewChainSelection()
+            s.inputGeometry = [e for lp in face.loops if lp.isOuter for e in lp.edges]
+            s.isOpen = False
+        v.applyCurveSelections(sels)
+    return f
+
+
 def _both(*selectors):
     def f(params):
         for sel in selectors:
@@ -3613,22 +3634,37 @@ def _side_ops(b, setup, a, side, plan, warnings):
                     # a region inside a shallower one (a shelf's opening holds the
                     # deeper pockets) is roughed from that one's rough floor, since
                     # the end mill has cleared it down to there; from the top it
-                    # would mill air. The finishing pass is one depth, so it keeps
-                    # one operation.
-                    groups = [(None, us)]  # (enclosing region's unit, units)
+                    # would mill air. The finishing pass cuts a shelf region that
+                    # holds deeper ones on its own, with stock contours leaving
+                    # them out: they are roughed below its floor by then, so
+                    # sweeping them at that floor would mill air.
+                    groups = [(None, us, [])]  # (enclosing unit, units, units left out)
                     if which == 'rough' and floor:
                         groups = []
                         for u in us:
                             w = _enclosing(u, inside, t, bot)
                             g = next((g for g in groups if g[0] is w), None)
                             if g is None:
-                                groups.append((w, [u]))
+                                groups.append((w, [u], []))
                             else:
                                 g[1].append(u)
                         groups.sort(key=lambda g: -1 if g[0] is None else g[0][2])
-                    for parent, gu in groups:
-                        gp, nm = params, name
-                        if parent is not None:
+                    elif floor:
+                        held = [(u, [w for w in inside if _enclosing(w, inside, t, bot) is u])
+                                for u in us if u[1] is not None]
+                        held = [(u, ws) for u, ws in held if ws]
+                        rest = [u for u in us if all(u is not h for h, _ in held)]
+                        groups = [(u, [u], ws) for u, ws in sorted(held, key=lambda h: h[0][2])]
+                        if rest:
+                            groups.append((None, rest, []))
+                    for parent, gu, out in groups:
+                        gp, nm, sel = params, name, None
+                        if out:
+                            gp = dict(params, useStockContours='true')
+                            nm = name + ' at %g mm' % round(parent[2], 2)
+                            sel = _sel_stock_contours([parent[1]], [w[1] for w in out if w[1]],
+                                                      [w[0] for w in out if not w[1]], top)
+                        elif parent is not None:
                             gp = dict(params, **at('top', parent[1]['face'], POCKET_FLOOR_ALLOWANCE))
                             nm = name + ' from %g mm' % round(parent[2], 2)
                         pts = []
@@ -3639,7 +3675,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
                         ops['main'].append(b.op(setup, 'pocket2d', tk, nm, gp, _both(
                             _sel_pocket_regions([u[0] for u in gu if u[0] is not None],
                                                 [u[1] for u in gu if u[1] is not None], top),
-                            _sel_faces('predrillPositions', pts))))
+                            _sel_faces('predrillPositions', pts), sel)))
         if which == 'rough':
             end_bores(which, multi, suffix)
         # tap holes bored to size: one light pass, plus a finishing pass in blind holes
