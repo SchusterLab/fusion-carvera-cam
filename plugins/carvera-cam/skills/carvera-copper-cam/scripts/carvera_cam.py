@@ -2175,6 +2175,11 @@ def _setup(cam, name, body, machine, stock, top, x_axis, vise=None, warnings=Non
         si.fixtureEnabled = True
         si.fixtures = [vise[0]]
     setup = cam.setups.add(si)
+    try:  # the machine stays in the simulation, out of the way elsewhere
+        setup.visibilityManager.machineVisible = False
+        setup.visibilityManager.machineBaseVisible = False
+    except AttributeError:
+        pass
     p = setup.parameters
     _set(p, 'wcs_orientation_mode', "'axesZX'")
     p.itemByName('wcs_orientation_axisX').value.value = [x_axis]
@@ -2323,6 +2328,7 @@ def _add_tabs(design, lay, tab):
     comp.name = TABS_COMPONENT
     sk = comp.sketches.add(comp.xYConstructionPlane)
     sk.name = 'tab outlines'
+    sk.isVisible = False
     lines, arcs = sk.sketchCurves.sketchLines, sk.sketchCurves.sketchArcs
     w = 2 * TOOL_R
     for t in lay['tabs']:
@@ -2396,6 +2402,7 @@ def _add_face_patches(design, lay, a):
         plane.name = 'face ' + side
         sk = comp.sketches.add(plane)
         sk.name = 'face outline ' + side
+        sk.isVisible = False
         curves = adsk.core.ObjectCollection.create()
         for pc in lay['outline']:
             for c in _sketch_curve(sk, pc, 0, pc['len']):
@@ -2408,6 +2415,7 @@ def _add_face_patches(design, lay, a):
         out[side] = _patch(comp, occ, sk, 'face ' + side)
         sk = comp.sketches.add(plane)
         sk.name = 'face outline ' + side + ' (finish)'
+        sk.isVisible = False
         for pc in lay['outline']:
             _sketch_curve(sk, pc, 0, pc['len'])
         out[side + ' finish'] = _patch(comp, occ, sk, 'face ' + side + ' (finish)')
@@ -2716,6 +2724,7 @@ def _make_layout(design, a, plan, warnings):
 
     sk = root.sketches.add(root.xYConstructionPlane)
     sk.name = LAYOUT_SKETCH
+    sk.isVisible = False
     segs = []  # (curves, is_tab, start point, direction)
     for i, pc in enumerate(pieces):
         pos = 0.0
@@ -2956,6 +2965,7 @@ def _shelf_regions(root, a, sk, pocket_entries):
         plane.name = LAYOUT_SKETCH + ' z=%g' % z
         sec = root.sketches.add(plane)
         sec.name = LAYOUT_SKETCH + ' section z=%g' % z
+        sec.isVisible = False
         sec.intersectWithSketchPlane([a['body']])
         # read every profile before adding to the layout sketch: a change to the
         # design invalidates the section's profile objects
@@ -4051,7 +4061,8 @@ def build(args):
                            *_vise_matrices(box, z0, box[1][2], False)),
                  _add_vise(design, VISE_PREFIX + 'bottom', fixture,
                            *_vise_matrices(box, -ztop, -z0, True))]
-        vises[1][0].isLightBulbOn = False  # it would hang upside down over the part
+        for occ, _ in vises:  # out of the way; the setups still carry them as fixtures
+            occ.isLightBulbOn = False
     plan['tab_faces'] = _add_tabs(design, plan['layout'], plan['tab'])
     plan['face_patches'] = _add_face_patches(design, plan['layout'], a)
     x_axis = _axis_line(design)
