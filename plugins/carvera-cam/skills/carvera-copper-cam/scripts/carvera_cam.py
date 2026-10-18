@@ -190,25 +190,28 @@ def _cam():
 
 def _find_body(args):
     design = _design()
+    # each body with its path: its name in the root component, else '<occurrence path>/<name>'
     bodies = []
     for b in design.rootComponent.bRepBodies:
-        bodies.append(b)
+        bodies.append((b.name, b))
     for occ in design.rootComponent.allOccurrences:
         if occ.component.name.startswith(VISE_PREFIX) or \
                 occ.component.name in (TABS_COMPONENT, FACES_COMPONENT, PART_COMPONENT):
             continue  # the vise, tabs, face patches or turned part an earlier build added
         for b in occ.bRepBodies:
-            bodies.append(b)
+            bodies.append((occ.fullPathName.replace('+', '/') + '/' + b.name, b))
     # a body an earlier build hid behind its turned copy still counts
-    bodies = [b for b in bodies if b.isSolid and
+    bodies = [(p, b) for p, b in bodies if b.isSolid and
               (b.isVisible or b.attributes.itemByName(*HIDDEN_ATTR) is not None)]
     name = args.get('body')
     if name:
-        bodies = [b for b in bodies if b.name == name]
+        # by path first, so that a root body named like the bodies of inserted parts is found
+        bodies = [(p, b) for p, b in bodies if p == name] or \
+            [(p, b) for p, b in bodies if b.name == name]
     if len(bodies) != 1:
         raise RuntimeError('expected one visible solid body%s, found %s; pass args["body"]'
-                           % (' named %r' % name if name else '', [b.name for b in bodies]))
-    return bodies[0]
+                           % (' named %r' % name if name else '', [p for p, _ in bodies]))
+    return bodies[0][1]
 
 
 # --------------------------------------------------------------- analysis

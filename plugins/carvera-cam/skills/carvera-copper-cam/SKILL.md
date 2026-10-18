@@ -97,6 +97,7 @@ def run(_context: str):
 
 Pass `readOnly: true` for `analyze`, since it changes nothing.
 If the design has more than one visible solid body, pass `{"body": "<name>"}`.
+A body in the root component goes by its name, and a body inside a component by its path, `<occurrence>/<body>`, such as `Nut:1/Body1`, so that a part named like the bodies of the screws and nuts inserted round it can still be picked.
 
 The JSON lists, among other things:
 
