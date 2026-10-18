@@ -105,7 +105,7 @@ Top setup:
 3. T1 drills the other entry holes and pre-drills the holes the end mill will bore, each from where the end mill has left the stock: the corner-chain entries from the top of the tab band, the pocket and window entries and pre-drills from 0.2 mm above the face.
 4. T2 roughs the pockets, bores, through windows, and the outline between the tabs down through the band.
 5. T3 finishes the features of steps 2 and 4, except the face and the plain bores (step 9), in single full-depth passes. The pockets are finished with a 2D pocket at the floor, which takes off the 0.2 mm the roughing left there. The windows have no floor, so they are finished with a 2D contour along their walls.
-6. Small end mills cut slots the 3.175 mm end mill cannot enter and the pockets beyond them (see "Slots"), then clear the pocket and window corners it cannot reach (rest machining, plunge entry). Each corner gets the largest small end mill that fits its radius and reaches its depth, unless one already chosen for another corner fits too: that one is used again, so the part needs fewer tools.
+6. Small end mills cut slots the 3.175 mm end mill cannot enter and the pockets beyond them (see "Slots"), then clear the pocket and window corners it cannot reach (rest machining, plunge entry). A floor inside a shelf's opening has walls only up to that shelf, so its corner cut starts at the shelf's floor: above it, the shelf's pocket has cleared everything, corners included (`Pocket corners 1 from 0.7 mm`; user, 2026-10-17). Each corner gets the largest small end mill that fits its radius and reaches its depth, unless one already chosen for another corner fits too: that one is used again, so the part needs fewer tools.
 7. Drills cut plain holes and tap drills.
 8. Thread mills cut the threads.
 9. T3 finishes the plain bores, after the drills and thread mills, so that the finishing pass cleans up the burrs they leave on the bores' floors and edges (user, 2026-10-17). Holes bored to a tap size keep their finishing pass in step 5, before the thread mill, which needs the hole at its final size.
@@ -123,7 +123,7 @@ The generator keeps track of the stock's highest point in each setup, which is w
 Every operation that would start at the face or above it starts at that point instead, so its first pass cuts the stock that is there and no air above it:
 - the outline, pockets, bores, windows, pocket corners, entry holes and the finishing face take their top height from the face's patch (`from point`), 0.2 mm above it until the finishing face;
 - drills, bores and thread mills that start at the hole top start 0.2 mm above it until the finishing face.
-Operations that start below the face, such as the cuts round the tabs and the deeper stages of a staged cut, keep their own top heights.
+Operations that start below the face keep their own top heights: the cuts round the tabs, the deeper stages of a staged cut, and the rough pockets and corner cuts of a region inside a shelf's opening, which start at that shelf's floor.
 
 Every top and bottom height is taken from geometry, not computed from the stock top: the stock top, the face patches, the tab bodies' faces, the pocket floors, a window's top face, the part's far face, or the hole top.
 An offset from that geometry is only ever one of the lab's fixed numbers: the 0.2 mm the rough face leaves, the 0.5 mm a drill or cut goes past a face it breaks through, or a thread's offset from threads.toml.
