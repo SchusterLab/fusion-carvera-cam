@@ -10,19 +10,21 @@ learned from the parts in the project 2026-01-06_smpm-sample-package-6port:
   McMaster-Carr's drills, in assets/carvera-tools.json (tool_library.py builds
   it), each with the feed preset "Copper" (aluminum runs the same
   program at 200% override);
-- a top setup and a flipped bottom setup, the part held to the stock by four
-  tabs that a separate "_tabs" program cuts last.
+- a machining strategy chosen from the stock (see _strategy): the part cut out
+  of larger stock and held by four tabs that a separate "_tabs" program cuts
+  last, held by its own sides in the vise, or stock of its own size; a top
+  setup, and a flipped bottom setup when the bottom has work.
 
 Entry points, each taking one dict of arguments:
 
     analyze(args)   recognize the part's features and print them as JSON
     build(args)     create the setups, operations and NC programs; with
-                    {"recipes": true}, leave the features that have a recipe
-                    (references/recipes/) to it and list them
+                    {"mode": "recipe"}, the setups and layout only, for the
+                    recipes in references/recipes/ to add the operations
     generate(args)  generate the toolpaths and report errors and warnings
 
 and the primitives the recipes compose (see "recipe primitives" below):
-recipes, walls, pass_path, coverage, tools, add_operation, add_contour and
+features, walls, pass_path, coverage, tools, add_operation, add_contour and
 renumber_tools.
 
 Lengths in args are millimetres. Fusion's internal unit is the centimetre.
@@ -803,12 +805,11 @@ def analyze(args=None):
 
 
 # ------------------------------------------------------- recipe primitives
-# Steps a recipe in references/recipes/ composes for a feature build leaves out.
-# Each takes JSON-like args and prints its result as JSON. A floor is named by
-# its index in analyze's "floors", which build's "recipes" use too.
+# The steps the recipes in references/recipes/ compose, after build with
+# {"mode": "recipe"}. Each takes JSON-like args and prints its result as JSON.
+# A floor is named by its index in analyze's "floors", which features uses too.
 
-PATH_ATTR = ('carvera-cam', 'path')
-RECIPES_ATTR = ('carvera-cam', 'recipes')  # on the design: build's "recipes", as JSON  # on each curve of a sketched pass: '<path id>:<order>'
+PATH_ATTR = ('carvera-cam', 'path')  # on each curve of a sketched pass: '<path id>:<order>'
 
 
 def _built(args):
@@ -823,14 +824,6 @@ def _built(args):
 
 def _xy(p):
     return [round(mm(p.x), 3), round(mm(p.y), 3)]
-
-
-def recipes(args=None):
-    """The features the last build left to a recipe, as its output listed them."""
-    attr = _design().attributes.itemByName(*RECIPES_ATTR)
-    out = json.loads(attr.value) if attr is not None else []
-    print(json.dumps(out, indent=1))
-    return out
 
 
 def walls(args):
@@ -1054,13 +1047,31 @@ def _save_layout(design, a, plan, name, setups, threads):
     def chain(ch):
         return {'curves': [tok(c) for c in ch['curves']], 'start': _p3(ch['start']),
                 'dir': _p3(ch['dir'])}
-    regions, index = [], {}
+    regions, index, src = [], {}, []
     for key, r in lay['shelves'].items():
         if id(r) not in index:
             index[id(r)] = len(regions)
+            src.append(r)
             regions.append({'curves': [tok(c) for c in r['curves']], 'clockwise': r['clockwise'],
                             'side': r['side'], 'z_mm': r['z'], 'floors': []})
         regions[index[id(r)]]['floors'].append(floor_of[key])
+    # the deepest shelf region each pocket floor lies inside, other than its own:
+    # the region's pocket clears it down to the region's floor (see _enclosing)
+    inside = {}
+    for i, f in enumerate(a['floors']):
+        if f['role'] != 'pocket':
+            continue
+        q = f['face'].pointOnFace
+        best = None
+        for k, r in enumerate(src):
+            if r['side'] != f['side'] or i in regions[k]['floors']:
+                continue
+            above = r['z'] > f['z'] + 1e-6 if f['side'] == 'top' else r['z'] < f['z'] - 1e-6
+            if above and _inside(r['rings'][0], q.x, q.y) and (
+                    best is None or abs(r['z'] - f['z']) < abs(src[best]['z'] - f['z'])):
+                best = k
+        if best is not None:
+            inside[str(i)] = best
     out = {
         'name': name, 'setups': setups,
         'strategy': {k: plan[k] for k in ('sides', 'outline', 'ends')},
@@ -1077,7 +1088,7 @@ def _save_layout(design, a, plan, name, setups, threads):
                                               'depth_mm': e['depth']}
                            for k, e in lay['pocket_entries'].items() if k in floor_of},
         'narrow': sorted(floor_of[k] for k in lay['narrow'] if k in floor_of),
-        'regions': regions,
+        'regions': regions, 'inside_region': inside,
         'window_entries': [None if e is None else {'point': tok(e['point']), 'pocket': e['pocket']}
                            for e in lay['window_entries']],
         'window_tops': [None if f is None else floor_of[f.tempId] for f in lay['window_tops']],
@@ -1099,7 +1110,7 @@ def _save_layout(design, a, plan, name, setups, threads):
 def _layout(design):
     attr = design.attributes.itemByName(*LAYOUT_ATTR)
     if attr is None:
-        raise RuntimeError('no layout in the design: run build with "recipes": "all" first')
+        raise RuntimeError('no layout in the design: run build with "mode": "recipe" first')
     return json.loads(attr.value)
 
 
@@ -1125,8 +1136,8 @@ def _hole_below(a, h):
 
 
 def features(args=None):
-    """Everything a recipe needs to machine the part after build with "recipes":
-    "all": the machining strategy, the setups and the stock round the part, the
+    """Everything a recipe needs to machine the part after build with "mode":
+    "recipe": the machining strategy, the setups and the stock round the part, the
     tab band, and every floor, hole and window with the entry points, chains and
     regions build sketched for them, each named as add_operation takes it."""
     args = args or {}
@@ -1143,7 +1154,8 @@ def features(args=None):
         floors.append(dict(_strip(f), floor=i, **{
             'entry': None if e is None else {'point': 'pocket:%d' % i, 'drilled': e['drill'],
                                              'hole_depth_mm': e['depth_mm']},
-            'narrow': i in L['narrow'], 'region': region_of.get(i), 'slot': slot_of.get(i),
+            'narrow': i in L['narrow'], 'region': region_of.get(i),
+            'inside_region': L['inside_region'].get(str(i)), 'slot': slot_of.get(i),
             'fed_by_slot': next((k for k, sl in enumerate(L['slots']) if i in sl['fed']), None)}))
     holes = []
     for i, h in enumerate(a['holes']):
@@ -1390,22 +1402,18 @@ def add_operation(args):
     strategy:  pocket2d, contour2d, drill, bore, thread or chamfer2d (default contour2d)
     name:      the operation's name
     tool:      the tool's description, from the part's tools or the library; with
-               T, that slot (T2 and T3 are both the 3.175 mm end mill); or
-    tool_from: an operation whose tool and preset it copies
+               T, that slot (T2 and T3 are both the 3.175 mm end mill)
     params:    Fusion parameter expressions on top of the lab's settings for the
-               strategy; a height's reference is {"ref": "<name>"} (see _ref) or
-               {"entity_tokens": [...]}
+               strategy; a height's reference is {"ref": "<name>"} (see _ref)
     select:    what it cuts: {"pockets": [...], "contours": [...], "stock_contours":
                [...]} of named items (see _sel_items); {"holes": [hole, ...]} for a
                drill, bore or thread; {"points": [...]} for a drill, {"predrill":
-               [...]} and {"entries": [...]}, of named points (see _point); or, as
-               the first recipes named them, {"pocket_floors": [...]},
-               {"window_loops": [...]}, {"paths": [...]}
-    after:     the operation it goes right after, and into the NC program holding
-               that; else it goes last in the setup
+               [...]} and {"entries": [...]}, of named points (see _point); or
+               {"paths": [...]}, passes sketched by pass_path
     program:   "top", "bottom" or "tabs": the NC program '<name>_<program>' it goes
-               in, made on first use; after `after` if that is in it, else last
+               in last, made on first use
     bottom_at_floor: the floor its bottom height sits at
+    The operation goes last in its setup, so add the operations in run order.
     """
     design, body, a = _built(args)
     cam = adsk.cam.CAM.cast(_app().activeDocument.products.itemByProductType('CAMProductType'))
@@ -1415,14 +1423,7 @@ def add_operation(args):
         sname = L['setups'][sname]
     setup = _setup_named(cam, sname)
     top = not sname.startswith('Bottom')
-    by_name = {o.name: o for o in setup.allOperations}
-    after = by_name[args['after']] if args.get('after') else None
-    if args.get('tool_from'):
-        like = by_name.get(args['tool_from']) or next(o for o in _all_ops(cam)
-                                                      if o.name == args['tool_from'])
-        tool, preset = like.tool, like.toolPreset
-    else:
-        tool, preset = _tool_for(cam, args['tool'], args.get('T'))
+    tool, preset = _tool_for(cam, args['tool'], args.get('T'))
     strategy = args.get('strategy', 'contour2d')
     sel = args.get('select', {})
     base = dict({'pocket2d': POCKET, 'contour2d': CONTOUR, 'drill': DRILL, 'bore': BORE,
@@ -1445,9 +1446,7 @@ def add_operation(args):
             _set(oi.parameters, k, v)
     for k, v in params.items():  # a height's reference faces
         if isinstance(v, dict):
-            ents = ([_ref(design, a, L, v['ref'])] if 'ref' in v else
-                    [design.findEntityByToken(t)[0] for t in v['entity_tokens']])
-            oi.parameters.itemByName(k).value.value = ents
+            oi.parameters.itemByName(k).value.value = [_ref(design, a, L, v['ref'])]
     if args.get('bottom_at_floor') is not None:
         face = a['floors'][args['bottom_at_floor']]['face']
         _set(oi.parameters, 'bottomHeight_mode', "'from point'")
@@ -1471,38 +1470,15 @@ def add_operation(args):
     if 'paths' in sel:
         _sel_paths(_path_curves(design, sel['paths']))(oi.parameters)
         picked = True
-    elif 'pocket_floors' in sel:
-        _sel_pocket([a['floors'][i]['face'] for i in sel['pocket_floors']])(oi.parameters)
-        picked = True
-    elif 'window_loops' in sel:
-        _sel_chains([a['windows'][j]['loop'] for j in sel['window_loops']], 'pockets')(oi.parameters)
-        picked = True
     if not picked:
         raise RuntimeError('select: give what the operation cuts')
     op = setup.operations.add(oi)
-    if after is not None:
-        op.moveAfter(after)
     programs, warnings = [], []
     if args.get('program'):
         nc = _program(cam, L, args['program'], warnings)
-        ops = list(nc.operations)
-        ids = [o.operationId for o in ops]
-        if after is not None and after.operationId in ids:
-            ops.insert(ids.index(after.operationId) + 1, op)
-        else:
-            ops.append(op)
-        nc.operations = ops
+        nc.operations = list(nc.operations) + [op]
         programs.append(nc.name)
-    elif after is not None:
-        # into the NC program that holds the operation it follows, right after it
-        for nc in cam.ncPrograms:
-            ops = list(nc.operations)
-            ids = [o.operationId for o in ops]
-            if after.operationId in ids:
-                ops.insert(ids.index(after.operationId) + 1, op)
-                nc.operations = ops
-                programs.append(nc.name)
-    out = {'operation': op.name, 'setup': setup.name, 'after': after.name if after else None,
+    out = {'operation': op.name, 'setup': setup.name,
            'T': int(tool.parameters.itemByName('tool_number').value.value),
            'nc_programs': programs}
     if REJECTED:
@@ -1807,7 +1783,6 @@ class Builder:
         self.log = log
         self.dry = dry
         self.needed = []
-        self.last = {}  # tool key -> the latest operation made with that tool
 
     def op(self, setup, strategy, tool_key, name, params, select=None):
         desc, key = tool_key if isinstance(tool_key, tuple) else (tool_key, None)
@@ -1835,7 +1810,6 @@ class Builder:
         if select:
             select(oi.parameters)
         op = setup.operations.add(oi)
-        self.last[(desc, key)] = op
         self.log.append('%s / %s [%s] T%s %s' % (setup.name, name, strategy,
                         tool.parameters.itemByName('tool_number').expression, desc))
         return op
@@ -3554,8 +3528,8 @@ def _make_layout(design, a, plan, warnings):
     # cleared the stock for its plunge.
     ring = _loop_ring(loop)
     open_passes = {}
-    if plan.get('recipes'):
-        a_floors = []  # left to the recipe
+    if plan['recipe']:
+        a_floors = []  # sketched by the open-pocket recipe
     else:
         a_floors = a['floors']
     step = 0.6 * ENDMILL_D / 10
@@ -4457,7 +4431,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
                     if staged_pockets and which == 'rough':
                         name += (' %g mm to the floors' % round(max(t, 0), 2) if floor
                                  else ' %g to %g mm' % (round(max(t, 0), 2), round(bot, 2)))
-                    if side_open and not plan.get('recipes'):
+                    if side_open:
                         # Fusion picks where a pocket enters an open pocket, and it
                         # plunges with the tool's edge in uncut stock: contour passes
                         # along the walls instead, on the tool-centre paths sketched
@@ -4484,36 +4458,6 @@ def _side_ops(b, setup, a, side, plan, warnings):
                             nm = name if len(by_depth) == 1 else name + ' %g mm' % dep
                             ops['main'].append(b.op(setup, 'contour2d', tk, nm, cparams,
                                                     _sel_paths(paths)))
-                        continue
-                    if side_open:
-                        # cut after build by the open-pocket recipe
-                        # (references/recipes/open-pocket.md): record where its
-                        # operations go and the heights and allowance they take
-                        if not b.dry:
-                            anchor = next((o for o in reversed(ops['main']) if o is not None), None)
-                            rp = dict(doMultipleDepths=multi, **top_at(t))
-                            rp.update({k: v for k, v in params.items() if k.startswith((
-                                'useStockToLeave', 'simpleStockToLeave', 'stockToLeave',
-                                'verticalStockToLeave'))})
-                            if not floor:
-                                rp.update({k: v for k, v in params.items()
-                                           if k.startswith('bottomHeight')})
-                            # a height's reference faces, as entity tokens
-                            rp = {k: ({'entity_tokens': [x.entityToken for x in v]}
-                                      if isinstance(v, list) else v) for k, v in rp.items()}
-                            # one operation per floor depth
-                            by_depth = {}
-                            for u in us:
-                                i = next(k for k, g in enumerate(a['floors']) if g['face'] is u[0])
-                                by_depth.setdefault(round(u[2], 3), []).append(i)
-                            for dep, idx in sorted(by_depth.items()):
-                                plan.setdefault('recipe_entries', []).append({
-                                    'recipe': 'open-pocket', 'floors': idx, 'depth_mm': dep,
-                                    'pass': which, 'setup': setup.name,
-                                    'name': name if len(by_depth) == 1 else name + ' %g mm' % dep,
-                                    'after': anchor.name if anchor else None,
-                                    'tool_from': b.last[tk].name if tk in b.last else None,
-                                    'bottom_at_floor': idx[0] if floor else None, 'params': rp})
                         continue
                     # a region inside a shallower one (a shelf's opening holds the
                     # deeper pockets) is roughed from that one's rough floor, since
@@ -4642,9 +4586,8 @@ def _side_ops(b, setup, a, side, plan, warnings):
         slotted |= {sl['floor']['face'].tempId for sl in sls}
         slotted |= {g['face'].tempId for g in fed}
 
-    # corners the 3.175 can't reach, in pockets and windows, with small end mills:
-    # by build itself, or after build by the corners recipe
-    # (references/recipes/corners.md), which build records what it needs for.
+    # corners the 3.175 can't reach, in pockets and windows, with small end mills
+    # (in recipe mode, references/recipes/corners.md does the same).
     # A floor inside a shelf region has walls only up to that region's floor:
     # above it the region's pocket has cleared everything, its corners too, so
     # its corner cut starts there
@@ -4660,95 +4603,67 @@ def _side_ops(b, setup, a, side, plan, warnings):
         w = _enclosing((f['face'], None, f['depth']), regions, 0.0, None)
         return w, (at('top', w[1]['face']) if w else top_at(0))
 
-    if not plan.get('recipes'):
-        # small end mills: rest machining in pockets whose corners the 3.175 can't reach,
-        # one operation per tool
-        def corner_tool(r, depth):
-            # a small end mill already chosen for corners, on either side, where one
-            # fits, so the part needs fewer tools; else the largest that fits
-            used = plan.setdefault('corner_endmills', set())
-            for desc, d, flute in SMALL_ENDMILLS:
-                if desc in used and d / 2 <= r + 1e-3 and flute >= depth + 0.5:
-                    return desc, d
-            em, d = _small_endmill(r, depth)
-            if em:
-                used.add(em)
-            return em, d
+    # small end mills: rest machining in pockets whose corners the 3.175 can't reach,
+    # one operation per tool
+    def corner_tool(r, depth):
+        # a small end mill already chosen for corners, on either side, where one
+        # fits, so the part needs fewer tools; else the largest that fits
+        used = plan.setdefault('corner_endmills', set())
+        for desc, d, flute in SMALL_ENDMILLS:
+            if desc in used and d / 2 <= r + 1e-3 and flute >= depth + 0.5:
+                return desc, d
+        em, d = _small_endmill(r, depth)
+        if em:
+            used.add(em)
+        return em, d
 
-        corners = {}
-        for f in pockets:
-            if f['face'].tempId in slotted:
-                continue
-            r = f['corner_radius']
-            if r is None or r >= ENDMILL_D / 2 - 1e-3:
-                continue
-            smallest = SMALL_ENDMILLS[-1][1] / 2
-            if r < smallest:
-                warnings.append('pocket at z=%g mm has sharp or R%.2f inside corners; the %g mm '
-                                'end mill leaves R%g' % (f['z'], r, 2 * smallest, smallest))
-            em, d = corner_tool(max(r, smallest), f['depth'])
-            if not em:
-                warnings.append('pocket at z=%g mm: corner radius %.2f mm needs a smaller tool '
-                                'than the library has, or is deeper than its flute' % (f['z'], r))
-                continue
-            w, top_h = corner_top(f)
-            corners.setdefault((em, d, w[2] if w else 0.0), (w, top_h, []))[2].append(f['face'])
-        for (em, d, z), (w, top_h, faces) in sorted(corners.items(), key=lambda kv: kv[0][2]):
-            name = 'Pocket corners %g' % d
-            if w is not None:
-                name += ' from %g mm' % round(z, 2)
-            ops['main'].append(b.op(setup, 'pocket2d', em, name, dict(
-                POCKET, doMultipleDepths='true', rampType="'plunge'", useRestMachining='true',
-                bottomHeight_mode="'from contour'", **top_h),
-                _sel_pocket(faces)))
-        # windows' corners likewise, from the part's face (the shelf pockets above a
-        # window leave the same corners) through the part
-        for w in windows:
-            r = w['corner_radius']
-            if r is None or r >= ENDMILL_D / 2 - 1e-3:
-                continue
-            smallest = SMALL_ENDMILLS[-1][1] / 2
-            if r < smallest:
-                warnings.append('window has sharp or R%.2f inside corners; the %g mm end mill '
-                                'leaves R%g' % (r, 2 * smallest, smallest))
-            em, d = corner_tool(max(r, smallest), thickness + 0.5)
-            if not em:
-                warnings.append('window: corner radius %.2f mm needs a smaller tool than the '
-                                'library has, or is deeper than its flute; the 3.175 end mill '
-                                'leaves material in its corners' % r)
-                continue
-            params = dict(POCKET, doMultipleDepths='true', rampType="'plunge'",
-                          useRestMachining='true', **top_at(0))
-            params.update(through_part('bottom'))
-            ops['main'].append(b.op(setup, 'pocket2d', em, 'Window corners %g' % d, params,
-                                    _sel_chains([w['loop']], 'pockets')))
-    elif not b.dry:
-        def tokens(params):
-            return {k: ({'entity_tokens': [x.entityToken for x in v]} if isinstance(v, list) else v)
-                    for k, v in params.items()}
-        feats = []
-        for f in pockets:
-            r = f['corner_radius']
-            if f['face'].tempId in slotted or r is None or r >= ENDMILL_D / 2 - 1e-3:
-                continue
-            w, top_h = corner_top(f)
-            feats.append({'kind': 'pocket', 'floor': next(k for k, g in enumerate(a['floors'])
-                                                          if g is f),
-                          'corner_radius_mm': r, 'depth_mm': f['depth'],
-                          'top_mm': round(w[2], 3) if w else 0.0,
-                          'params': tokens(dict(bottomHeight_mode="'from contour'", **top_h))})
-        for w in windows:
-            r = w['corner_radius']
-            if r is None or r >= ENDMILL_D / 2 - 1e-3:
-                continue
-            feats.append({'kind': 'window', 'window': a['windows'].index(w),
-                          'corner_radius_mm': r, 'depth_mm': thickness,
-                          'params': tokens(dict(top_at(0), **through_part('bottom')))})
-        if feats:
-            anchor = next((o for o in reversed(ops['main']) if o is not None), None)
-            plan.setdefault('recipe_entries', []).append({
-                'recipe': 'corners', 'setup': setup.name,
-                'after': anchor.name if anchor else None, 'features': feats})
+    corners = {}
+    for f in pockets:
+        if f['face'].tempId in slotted:
+            continue
+        r = f['corner_radius']
+        if r is None or r >= ENDMILL_D / 2 - 1e-3:
+            continue
+        smallest = SMALL_ENDMILLS[-1][1] / 2
+        if r < smallest:
+            warnings.append('pocket at z=%g mm has sharp or R%.2f inside corners; the %g mm '
+                            'end mill leaves R%g' % (f['z'], r, 2 * smallest, smallest))
+        em, d = corner_tool(max(r, smallest), f['depth'])
+        if not em:
+            warnings.append('pocket at z=%g mm: corner radius %.2f mm needs a smaller tool '
+                            'than the library has, or is deeper than its flute' % (f['z'], r))
+            continue
+        w, top_h = corner_top(f)
+        corners.setdefault((em, d, w[2] if w else 0.0), (w, top_h, []))[2].append(f['face'])
+    for (em, d, z), (w, top_h, faces) in sorted(corners.items(), key=lambda kv: kv[0][2]):
+        name = 'Pocket corners %g' % d
+        if w is not None:
+            name += ' from %g mm' % round(z, 2)
+        ops['main'].append(b.op(setup, 'pocket2d', em, name, dict(
+            POCKET, doMultipleDepths='true', rampType="'plunge'", useRestMachining='true',
+            bottomHeight_mode="'from contour'", **top_h),
+            _sel_pocket(faces)))
+    # windows' corners likewise, from the part's face (the shelf pockets above a
+    # window leave the same corners) through the part
+    for w in windows:
+        r = w['corner_radius']
+        if r is None or r >= ENDMILL_D / 2 - 1e-3:
+            continue
+        smallest = SMALL_ENDMILLS[-1][1] / 2
+        if r < smallest:
+            warnings.append('window has sharp or R%.2f inside corners; the %g mm end mill '
+                            'leaves R%g' % (r, 2 * smallest, smallest))
+        em, d = corner_tool(max(r, smallest), thickness + 0.5)
+        if not em:
+            warnings.append('window: corner radius %.2f mm needs a smaller tool than the '
+                            'library has, or is deeper than its flute; the 3.175 end mill '
+                            'leaves material in its corners' % r)
+            continue
+        params = dict(POCKET, doMultipleDepths='true', rampType="'plunge'",
+                      useRestMachining='true', **top_at(0))
+        params.update(through_part('bottom'))
+        ops['main'].append(b.op(setup, 'pocket2d', em, 'Window corners %g' % d, params,
+                                _sel_chains([w['loop']], 'pockets')))
     small = {}
     for h, rough, _ in bored:
         if rough[0] != ENDMILL:
@@ -4893,7 +4808,7 @@ def _bottom_work(a):
             [h for h in a['holes'] if h['side'] == 'bottom'])
 
 
-def _strategy(a, stock, sides, warnings):
+def _strategy(a, stock, sides):
     """How the stock is machined into the part.
 
     outline: the stock is larger than the part in both X and Y, by the outline cut
@@ -4901,7 +4816,10 @@ def _strategy(a, stock, sides, warnings):
       machining): an outline cut round the part, which leaves four tabs holding
       it, and a last program that cuts the tabs. Stock of the part's own X and Y
       size needs neither; its outline must then be the rectangle the stock is.
-      Anything between is refused.
+    ends: the stock is the part's size along the design's Y only (see
+      _quarter_turn for X), and the part is longer than the jaws are wide: the
+      vise holds the part by its sides, and an end cut frees its ends first.
+      Any other stock is refused.
     sides: 2, a top and a flipped bottom setup, when the bottom has features to
       cut or stock to face (stock["bottom"] above 0); else 1, the top setup
       alone, with the part on the stock's bottom. `sides` (1 or 2) overrides.
@@ -4983,7 +4901,8 @@ def build(args):
     """Create setups, operations and NC programs for the part.
 
     args:
-      body:      body name (optional when the design has one visible body)
+      body:      the body's name in the root component, or its path
+                 '<occurrence>/<body>' (optional when the design has one visible body)
       flip:      machine the design's bottom face first, as the top (default: when
                  it has more features than the top face; see _machined_body)
       stock:     {"x": mm, "y": mm, "z": mm, "y_mode": "back", "y_offset": 10,
@@ -4999,11 +4918,10 @@ def build(args):
       name:      program name prefix (default: document name)
       face:      face the top and bottom from stock (default true)
       chamfer:   deburr the outer faces (default true)
-      recipes:   leave the features that have a recipe (references/recipes/) to it,
-                 and list them under "recipes" (default false: build cuts them);
-                 "all" leaves every operation to the recipes: build makes the
-                 setups, the layout, the tabs, the face patches and the vise, and
-                 no operations or NC programs (see features and add_operation)
+      mode:      "script" (default): build makes every operation; "recipe": build
+                 makes the setups, the layout, the tabs, the face patches and the
+                 vise, and no operations or NC programs, which the recipes in
+                 references/recipes/ add (see features and add_operation)
       tab_width: tab width along the outline in mm (default 5)
       tab_z:     model Z of the tab band's centre in mm (default: the mid-plane,
                  or the nearest height clear of pockets that open to the side)
@@ -5011,6 +4929,11 @@ def build(args):
                  collision checks (default true)
     """
     t0 = time.time()
+    if 'recipes' in args:
+        raise RuntimeError('build takes no "recipes" argument: pass "mode": "recipe" or "script"')
+    mode = args.get('mode', 'script')
+    if mode not in ('script', 'recipe'):
+        raise RuntimeError('"mode" must be "script" or "recipe"')
     if 'stock' not in args:
         raise RuntimeError('args["stock"] is required: {"x":..,"y":..,"z":..} in mm')
     cam = _cam()
@@ -5028,7 +4951,7 @@ def build(args):
             was_part = True
     except AttributeError:  # Fusion before design intents
         pass
-    if 'stock' in args and _quarter_turn(_find_body(args), args['stock']):
+    if _quarter_turn(_find_body(args), args['stock']):
         quarter = True
         args = dict(args, stock=dict(args['stock'], x=args['stock']['y'], y=args['stock']['x']))
     else:
@@ -5041,7 +4964,7 @@ def build(args):
     if stock['z'] < thickness - 1e-3:
         raise RuntimeError('stock is %g mm thick but the part is %g mm' % (stock['z'], thickness))
     log, warnings = [], []
-    strategy = _strategy(a, stock, args.get('sides'), warnings)
+    strategy = _strategy(a, stock, args.get('sides'))
     sides, outline = strategy['sides'], strategy['outline']
     ends = strategy['ends']
     if not outline:  # the stock fits the part across the jaws, so it sits where the part is
@@ -5087,8 +5010,7 @@ def build(args):
         'taps': {str(k): v for k, v in (args.get('taps') or {}).items()},
         'face': args.get('face', True),
         'chamfer': args.get('chamfer', True),
-        'recipes': bool(args.get('recipes', False)),
-        'all': args.get('recipes') == 'all',
+        'recipe': mode == 'recipe',
         'sides': sides,
         'outline': outline,
         'ends': ends,
@@ -5101,7 +5023,7 @@ def build(args):
     # choices as the real one
     plan['layout'] = _make_layout(design, a, plan, warnings)
     # dry run to learn which tools the part needs, then number them in slot order
-    if not plan['all']:
+    if not plan['recipe']:
         dry = Builder(cam, tools, [], dry=True)
         for side in side_names:
             _side_ops(dry, None, a, side, plan, [])
@@ -5144,7 +5066,7 @@ def build(args):
                 'cut ends in it')
     x_axis = _axis_line(design)
     top = _setup(cam, 'Top ' + SETUP_TAG, body, machine, stock, True, x_axis, vises[0], warnings)
-    if plan['all']:
+    if plan['recipe']:
         # every operation is left to the recipes (references/recipes/part.md)
         setups = {'top': top.name}
         if sides == 2:
@@ -5154,7 +5076,7 @@ def build(args):
                      {i: h['thread'] for i, h in enumerate(a['holes']) if h['thread']})
         print(json.dumps({
             'turned_over': flipped, 'quarter_turned': quarter, 'strategy': strategy,
-            'setups': setups, 'operations': log, 'recipes': 'all: see features()',
+            'setups': setups, 'operations': log, 'next': 'features({}), then references/recipes/part.md',
             'warnings': warnings, 'seconds': round(time.time() - t0, 1)}, indent=1))
         return
     top_ops = _side_ops(b, top, a, 'top', plan, warnings)
@@ -5198,12 +5120,6 @@ def build(args):
                       'machined first, as the top (%d features); the design\'s body is hidden '
                       'behind the turned copy in "%s"' % (counts['bottom'], counts['top'],
                                                           PART_COMPONENT))
-    # kept in the document too, for the recipe primitives' later calls
-    attr = design.attributes.itemByName(*RECIPES_ATTR)
-    if attr is not None:
-        attr.deleteMe()
-    design.attributes.add(RECIPES_ATTR[0], RECIPES_ATTR[1],
-                          json.dumps(plan.get('recipe_entries', [])))
     print(json.dumps({
         'turned_over': flipped,
         'quarter_turned': quarter,
@@ -5214,8 +5130,6 @@ def build(args):
         'tabs': {'z_mm': tab_z, 'band_mm': band, 'width_mm': tab_width,
                  'count': len(plan['layout']['tabs'])} if outline else None,
         'pocket_entries': sum(1 for e in plan['layout']['pocket_entries'].values() if e['drill']),
-        # features build leaves to a recipe in references/recipes/, in run order
-        'recipes': plan.get('recipe_entries', []),
         'warnings': warnings,
         'seconds': round(time.time() - t0, 1),
     }, indent=1))

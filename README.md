@@ -26,7 +26,7 @@ The skill drives Fusion through the Fusion MCP server, so Claude Code needs that
 
 Ask Claude Code, for example, "Generate Carvera toolpaths for `my-part` in copper, from a 2-inch bar 0.25 inch thick".
 The skill opens the part, reports the features it recognized, asks whether the stock has the part's own size and thickness and, if not, its dimensions, tells you the machining strategy that follows, confirms any tapped holes with you, builds the setups and generates the toolpaths.
-Some features, such as pockets open to the side and inside corners tighter than the main end mill, it cuts two ways: by its script, and by following a written recipe step by step in a throwaway copy of the part.
+It programs the whole part two ways: by its script, and by following written recipes step by step in a throwaway copy of the part.
 It checks the toolpaths two ways too, with its checker and by reading the G-code, compares the results, and tells you how they compared; where one way falls short, it fixes the skill and offers the fix to this repository as a pull request, once you agree.
 It does not save the document or write G-code unless you ask.
 
@@ -41,7 +41,7 @@ The skill lists every finding with its rule, from out-of-date toolpaths and cuts
 | `.../references/conventions.md` | the lab's CAM conventions the generator applies |
 | `.../references/rules.md` | the rules the toolpath check applies, with their thresholds and evidence |
 | `.../references/threads.toml` | how the lab pre-drills and thread-mills M2 to M4 tapped holes |
-| `.../references/recipes/` | the written methods for features the generator can also leave to them: pockets open to the side, inside corners |
+| `.../references/recipes/` | the written method for programming the whole part (`part.md`), with its recipes for pockets open to the side and inside corners |
 | `.../references/review.md` | how to judge toolpaths by reading their G-code and screenshots, the written counterpart of the check |
 | `.../assets/carvera-tools.json` | the tool library: Makera's end mills, thread mills and chamfering bit, and McMaster-Carr's drills |
 | `.../assets/mcmaster-expanded-shank-carbide-drills.csv` | McMaster-Carr's table of expanded-shank carbide drills, which the library's drills are made from |

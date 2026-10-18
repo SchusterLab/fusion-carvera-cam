@@ -8,19 +8,14 @@ A pocket toolpath is the wrong tool here: Fusion picks where it enters an open p
 
 ## When it applies
 
-`build` with `"recipes": true` leaves these pockets uncut and lists them in its output under `recipes`, with `"recipe": "open-pocket"`; `recipes({})` reads the same list back from the document in a later call.
-Each entry is one operation to add, and gives:
+[part.md](part.md) sends here for every pocket floor that `features` marks `side_open`, in the setup of its `side`: the rough operations go right after `Pockets` (part.md's step 9), the finishing ones right after `Pockets (finish)` (step 17).
+One operation cuts the open floors of one depth, in one pass (`rough` or `finish`):
 
-- `floors`: the pockets' floors, as indices into `analyze`'s `floors` list; one operation cuts them all.
-- `depth_mm`: how deep the floors lie below the face; an operation covers floors of one depth.
-- `pass`: `rough` or `finish`; every pocket gets one entry of each.
-- `setup`, `after`: the setup, and the operation the new one goes right after.
-  Entries that share `after` go in the order listed: the second one after the first.
-- `tool_from`: an operation that uses the right tool and feeds; the new one copies them.
-- `name`: the operation's name.
-- `params`: the heights and allowance the operation takes: where it starts, whether it goes down in steps, and the 0.2 mm the rough pass leaves on the floor.
-  Pass it to `add_contour` exactly as given; a height's reference face comes as `{"entity_tokens": [...]}`.
-- `bottom_at_floor`: the floor the operation goes down to.
+- **Tool**: T2 (`Spiral O Metal 3.175*12mm`, `"T": 2`) roughs, T3 (`"T": 3`) finishes.
+- **Name**: `Open pockets`, or `Pockets` when every pocket of the setup opens to the side; then ` (finish)` for the finishing pass; then, with open floors of more than one depth, ` <depth> mm` (`Open pockets (finish) 1.5 mm`).
+- **Heights**: top at H (part.md's "Heights"); `bottom_at_floor` one of the floors.
+- **Rough**: `doMultipleDepths` `true`, and the 0.2 mm floor allowance: `useStockToLeave` `true`, `simpleStockToLeave` `false`, `stockToLeave` `0mm`, `verticalStockToLeave` `0.2mm`.
+- **Finish**: `doMultipleDepths` `false`, no allowance.
 
 ## Steps
 
@@ -42,10 +37,10 @@ Each entry is one operation to add, and gives:
    `in_corners_mm2` is what the end mill's radius leaves in inside corners tighter than 1.5875 mm; the corners recipe cuts it, so it is expected wherever `analyze` gives the floor a smaller `corner_radius`.
    If `elsewhere_mm2` is not 0, add a pass where the uncut area lies, or see "Shapes the steps do not cover".
 5. **Add the operations.**
-   For each entry, call `add_contour` with the entry's `setup`, `after`, `tool_from`, `name`, `params` and `bottom_at_floor`, and `paths`, the ids of every pass for the entry's floors.
+   For each depth and pass, call `add_contour` with the setup, `"program"` the setup's, the tool and `T`, the name, the `params` and `bottom_at_floor` above, and `paths`, the ids of every pass for that depth's floors.
    The rough and the finishing operation follow the same paths: the rough one in steps, leaving 0.2 mm on the floor, and the finishing one in one pass at the floor.
    The contour follows each path exactly, with no tool-radius offset.
-   `add_contour` also puts the operation in the NC program that holds `after`.
+   `program` puts it, last, in the setup's NC program.
 6. **Generate and check**, as in SKILL.md.
    Rule E4 must report nothing for the new operations: it accepts a plunge only into stock that an end mill in this setup or an earlier one has cleared, or down a drilled hole.
 
@@ -53,7 +48,7 @@ Each entry is one operation to add, and gives:
 
 They are functions in `scripts/carvera_cam.py`, run in Fusion like `build`.
 Each takes a dict and prints its result as JSON.
-`recipes`, `walls` and `coverage` change nothing and may run with `readOnly: true`; `pass_path` and `add_contour` change the design and may not.
+`features`, `walls` and `coverage` change nothing and may run with `readOnly: true`; `pass_path` and `add_contour` change the design and may not.
 The calls for one part fit in one MCP call.
 In this example, `SCRIPTS` is the skill's `scripts` folder:
 
@@ -67,11 +62,17 @@ def call(fn, args):
     return json.loads(buf.getvalue())
 
 D = 3.175  # the end mill's diameter, mm
-entries = [e for e in call('recipes', {}) if e['recipe'] == 'open-pocket']
+f = call('features', {})
+side = 'top'
+pockets = [x for x in f['floors'] if x['role'] == 'pocket' and x['side'] == side]
+by_depth = {}  # depth -> the open floors of that depth
+for x in pockets:
+    if x['side_open']:
+        by_depth.setdefault(round(x['depth'], 3), []).append(x['floor'])
 paths = {}
-for e in [e for e in entries if e['pass'] == 'rough']:
+for dep, floors in by_depth.items():
     ids = []
-    for i in e['floors']:
+    for i in floors:
         w = call('walls', {'floor': i})
         n = max(1, math.ceil((w['reach_mm'] + 0.1 - D) / (0.6 * D)) + 1)
         for k in range(len(w['runs'])):
@@ -82,13 +83,23 @@ for e in [e for e in entries if e['pass'] == 'rough']:
                 else:
                     print('floor', i, 'run', k, 'pass', j, 'failed')  # see below
         print('floor', i, call('coverage', {'floor': i}))
-    paths[tuple(e['floors'])] = ids
-last = {}  # (pass, after) -> the operation added there last
-for e in entries:
-    after = last.get((e['pass'], e['after']), e['after'])
-    o = call('add_contour', {k: e[k] for k in ('setup', 'tool_from', 'name', 'params', 'bottom_at_floor')}
-             | {'after': after, 'paths': paths[tuple(e['floors'])]})
-    last[(e['pass'], e['after'])] = o['operation']
+    paths[dep] = ids
+
+def add_open_pockets(which, top_at_h):
+    """Right after Pockets (which='rough') or Pockets (finish) ('finish');
+    top_at_h: part.md's "top at H" params at that point."""
+    name = 'Pockets' if all(x['side_open'] for x in pockets) else 'Open pockets'
+    for dep, floors in sorted(by_depth.items()):
+        params = dict(top_at_h, doMultipleDepths='true' if which == 'rough' else 'false')
+        if which == 'rough':
+            params.update(useStockToLeave='true', simpleStockToLeave='false',
+                          stockToLeave='0mm', verticalStockToLeave='0.2mm')
+        call('add_contour', {
+            'setup': side, 'program': side, 'tool': 'Spiral O Metal 3.175*12mm',
+            'T': 2 if which == 'rough' else 3,
+            'name': name + (' (finish)' if which == 'finish' else '')
+                    + (' %g mm' % dep if len(by_depth) > 1 else ''),
+            'params': params, 'bottom_at_floor': floors[0], 'paths': paths[dep]})
 ```
 
 ## Shapes the steps do not cover

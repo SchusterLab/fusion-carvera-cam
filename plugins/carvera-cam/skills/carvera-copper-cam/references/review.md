@@ -31,11 +31,12 @@ Each item names the checker rule that covers the same ground, from [rules.md](ru
    An operation's deepest cut, below where it starts, fits within the tool's flute, or within its neck for a tool with a neck narrower than its cut, such as a thread mill; and the depth below the stock top stays under three quarters of how far the tool sticks out of its holder.
 6. **Every edge is deburred, and the bit stays out of the tabs** (DB1, DB2).
    Every outer edge of a face facing up in the setup, and the rim of every hole and pocket in it, a counterbore's floor included, should have a chamfering pass along it; select the chamfer operations and look.
+   The exception is an edge on the stock's own sides, where the stock fits the part and the face is not faced: no tool cuts it, so it is not deburred (DB1 skips it too).
    Fusion silently leaves out an edge where the bit's point would go below a floor, so an edge with no pass is likely one of those.
    At the outline, the bit's deepest Z must stay above the tabs' top.
 7. **The part stays held** (no rule checks this).
    With the outline selected, the screenshot shows four tabs left standing, and only the tab program cuts them.
-   Stock of the part's own size has no outline or tabs; there the vise holds the part, so check item 8 with care.
+   Stock of the part's own size, and stock that fits the part along one side (cut free by the Ends cut), have no outline or tabs; there the vise holds the part, so check item 8 with care.
 8. **The tool stays clear of the vise** (X1).
    Every operation's `xy_extent` lies inside the stock, and the screenshot shows no toolpath in the jaws.
    With stock of the part's own size, the facing and the passes of a pocket open to the side run past the stock's edge by design, and with stock that fits along one side, the end cuts do; there look at the jaws instead: no cut beside a gripped edge may go below the jaws' top, and the end cuts must lie outside the jaws' width.
