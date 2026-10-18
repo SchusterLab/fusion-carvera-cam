@@ -16,8 +16,14 @@ learned from the parts in the project 2026-01-06_smpm-sample-package-6port:
 Entry points, each taking one dict of arguments:
 
     analyze(args)   recognize the part's features and print them as JSON
-    build(args)     create the setups, operations and NC programs
+    build(args)     create the setups, operations and NC programs; with
+                    {"recipes": true}, leave the features that have a recipe
+                    (references/recipes/) to it and list them
     generate(args)  generate the toolpaths and report errors and warnings
+
+and the primitives the recipes compose (see "recipe primitives" below):
+recipes, walls, pass_path, coverage, tools, add_operation, add_contour and
+renumber_tools.
 
 Lengths in args are millimetres. Fusion's internal unit is the centimetre.
 """
@@ -52,8 +58,12 @@ PRESET_NAMES = ('Copper',)
 SETUP_TAG = '(carvera-cam)'
 
 DRILL_3175 = '3.175*7.4mm Drill (1/8")'
+DRILL_D = 3.175
 ENDMILL = 'Spiral O Metal 3.175*12mm'
 ENDMILL_D = 3.175
+# the end mill enters copper only down a drilled hole at least half its width,
+# the drill's cone included (rule TH4)
+ENTRY_CONE_D = ENDMILL_D / 2
 # Smaller end mills, largest first: (description, diameter, flute length).
 SMALL_ENDMILLS = [
     ('Spiral O Metal 2.5*12mm', 2.5, 12.0),
@@ -204,11 +214,13 @@ def _thread_faces(design):
 
     The lab models tapped holes with the Hole command's Tapped type (not modeled),
     which leaves a plain hole at the minor diameter and stores the thread on the
-    hole feature.
+    hole feature. A pattern or mirror of a tapped hole copies only its faces, so a
+    cylinder made by a pattern takes the thread of a tapped hole of the same radius.
     """
     out = {}
     comps = [design.rootComponent] + [o.component for o in design.rootComponent.allOccurrences]
     for comp in comps:
+        radii = []  # (radius in cm, thread) of this component's tapped holes
         for hf in comp.features.holeFeatures:
             try:
                 if hf.holeTapType != adsk.fusion.HoleTapTypes.TappedHoleTapType:
@@ -216,8 +228,26 @@ def _thread_faces(design):
                 name = hf.tappedHoleInfo.threadDesignation.split('x')[0]
                 for f in hf.sideFaces:
                     out[f.tempId] = name
+                    if f.geometry.surfaceType == adsk.core.SurfaceTypes.CylinderSurfaceType:
+                        radii.append((f.geometry.radius, name))
             except Exception:
                 pass
+        if radii:
+            fs = comp.features
+            for coll in (fs.rectangularPatternFeatures, fs.circularPatternFeatures,
+                         fs.pathPatternFeatures, fs.mirrorFeatures):
+                for pf in coll:
+                    try:
+                        faces = list(pf.faces)
+                    except Exception:
+                        continue
+                    for f in faces:
+                        if f.geometry.surfaceType != adsk.core.SurfaceTypes.CylinderSurfaceType:
+                            continue
+                        for r, name in radii:
+                            if abs(f.geometry.radius - r) < 1e-5:
+                                out.setdefault(f.tempId, name)
+                                break
         for tf in comp.features.threadFeatures:
             try:
                 name = tf.threadInfo.threadDesignation.split('x')[0]
@@ -715,6 +745,343 @@ def analyze(args=None):
     return out
 
 
+# ------------------------------------------------------- recipe primitives
+# Steps a recipe in references/recipes/ composes for a feature build leaves out.
+# Each takes JSON-like args and prints its result as JSON. A floor is named by
+# its index in analyze's "floors", which build's "recipes" use too.
+
+PATH_ATTR = ('carvera-cam', 'path')
+RECIPES_ATTR = ('carvera-cam', 'recipes')  # on the design: build's "recipes", as JSON  # on each curve of a sketched pass: '<path id>:<order>'
+
+
+def _built(args):
+    """The design, the body the setups machine (the turned copy, if build made
+    one) and its analysis."""
+    design = _design()
+    occ = next((o for o in design.rootComponent.occurrences
+                if o.component.name == PART_COMPONENT), None)
+    body = occ.bRepBodies.item(0) if occ else _find_body(args)
+    return design, body, analyze_body(body, design)
+
+
+def _xy(p):
+    return [round(mm(p.x), 3), round(mm(p.y), 3)]
+
+
+def recipes(args=None):
+    """The features the last build left to a recipe, as its output listed them."""
+    attr = _design().attributes.itemByName(*RECIPES_ATTR)
+    out = json.loads(attr.value) if attr is not None else []
+    print(json.dumps(out, indent=1))
+    return out
+
+
+def walls(args):
+    """The walls of a pocket open to the side, `args['floor']`: each run of
+    walls rising from the floor between its openings, in order with the floor
+    on the left, and how far the floor reaches from its walls."""
+    design, body, a = _built(args)
+    f = a['floors'][args['floor']]
+    runs, reach = _open_walls(f['face'])
+    out = {'floor': _strip(f), 'reach_mm': round(mm(reach), 3), 'runs': []}
+    for run in runs:
+        ws = []
+        for ce in run:
+            e = ce.edge
+            ok, p0, p1 = e.evaluator.getEndPoints()
+            if ce.isOpposedToEdge:
+                p0, p1 = p1, p0
+            ws.append({'type': type(e.geometry).__name__, 'from': _xy(p0), 'to': _xy(p1),
+                       'length_mm': round(mm(e.length), 3)})
+        out['runs'].append(ws)
+    print(json.dumps(out, indent=1))
+    return out
+
+
+def pass_path(args):
+    """Sketch one contour pass along a run of walls (`args['floor']`, `run`,
+    default 0) as the tool centre's path, `offset_mm` off the walls, with a
+    line at each end out to the outline cut's path. Returns the path's id for
+    add_contour, or why there is none."""
+    design, body, a = _built(args)
+    f = a['floors'][args['floor']]
+    runs, _ = _open_walls(f['face'])
+    run = runs[args.get('run', 0)]
+    sk = design.rootComponent.sketches.itemByName(LAYOUT_SKETCH)
+    if sk is None:
+        raise RuntimeError('no "%s" sketch: run build first' % LAYOUT_SKETCH)
+    faces = [g for g in (a['top_face'], a['bottom_face']) if g is not None]
+    ring = _loop_ring(_outline_loop(faces)[0])
+    walls = _draw_walls(sk, run)
+    path = _pass_path(sk, run, walls, args['offset_mm'] / 10, ring, f['face'])
+    for c in walls:
+        if c.isValid:
+            c.deleteMe()
+    if path is None:
+        out = {'ok': False, 'why': "an end of the pass does not reach the outline cut's path, "
+                                   "or the walls offset that far leave no path"}
+    else:
+        pid = '%d-%d' % (args['floor'], len(design.findAttributes(*PATH_ATTR)))
+        for k, c in enumerate(path):
+            c.attributes.add(PATH_ATTR[0], PATH_ATTR[1], '%s:%d' % (pid, k))
+        first, last = path[0], path[-1]
+        ends = [p for c in (first, last) for p in (c.startSketchPoint, c.endSketchPoint)]
+        free = [p for p in ends if sum(1 for c in path for q in (c.startSketchPoint, c.endSketchPoint)
+                                       if q.geometry.distanceTo(p.geometry) < 1e-5) == 1]
+        out = {'ok': True, 'path': pid, 'ends': [_xy(p.geometry) for p in free],
+               'length_mm': round(mm(sum(c.length for c in path)), 3)}
+    print(json.dumps(out, indent=1))
+    return out
+
+
+def _path_curves(design, ids):
+    parts = {}
+    for at_ in design.findAttributes(*PATH_ATTR):
+        pid, k = at_.value.rsplit(':', 1)
+        parts.setdefault(pid, []).append((int(k), at_.parent))
+    return [[c for _, c in sorted(parts[pid], key=lambda kc: kc[0])] for pid in ids]
+
+
+def coverage(args):
+    """How much of floor `args['floor']` the 3.175 mm end mill misses when it
+    follows the sketched paths `paths` (pass_path ids; by default every pass
+    sketched for that floor, by build or pass_path): the floor sampled every
+    0.1 mm, each point cut when it lies within the tool's radius of a path.
+    Returns the uncut area, split into what lies in inside corners (within a
+    tool radius of the walls, which a corners pass cuts) and what lies
+    elsewhere (a gap the passes leave), and for the gaps, or else the corners,
+    their extent and the uncut point farthest from any path."""
+    design, body, a = _built(args)
+    f = a['floors'][args['floor']]
+    rings = [_loop_ring(lp) for lp in f['face'].loops]
+    outer = [r for r, lp in zip(rings, f['face'].loops) if lp.isOuter][0]
+    inner = [r for r, lp in zip(rings, f['face'].loops) if not lp.isOuter]
+    ids = args.get('paths')
+    if not ids:  # every pass sketched for this floor, by build or pass_path
+        ids = sorted({at_.value.rsplit(':', 1)[0] for at_ in design.findAttributes(*PATH_ATTR)
+                      if at_.value.split(':')[0].replace('build-', '').split('-')[0]
+                      == str(args['floor'])})
+    segs = []
+    for curves in _path_curves(design, ids):
+        for c in curves:
+            ev = c.geometry.evaluator
+            ok, t0, t1 = ev.getParameterExtents()
+            n = max(2, int(c.length / 0.01))
+            q = [ev.getPointAtParameter(t0 + (t1 - t0) * k / n)[1] for k in range(n + 1)]
+            segs += [(p0.x, p0.y, p1.x, p1.y) for p0, p1 in zip(q, q[1:])]
+    if not segs:
+        raise RuntimeError('coverage: no sketched paths for floor %d' % args['floor'])
+    # the walls rising from the floor: an uncut point within a tool radius of
+    # one lies in an inside corner the end mill's radius cannot reach
+    walls = [q for e in _rising_edges(f['face']) for q in _edge_points(e)]
+    xs, ys = [x for x, _ in outer], [y for _, y in outer]
+    step, r = 0.01, TOOL_R + 0.002  # 0.02 mm for the sampling
+    uncut, worst = [], (0.0, None)
+    y = min(ys) + step / 2
+    while y < max(ys):
+        x = min(xs) + step / 2
+        while x < max(xs):
+            if _in_profile((outer, inner, None), x, y):
+                d = min((math.hypot(x - ax - u * (bx - ax), y - ay - u * (by - ay))
+                         for ax, ay, bx, by in segs
+                         for u in [0.0 if (bx - ax) ** 2 + (by - ay) ** 2 < 1e-12 else
+                                   max(0.0, min(1.0, ((x - ax) * (bx - ax) + (y - ay) * (by - ay))
+                                                 / ((bx - ax) ** 2 + (by - ay) ** 2)))]),
+                        default=1e9)
+                if d > r:
+                    uncut.append((x, y))
+                    if d > worst[0]:
+                        worst = (d, (x, y))
+            x += step
+        y += step
+    corner = [(x, y) for x, y in uncut
+              if min((math.hypot(x - u, y - v) for u, v in walls), default=1e9) < TOOL_R]
+    in_corner = set(corner)
+    gaps = [p for p in uncut if p not in in_corner]
+    out = {'floor': args['floor'], 'uncut_area_mm2': round(len(uncut) * step * step * 100, 2),
+           'in_corners_mm2': round(len(corner) * step * step * 100, 2),
+           'elsewhere_mm2': round(len(gaps) * step * step * 100, 2)}
+    uncut = gaps or uncut
+    if uncut:
+        out['uncut_extent_mm'] = [round(mm(min(x for x, _ in uncut)), 2), round(mm(min(y for _, y in uncut)), 2),
+                                  round(mm(max(x for x, _ in uncut)), 2), round(mm(max(y for _, y in uncut)), 2)]
+        out['farthest_uncut'] = {'at_mm': [round(mm(v), 2) for v in worst[1]],
+                                 'from_path_mm': round(mm(worst[0]), 2)}
+    print(json.dumps(out, indent=1))
+    return out
+
+
+def _setup_named(cam, name):
+    return next(x for x in cam.setups if x.name == name)
+
+
+def _all_ops(cam):
+    return [o for st in cam.setups for o in st.allOperations]
+
+
+def _tool_info(t):
+    p = t.parameters
+    v = lambda n: p.itemByName(n).value.value if p.itemByName(n) is not None else None
+    return {'tool': v('tool_description'), 'type': v('tool_type'),
+            'diameter_mm': round(mm(v('tool_diameter') or 0), 3),
+            'flute_mm': round(mm(v('tool_fluteLength') or 0), 3)}
+
+
+def tools(args=None):
+    """The tools the part's operations use, by slot, and the skill's library."""
+    cam = adsk.cam.CAM.cast(_app().activeDocument.products.itemByProductType('CAMProductType'))
+    used = {}
+    for o in _all_ops(cam):
+        if o.tool is None:
+            continue
+        n = int(o.tool.parameters.itemByName('tool_number').value.value)
+        used.setdefault(n, dict(_tool_info(o.tool), T=n, first_used_by=o.name))
+    lib = Tools()
+    out = {'in_use': [used[n] for n in sorted(used)],
+           'library': [_tool_info(t) for t in lib.by_desc.values()]}
+    print(json.dumps(out, indent=1))
+    return out
+
+
+def _tool_for(cam, desc):
+    """(tool, preset) for the tool described `desc`: the part's own copy when an
+    operation uses it already, else the library's, numbered after the others
+    (renumber_tools puts it in its slot)."""
+    for o in _all_ops(cam):
+        if o.tool is not None and o.tool.parameters.itemByName('tool_description').value.value == desc:
+            return o.tool, o.toolPreset
+    src = Tools().by_desc[desc]
+    tool = adsk.cam.Tool.createFromJson(src.toJson())
+    top = max([int(o.tool.parameters.itemByName('tool_number').value.value)
+               for o in _all_ops(cam) if o.tool is not None] or [0])
+    tool.parameters.itemByName('tool_number').expression = str(top + 1)
+    preset = None
+    for name in PRESET_NAMES:
+        preset = next((tool.presets.item(i) for i in range(tool.presets.count)
+                       if tool.presets.item(i).name == name), None)
+        if preset:
+            break
+    return tool, preset
+
+
+def add_operation(args):
+    """An operation made after build: `strategy` (pocket2d or contour2d) in setup
+    `setup`, right after the operation `after` and in the NC program that holds
+    it, named `name`. The tool is the operation `tool_from`'s, or the tool
+    described `tool` from the part's tools or the library. `params` (Fusion
+    parameter expressions, or a height's reference faces as {"entity_tokens":
+    [...]}) go on top of the lab's settings for the strategy; `bottom_at_floor`
+    puts the bottom at that floor. What it cuts, `select`: {"pocket_floors":
+    [floor, ...]}, {"window_loops": [window, ...]} or {"paths": [path id, ...]}
+    (sketched by pass_path, cut in that order, with no tool-radius offset)."""
+    design, body, a = _built(args)
+    cam = adsk.cam.CAM.cast(_app().activeDocument.products.itemByProductType('CAMProductType'))
+    setup = _setup_named(cam, args['setup'])
+    by_name = {o.name: o for o in setup.allOperations}
+    after = by_name[args['after']]
+    if args.get('tool_from'):
+        like = by_name.get(args['tool_from']) or next(o for o in _all_ops(cam)
+                                                      if o.name == args['tool_from'])
+        tool, preset = like.tool, like.toolPreset
+    else:
+        tool, preset = _tool_for(cam, args['tool'])
+    strategy = args.get('strategy', 'contour2d')
+    sel = args.get('select', {})
+    base = dict(POCKET if strategy == 'pocket2d' else CONTOUR)
+    if 'paths' in sel:
+        base['compensationType'] = "'off'"
+    oi = setup.operations.createInput(strategy)
+    oi.tool = tool
+    if preset is not None:
+        oi.toolPreset = preset
+    oi.displayName = args['name']
+    modes = getattr(adsk.cam, 'AutomaticGenerationModes', None)
+    skip = [getattr(modes, n) for n in dir(modes) if 'Skip' in n] if modes else []
+    if skip:
+        oi.generationMode = skip[0]
+    params = dict(base, **args.get('params', {}))
+    for k, v in params.items():
+        if not isinstance(v, dict):
+            _set(oi.parameters, k, v)
+    for k, v in params.items():  # a height's reference faces, by entity token
+        if isinstance(v, dict):
+            oi.parameters.itemByName(k).value.value = [
+                design.findEntityByToken(t)[0] for t in v['entity_tokens']]
+    if args.get('bottom_at_floor') is not None:
+        face = a['floors'][args['bottom_at_floor']]['face']
+        _set(oi.parameters, 'bottomHeight_mode', "'from point'")
+        _set(oi.parameters, 'bottomHeight_offset', '0mm')
+        oi.parameters.itemByName('bottomHeight_ref').value.value = [face]
+    if 'paths' in sel:
+        _sel_paths(_path_curves(design, sel['paths']))(oi.parameters)
+    elif 'pocket_floors' in sel:
+        _sel_pocket([a['floors'][i]['face'] for i in sel['pocket_floors']])(oi.parameters)
+    elif 'window_loops' in sel:
+        _sel_chains([a['windows'][j]['loop'] for j in sel['window_loops']], 'pockets')(oi.parameters)
+    else:
+        raise RuntimeError('select: give paths, pocket_floors or window_loops')
+    op = setup.operations.add(oi)
+    op.moveAfter(after)
+    # into the NC program that holds the operation it follows, right after it
+    programs = []
+    for nc in cam.ncPrograms:
+        ops = list(nc.operations)
+        ids = [o.operationId for o in ops]
+        if after.operationId in ids:
+            ops.insert(ids.index(after.operationId) + 1, op)
+            nc.operations = ops
+            programs.append(nc.name)
+    out = {'operation': op.name, 'setup': setup.name, 'after': after.name,
+           'T': int(tool.parameters.itemByName('tool_number').value.value),
+           'nc_programs': programs}
+    print(json.dumps(out, indent=1))
+    return out
+
+
+def add_contour(args):
+    """add_operation for a contour along sketched paths: `paths` (pass_path
+    ids), with the other arguments as add_operation takes them."""
+    return add_operation(dict(args, strategy='contour2d', select={'paths': args['paths']}))
+
+
+def renumber_tools(args=None):
+    """Number the tools in the lab's slot order after operations were added: T1
+    the 3.175 mm drill, T2 and T3 the roughing and finishing end mill as build
+    numbered them, then every other tool in the order the programs first use
+    it, the top setup's operations first."""
+    cam = adsk.cam.CAM.cast(_app().activeDocument.products.itemByProductType('CAMProductType'))
+    order, number = [], {}
+    for o in _all_ops(cam):
+        if o.tool is None:
+            continue
+        p = o.tool.parameters
+        n = int(p.itemByName('tool_number').value.value)
+        key = p.itemByName('tool_description').value.value if n > 3 else n
+        if key not in number:
+            number[key] = n if n <= 3 else 4 + len(order)
+            if n > 3:
+                order.append(key)
+    changed = []
+    for o in _all_ops(cam):
+        if o.tool is None:
+            continue
+        t = o.tool
+        p = t.parameters
+        n = int(p.itemByName('tool_number').value.value)
+        new = n if n <= 3 else number[p.itemByName('tool_description').value.value]
+        if new != n:
+            preset = o.toolPreset.name if o.toolPreset is not None else None
+            p.itemByName('tool_number').expression = str(new)
+            o.tool = t
+            if preset is not None:
+                o.toolPreset = next((t.presets.item(i) for i in range(t.presets.count)
+                                     if t.presets.item(i).name == preset), None)
+            changed.append({'operation': o.name, 'from': n, 'to': new})
+    out = {'changed': changed, 'slots': [{'T': number[k], 'tool': k} for k in order]}
+    print(json.dumps(out, indent=1))
+    return out
+
+
 # ------------------------------------------------------------- libraries
 
 class Tools:
@@ -722,7 +1089,9 @@ class Tools:
 
     def __init__(self):
         with open(TOOLS_FILE, encoding='utf-8') as f:
-            lib = adsk.cam.ToolLibrary.createFromJson(f.read())
+            # escaped to ASCII: createFromJson garbles other characters, such as
+            # the ″ in the chamfering bit's name
+            lib = adsk.cam.ToolLibrary.createFromJson(json.dumps(json.load(f)))
         self.by_desc = {}
         for t in lib:
             self.by_desc.setdefault(t.parameters.itemByName('tool_description').value.value, t)
@@ -963,6 +1332,7 @@ class Builder:
         self.log = log
         self.dry = dry
         self.needed = []
+        self.last = {}  # tool key -> the latest operation made with that tool
 
     def op(self, setup, strategy, tool_key, name, params, select=None):
         desc, key = tool_key if isinstance(tool_key, tuple) else (tool_key, None)
@@ -989,6 +1359,7 @@ class Builder:
         if select:
             select(oi.parameters)
         op = setup.operations.add(oi)
+        self.last[(desc, key)] = op
         self.log.append('%s / %s [%s] T%s %s' % (setup.name, name, strategy,
                         tool.parameters.itemByName('tool_number').expression, desc))
         return op
@@ -1018,11 +1389,11 @@ def _sel_pocket_outline(face):
     return f
 
 
-def _sel_silhouette(param='contours'):
+def _sel_silhouette():
     # The setup-model flag, not inputGeometry=[body]: a body silhouette comes out
     # empty in the flipped bottom setup.
     def f(params):
-        v = params.itemByName(param).value
+        v = params.itemByName('contours').value
         sels = v.getCurveSelections()
         s = sels.createNewSilhouetteSelection()
         s.isSetupModelSelected = True
@@ -1074,6 +1445,19 @@ def _sel_face_contours(faces):
         for face in faces:
             s = sels.createNewFaceContourSelection()
             s.inputGeometry = [face]
+        v.applyCurveSelections(sels)
+    return f
+
+
+def _sel_inner_contours(faces):
+    """The faces' inner loops: the edges of the holes through them."""
+    def f(params):
+        v = params.itemByName('contours').value
+        sels = v.getCurveSelections()
+        for face in faces:
+            s = sels.createNewFaceContourSelection()
+            s.inputGeometry = [face]
+            s.loopType = adsk.cam.LoopTypes.OnlyInsideLoops
         v.applyCurveSelections(sels)
     return f
 
@@ -1152,8 +1536,9 @@ def _pass_path(sk, run, walls, d, ring, face):
     """One contour pass along a pocket's open walls (`run`, co-edges, drawn as
     `walls`, see _draw_walls): the tool centre's path `d` cm off the walls,
     sketched, with a line at each end out to the outline cut's path, one tool
-    radius outside the outline (`ring`). The curves in the order the tool follows
-    them, or None when an end does not meet that path."""
+    radius outside the outline (`ring`); an end already beyond that path is cut
+    back to it instead. The curves in the order the tool follows them, or None
+    (leaving nothing sketched) when an end, run on 10 mm, does not meet that path."""
     q = face.pointOnFace
     coll = adsk.core.ObjectCollection.create()
     for c in walls:
@@ -1173,12 +1558,16 @@ def _pass_path(sk, run, walls, d, ring, face):
     ends = [p for c in curves for p in pts(c)
             if sum(1 for c2 in curves for p2 in pts(c2) if near(p, p2)) == 1]
     if len(ends) != 2:
+        for c in curves:
+            c.deleteMe()
         return None
     start = min(ends, key=lambda p: math.hypot(p.geometry.x - s0.x, p.geometry.y - s0.y))
     order, node, left = [], start, list(curves)
     while left:
         c = next((c for c in left if any(near(p, node) for p in pts(c))), None)
         if c is None:
+            for c in curves:
+                c.deleteMe()
             return None
         left.remove(c)
         order.append(c)
@@ -1190,9 +1579,10 @@ def _pass_path(sk, run, walls, d, ring, face):
         dd = _ring_clearance((ring, [], None), x, y)
         return -dd if _inside(ring, x, y) else dd
 
-    def out_to_cut(p, c):
+    def run_on(p, c):
         # from the end p of curve c, on along c's direction there to the cut's
-        # path: the point, False when p is on it, None when the line misses it
+        # path: the point, False when p is on it already or beyond it, None
+        # when the line misses it within 10 mm
         ev = c.geometry.evaluator
         ok, t = ev.getParameterAtPoint(p.geometry)
         ok, v = ev.getFirstDerivative(t)
@@ -1204,7 +1594,7 @@ def _pass_path(sk, run, walls, d, ring, face):
         x0, y0 = p.geometry.x, p.geometry.y
         f = lambda L: outside(x0 + L * ux, y0 + L * uy) - TOOL_R
         if f(0) > -1e-4:
-            return False if f(0) < 0.005 else None
+            return False
         lo, hi, L = 0.0, None, 0.0
         while L < 1.0:
             L += 0.002
@@ -1219,15 +1609,81 @@ def _pass_path(sk, run, walls, d, ring, face):
             lo, hi = (mid, hi) if f(mid) < 0 else (lo, mid)
         return adsk.core.Point3D.create(x0 + hi * ux, y0 + hi * uy, 0)
 
-    qa = out_to_cut(start, order[0])
-    qb = out_to_cut(stop, order[-1])
-    if qa is None or qb is None:
+    def trim_back(end, chain):
+        # an end beyond the cut's path: cut the chain back to where it crosses
+        # the path, from that end; chain runs from that end inward. The new end
+        # sketch point, or None when the chain never comes inside the path
+        while chain:
+            c = chain[0]
+            ev = c.geometry.evaluator
+            ok, t0, t1 = ev.getParameterExtents()
+            ok, te = ev.getParameterAtPoint(end.geometry)
+            tf = t1 if abs(te - t0) < abs(te - t1) else t0  # the far end's parameter
+            g = lambda tt: (lambda q: outside(q.x, q.y) - TOOL_R)(ev.getPointAtParameter(tt)[1])
+            ts = [te + (tf - te) * k / 200 for k in range(201)]
+            k = next((k for k, tt in enumerate(ts) if g(tt) <= 0), None)
+            if k is None:  # all of this curve lies beyond the path
+                a_, b_ = pts(c)
+                end = b_ if near(a_, end) else a_
+                chain.pop(0)
+                c.deleteMe()
+                continue
+            lo, hi = ts[k - 1], ts[k]
+            for _ in range(40):
+                mid = (lo + hi) / 2
+                lo, hi = (mid, hi) if g(mid) > 0 else (lo, mid)
+            ok, q = ev.getPointAtParameter(hi)
+            # redraw the curve from its far end to q (SketchCurve.split leaves
+            # some curves whole, without an error)
+            a_, b_ = pts(c)
+            far = b_ if near(a_, end) else a_
+            if isinstance(c, adsk.fusion.SketchLine):
+                new = sk.sketchCurves.sketchLines.addByTwoPoints(far, q)
+            elif isinstance(c, adsk.fusion.SketchArc):
+                ok, m = ev.getPointAtParameter((hi + tf) / 2)
+                new = sk.sketchCurves.sketchArcs.addByThreePoints(far, m, q)
+            else:
+                return None
+            c.deleteMe()
+            chain[0] = new
+            a_, b_ = pts(new)
+            return a_ if a_.geometry.distanceTo(q) < 1e-5 else b_
         return None
+
+    made = []
+
+    def fail():
+        for c in list(order) + made:
+            if c.isValid:
+                c.deleteMe()
+        return None
+
+    ends_out = []
+    for which in (0, 1):
+        chain = order if which == 0 else order[::-1]
+        end = start if which == 0 else stop
+        q = run_on(end, chain[0])
+        if q is None:
+            return fail()
+        if q is False and outside(end.geometry.x, end.geometry.y) - TOOL_R > 1e-4:
+            end = trim_back(end, chain)
+            if end is None:
+                return fail()
+            if which == 0:
+                order[:] = chain
+            else:
+                order[:] = chain[::-1]
+        ends_out.append((end, q))
+    (start, qa), (stop, qb) = ends_out
     path = list(order)
     if qa:
-        path.insert(0, sk.sketchCurves.sketchLines.addByTwoPoints(qa, start))
+        ln = sk.sketchCurves.sketchLines.addByTwoPoints(qa, start)
+        made.append(ln)
+        path.insert(0, ln)
     if qb:
-        path.append(sk.sketchCurves.sketchLines.addByTwoPoints(stop, qb))
+        ln = sk.sketchCurves.sketchLines.addByTwoPoints(stop, qb)
+        made.append(ln)
+        path.append(ln)
     return path
 
 
@@ -1318,6 +1774,9 @@ POCKET_TOL = 0.01  # mm
 POCKET = {
     'tolerance': '%gmm' % POCKET_TOL,
     'maximumStepover': 'tool_diameter * 0.6',
+    # the preset's stepdown, as the lab's own pockets take it; a new 2D pocket
+    # otherwise keeps a 0.2 mm default, use_tool_stepdown notwithstanding
+    'maximumStepdown': 'tool_stepdown',
     'useStockToLeave': 'false',
     'doRamp': 'true',
     # copper is always entered at a pre-drilled hole, never by a helix or ramp
@@ -1373,15 +1832,27 @@ def _drill_ends(through):
             'drillTipThroughBottom': 'true' if through else 'false'}
 
 
+def _thread_passes(name):
+    """The most radial passes the thread mill makes at threads.toml's stepover.
+
+    The last pass runs the tool's centre on a helix of radius (modelled hole +
+    pitch diameter offset - thread mill diameter) / 2, and each earlier pass one
+    stepover further in; Fusion discards a pass whose radius would fall below zero.
+    """
+    r = THREAD_RECIPES[name]
+    with open(TOOLS_FILE, encoding='utf-8') as f:
+        tool = [t for t in json.load(f)['data'] if t.get('description') == r['thread_mill']][0]
+    helix = (r['modelled_hole'] + r['pitch_diameter_offset'] - tool['geometry']['DC']) / 2
+    return max(1, math.floor(helix / THREAD_COMMON['thread']['stepover'] + 1e-9) + 1)
+
+
 def _thread_params(name, through, allow=0.0):
     """Thread-mill parameters for one thread size, from threads.toml; `allow` is
     the material still on the face above the hole top."""
     r, c = THREAD_RECIPES[name], THREAD_COMMON['thread']
-    r = dict(r, **r.get('through' if through else 'blind', {}))
-    stepover = 'tool_stepover' if r['stepover'] == 'tool' else '%gmm' % r['stepover']
     return dict(THREAD, direction="'%s'" % c['direction'], threadPitch='%gmm' % r['pitch'],
                 pitchDiameterOffset='%gmm' % r['pitch_diameter_offset'],
-                numberOfStepovers=str(r['passes']), stepover=stepover,
+                numberOfStepovers=str(_thread_passes(name)), stepover='%gmm' % c['stepover'],
                 topHeight_offset='%gmm' % (c['top_offset'] + allow),
                 bottomHeight_offset='%gmm' % (c['through_bottom_offset'] if through
                                               else c['blind_bottom_offset']))
@@ -2382,8 +2853,12 @@ def _make_layout(design, a, plan, warnings):
     # cleared the stock for its plunge.
     ring = _loop_ring(loop)
     open_passes = {}
+    if plan.get('recipes'):
+        a_floors = []  # left to the recipe
+    else:
+        a_floors = a['floors']
     step = 0.6 * ENDMILL_D / 10
-    for f in a['floors']:
+    for f in a_floors:
         if f['role'] != 'pocket' or not f['side_open']:
             continue
         runs, reach = _open_walls(f['face'])
@@ -2399,6 +2874,12 @@ def _make_layout(design, a, plan, warnings):
                                     'out, so check that pocket' % f['z'])
                 else:
                     paths.append(pth)
+                    pid = 'build-%d-%d' % (a['floors'].index(f), len(paths) - 1)
+                    for j, c in enumerate(pth):  # so coverage can read the passes
+                        c.attributes.add(PATH_ATTR[0], PATH_ATTR[1], '%s:%d' % (pid, j))
+            for c in walls:
+                if c.isValid:
+                    c.deleteMe()
         open_passes[f['face'].tempId] = paths
     return {'sketch': sk, 'corner': corner, 'tabs': tab_chains, 'shelves': shelves,
             'entry': corner[0]['entry'], 'pocket_entries': pocket_entries, 'narrow': narrow,
@@ -2647,6 +3128,36 @@ def _side_ops(b, setup, a, side, plan, warnings):
     def depth_of(z):
         return (a['ztop'] - z) if top else (z - a['zbot'])
 
+    def hole_below(h):
+        """The widest narrower hole that goes on down from a blind hole's floor, on
+        its axis (the hole under a counterbore), or None."""
+        if h['through']:
+            return None
+        floor = h['z0'] if top else h['z1']
+        near = lambda u, v: abs(u - v) < 1e-3
+        below = [g for g in a['holes'] if g['dia'] < h['dia'] - 1e-3
+                 and near(g['x'], h['x']) and near(g['y'], h['y'])
+                 and near(g['z1'] if top else g['z0'], floor)]
+        return max(below, key=lambda g: g['dia']) if below else None
+
+    def pre_drill_ends(h):
+        """A bore pre-drill's ends. A blind hole stops at its bottom, but where a
+        narrower hole goes on below it (a counterbore), the drill's point goes on
+        down until its cone meets the floor at that hole's edge, or the hole's
+        own bottom if that comes first and it is blind: as wide as it can be without marking the
+        floor. A hole below as wide as the drill takes the tip through."""
+        ends = _drill_ends(h['through'])
+        g = hole_below(h)
+        if g is None:
+            return ends
+        if g['dia'] >= ENDMILL_D - 1e-3:
+            return dict(ends, drillTipThroughBottom='true')
+        angle = 130.0 if b.dry else b.tools.tip_angle(DRILL_3175)
+        point = g['dia'] / 2 / math.tan(math.radians(angle / 2))
+        if not g['through']:
+            point = min(point, g['depth'])
+        return dict(ends, bottomHeight_offset='%gmm' % -round(point, 3))
+
     # classify holes
     drilled, bored, tapped = [], [], []
     drills = b.tools.drills()
@@ -2753,17 +3264,19 @@ def _side_ops(b, setup, a, side, plan, warnings):
     for e in side_entries.values():
         if e['drill'] and (e['point'] is None or all(e['point'] is not q for q, _ in holes_in)):
             holes_in.append((e['point'], e['depth']))
-    # each entry hole's drill tip goes through the pocket floor
+    # each entry hole's drill point goes below the pocket floor only until its
+    # cone is half the end mill wide at the floor, as the end mill needs to
+    # enter there (rule TH4); the rest of the cone is a dimple in the floor
+    cone = b.tools.tip_length(DRILL_3175) * ENTRY_CONE_D / DRILL_D
     dimples = [(q, d) for q, d in holes_in if q is not None]
     if dimples:
-        tip = b.tools.tip_length(DRILL_3175)
         where = ', '.join('(%.2f, %.2f)' % (mm(q.geometry.x), mm(q.geometry.y)) for q, _ in dimples)
         warnings.append('the %d pocket entry hole%s on the %s leave%s a cone-shaped dimple %g mm '
                         'across and %.2f mm deep in the pocket floor, so that the end mill '
-                        'never plunges; at x, y = %s mm'
+                        'enters a hole at least half its width; at x, y = %s mm'
                         % (len(dimples), '' if len(dimples) == 1 else 's', side,
-                           's' if len(dimples) == 1 else '', ENDMILL_D, tip, where))
-        thin = [d for _, d in dimples if thickness - d < tip + 0.2]
+                           's' if len(dimples) == 1 else '', ENTRY_CONE_D, cone, where))
+        thin = [d for _, d in dimples if thickness - d < cone + 0.2]
         if thin:
             warnings.append('a pocket entry hole\'s dimple comes within 0.2 mm of the part\'s '
                             'other face, or through it, under a floor %g mm deep'
@@ -2788,14 +3301,16 @@ def _side_ops(b, setup, a, side, plan, warnings):
             by_depth.setdefault(round(d, 3), []).append(p)
         out = []
         for depth, pts in sorted(by_depth.items()):
-            # the tip goes through, so that the hole is full width down to the
-            # floor and the end mill never plunges; it leaves a dimple there
+            # at a floor, the point goes only `cone` below it (see above); a stage
+            # of the drill's reach above the floor takes the tip through
             params = dict(DRILL, holeMode="'selection-points'", breakThroughDepth='0mm',
                           drillTipThroughBottom='true', **top_at(t))
             floor = floor_at.get(depth)
-            # down to the floor, or a stage of the drill's reach above it
-            params.update(at('bottom', floor) if floor is not None
-                          else _bottom_below_part_top(depth, m))
+            if floor is not None:
+                params.update(at('bottom', floor, -round(cone, 3)),
+                              drillTipThroughBottom='false')
+            else:
+                params.update(_bottom_below_part_top(depth, m))
             name = ('Pocket entry holes %g to %g mm' % (round(max(t, 0), 2), depth)
                     if staged_pockets else 'Pocket entry holes %g mm' % depth)
             out.append(b.op(setup, 'drill', drill_for(depth - t), name, params, points(pts)))
@@ -2834,13 +3349,15 @@ def _side_ops(b, setup, a, side, plan, warnings):
                             params, points(pts)))
         # pre-drill everything the 3.175 end mill will bore
         pre = [h for h in end_bored + [h for h, _ in tap_bored] if not deep_bore(h)]
-        for through in (True, False):
-            hs = [h for h in pre if h['through'] == through]
-            if hs:
-                out.append(b.op(setup, 'drill', drill_for(max(h['depth'] for h in hs)),
-                                'Pre-drill bores' + ('' if through else ' (blind)'),
-                                dict(DRILL, **_drill_ends(through), **from_hole_top()),
-                                _sel_faces('holeFaces', [h['face'] for h in hs])))
+        groups = {}
+        for h in pre:
+            ends = pre_drill_ends(h)
+            groups.setdefault((h['through'], tuple(sorted(ends.items()))), (ends, []))[1].append(h)
+        for (through, _), (ends, hs) in sorted(groups.items(), key=lambda kv: not kv[0][0]):
+            out.append(b.op(setup, 'drill', drill_for(max(h['depth'] for h in hs)),
+                            'Pre-drill bores' + ('' if through else ' (blind)'),
+                            dict(DRILL, **ends, **from_hole_top()),
+                            _sel_faces('holeFaces', [h['face'] for h in hs])))
         return out
 
     pockets = sorted([f for f in floors if f['role'] == 'pocket'], key=lambda f: f['depth'])
@@ -2889,7 +3406,10 @@ def _side_ops(b, setup, a, side, plan, warnings):
             seq, _ = _stage_plan(0, h['depth'], h['depth'], reach)
         for kind, s, e in seq:
             if t0 > 1e-6 and s <= 0:
-                top_h = {'topHeight_mode': "'from hole top'", 'topHeight_offset': '0mm'}
+                # a hole in a floor: the rough pockets and bores leave 0.2 mm on
+                # the floor, which the rough bore's entries would plunge through
+                top_h = {'topHeight_mode': "'from hole top'", 'topHeight_offset': '%gmm' % (
+                    POCKET_FLOOR_ALLOWANCE if which == 'rough' else 0.0)}
             else:
                 top_h = top_at(t0 + s)
             last = e >= h['depth'] - 1e-6
@@ -2897,7 +3417,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
             if kind == 'drill':
                 p = dict(DRILL, **top_h)
                 if last:
-                    p.update(_drill_ends(h['through']))
+                    p.update(pre_drill_ends(h))
                 else:
                     p.update(_bottom_below_part_top(t0 + e, m), breakThroughDepth='0mm',
                              drillTipThroughBottom='true')
@@ -2917,6 +3437,22 @@ def _side_ops(b, setup, a, side, plan, warnings):
     slot_floors = {g['face'].tempId for sl in (lay['slots'] if lay else [])
                    if sl['side'] == side for g in [sl['floor']] + sl['fed']}
     passes = (('rough', 'true', ''), ('finish', 'false', ' (finish)'))
+
+    def end_bores(which, multi, suffix):
+        for hs in _group(end_bored):
+            h = hs[0]
+            radial = max(0.1, (h['dia'] - ENDMILL_D) / 2)
+            # the finishing bore is a single pass at the wall; in a blind hole the
+            # rough bore stops the floor allowance above the floor for it to take
+            # off (user, 2026-10-17); a bore has no axial stock to leave
+            params = dict(BORE, stepover='0.3mm',
+                          numberOfStepovers=str(max(1, math.ceil(radial / 0.3))),
+                          doMultiplePasses=multi)
+            bottom = -0.5 if h['through'] else (
+                POCKET_FLOOR_ALLOWANCE if which == 'rough' else 0.0)
+            staged_bore(hs, which, (ENDMILL, which), params,
+                        bottom, 'Bore %.2f%s' % (h['dia'], suffix))
+
     for which, multi, suffix in passes:
         tk = (ENDMILL, which)
         # outline: the top setup cuts down to the tab band, the bottom setup up to it
@@ -2994,7 +3530,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
                     if staged_pockets and which == 'rough':
                         name += (' %g mm to the floors' % round(max(t, 0), 2) if floor
                                  else ' %g to %g mm' % (round(max(t, 0), 2), round(bot, 2)))
-                    if side_open:
+                    if side_open and not plan.get('recipes'):
                         # Fusion picks where a pocket enters an open pocket, and it
                         # plunges with the tool's edge in uncut stock: contour passes
                         # along the walls instead, on the tool-centre paths sketched
@@ -3022,18 +3558,42 @@ def _side_ops(b, setup, a, side, plan, warnings):
                             ops['main'].append(b.op(setup, 'contour2d', tk, nm, cparams,
                                                     _sel_paths(paths)))
                         continue
+                    if side_open:
+                        # cut after build by the open-pocket recipe
+                        # (references/recipes/open-pocket.md): record where its
+                        # operations go and the heights and allowance they take
+                        if not b.dry:
+                            anchor = next((o for o in reversed(ops['main']) if o is not None), None)
+                            rp = dict(doMultipleDepths=multi, **top_at(t))
+                            rp.update({k: v for k, v in params.items() if k.startswith((
+                                'useStockToLeave', 'simpleStockToLeave', 'stockToLeave',
+                                'verticalStockToLeave'))})
+                            if not floor:
+                                rp.update({k: v for k, v in params.items()
+                                           if k.startswith('bottomHeight')})
+                            # a height's reference faces, as entity tokens
+                            rp = {k: ({'entity_tokens': [x.entityToken for x in v]}
+                                      if isinstance(v, list) else v) for k, v in rp.items()}
+                            # one operation per floor depth
+                            by_depth = {}
+                            for u in us:
+                                i = next(k for k, g in enumerate(a['floors']) if g['face'] is u[0])
+                                by_depth.setdefault(round(u[2], 3), []).append(i)
+                            for dep, idx in sorted(by_depth.items()):
+                                plan.setdefault('recipe_entries', []).append({
+                                    'recipe': 'open-pocket', 'floors': idx, 'depth_mm': dep,
+                                    'pass': which, 'setup': setup.name,
+                                    'name': name if len(by_depth) == 1 else name + ' %g mm' % dep,
+                                    'after': anchor.name if anchor else None,
+                                    'tool_from': b.last[tk].name if tk in b.last else None,
+                                    'bottom_at_floor': idx[0] if floor else None, 'params': rp})
+                        continue
                     ops['main'].append(b.op(setup, 'pocket2d', tk, name, params, _both(
                         _sel_pocket_regions([u[0] for u in us if u[0] is not None],
                                             [u[1] for u in us if u[1] is not None], top),
                         _sel_faces('predrillPositions', unique))))
-        for hs in _group(end_bored):
-            h = hs[0]
-            radial = max(0.1, (h['dia'] - ENDMILL_D) / 2)
-            # the finishing bore is a single pass at the wall
-            staged_bore(hs, which, tk, dict(BORE, stepover='0.3mm',
-                                            numberOfStepovers=str(max(1, math.ceil(radial / 0.3))),
-                                            doMultiplePasses=multi),
-                        -0.5 if h['through'] else 0.0, 'Bore %.2f%s' % (h['dia'], suffix))
+        if which == 'rough':
+            end_bores(which, multi, suffix)
         # tap holes bored to size: one light pass, plus a finishing pass in blind holes
         for hs in _group([h for h, _ in tap_bored]):
             h = hs[0]
@@ -3114,63 +3674,92 @@ def _side_ops(b, setup, a, side, plan, warnings):
         slotted |= {sl['floor']['face'].tempId for sl in sls}
         slotted |= {g['face'].tempId for g in fed}
 
-    # small end mills: rest machining in pockets whose corners the 3.175 can't reach,
-    # one operation per tool
-    def corner_tool(r, depth):
-        # a small end mill already chosen for corners, on either side, where one
-        # fits, so the part needs fewer tools; else the largest that fits
-        used = plan.setdefault('corner_endmills', set())
-        for desc, d, flute in SMALL_ENDMILLS:
-            if desc in used and d / 2 <= r + 1e-3 and flute >= depth + 0.5:
-                return desc, d
-        em, d = _small_endmill(r, depth)
-        if em:
-            used.add(em)
-        return em, d
+    # corners the 3.175 can't reach, in pockets and windows, with small end mills:
+    # by build itself, or after build by the corners recipe
+    # (references/recipes/corners.md), which build records what it needs for
+    if not plan.get('recipes'):
+        # small end mills: rest machining in pockets whose corners the 3.175 can't reach,
+        # one operation per tool
+        def corner_tool(r, depth):
+            # a small end mill already chosen for corners, on either side, where one
+            # fits, so the part needs fewer tools; else the largest that fits
+            used = plan.setdefault('corner_endmills', set())
+            for desc, d, flute in SMALL_ENDMILLS:
+                if desc in used and d / 2 <= r + 1e-3 and flute >= depth + 0.5:
+                    return desc, d
+            em, d = _small_endmill(r, depth)
+            if em:
+                used.add(em)
+            return em, d
 
-    corners = {}
-    for f in pockets:
-        if f['face'].tempId in slotted:
-            continue
-        r = f['corner_radius']
-        if r is None or r >= ENDMILL_D / 2 - 1e-3:
-            continue
-        smallest = SMALL_ENDMILLS[-1][1] / 2
-        if r < smallest:
-            warnings.append('pocket at z=%g mm has sharp or R%.2f inside corners; the %g mm '
-                            'end mill leaves R%g' % (f['z'], r, 2 * smallest, smallest))
-        em, d = corner_tool(max(r, smallest), f['depth'])
-        if not em:
-            warnings.append('pocket at z=%g mm: corner radius %.2f mm needs a smaller tool '
-                            'than the library has, or is deeper than its flute' % (f['z'], r))
-            continue
-        corners.setdefault((em, d), []).append(f['face'])
-    for (em, d), faces in corners.items():
-        ops['main'].append(b.op(setup, 'pocket2d', em, 'Pocket corners %g' % d, dict(
-            POCKET, doMultipleDepths='true', rampType="'plunge'", useRestMachining='true',
-            bottomHeight_mode="'from contour'", **top_at(0)),
-            _sel_pocket(faces)))
-    # windows' corners likewise, from the part's face (the shelf pockets above a
-    # window leave the same corners) through the part
-    for w in windows:
-        r = w['corner_radius']
-        if r is None or r >= ENDMILL_D / 2 - 1e-3:
-            continue
-        smallest = SMALL_ENDMILLS[-1][1] / 2
-        if r < smallest:
-            warnings.append('window has sharp or R%.2f inside corners; the %g mm end mill '
-                            'leaves R%g' % (r, 2 * smallest, smallest))
-        em, d = corner_tool(max(r, smallest), thickness + 0.5)
-        if not em:
-            warnings.append('window: corner radius %.2f mm needs a smaller tool than the '
-                            'library has, or is deeper than its flute; the 3.175 end mill '
-                            'leaves material in its corners' % r)
-            continue
-        params = dict(POCKET, doMultipleDepths='true', rampType="'plunge'",
-                      useRestMachining='true', **top_at(0))
-        params.update(through_part('bottom'))
-        ops['main'].append(b.op(setup, 'pocket2d', em, 'Window corners %g' % d, params,
-                                _sel_chains([w['loop']], 'pockets')))
+        corners = {}
+        for f in pockets:
+            if f['face'].tempId in slotted:
+                continue
+            r = f['corner_radius']
+            if r is None or r >= ENDMILL_D / 2 - 1e-3:
+                continue
+            smallest = SMALL_ENDMILLS[-1][1] / 2
+            if r < smallest:
+                warnings.append('pocket at z=%g mm has sharp or R%.2f inside corners; the %g mm '
+                                'end mill leaves R%g' % (f['z'], r, 2 * smallest, smallest))
+            em, d = corner_tool(max(r, smallest), f['depth'])
+            if not em:
+                warnings.append('pocket at z=%g mm: corner radius %.2f mm needs a smaller tool '
+                                'than the library has, or is deeper than its flute' % (f['z'], r))
+                continue
+            corners.setdefault((em, d), []).append(f['face'])
+        for (em, d), faces in corners.items():
+            ops['main'].append(b.op(setup, 'pocket2d', em, 'Pocket corners %g' % d, dict(
+                POCKET, doMultipleDepths='true', rampType="'plunge'", useRestMachining='true',
+                bottomHeight_mode="'from contour'", **top_at(0)),
+                _sel_pocket(faces)))
+        # windows' corners likewise, from the part's face (the shelf pockets above a
+        # window leave the same corners) through the part
+        for w in windows:
+            r = w['corner_radius']
+            if r is None or r >= ENDMILL_D / 2 - 1e-3:
+                continue
+            smallest = SMALL_ENDMILLS[-1][1] / 2
+            if r < smallest:
+                warnings.append('window has sharp or R%.2f inside corners; the %g mm end mill '
+                                'leaves R%g' % (r, 2 * smallest, smallest))
+            em, d = corner_tool(max(r, smallest), thickness + 0.5)
+            if not em:
+                warnings.append('window: corner radius %.2f mm needs a smaller tool than the '
+                                'library has, or is deeper than its flute; the 3.175 end mill '
+                                'leaves material in its corners' % r)
+                continue
+            params = dict(POCKET, doMultipleDepths='true', rampType="'plunge'",
+                          useRestMachining='true', **top_at(0))
+            params.update(through_part('bottom'))
+            ops['main'].append(b.op(setup, 'pocket2d', em, 'Window corners %g' % d, params,
+                                    _sel_chains([w['loop']], 'pockets')))
+    elif not b.dry:
+        def tokens(params):
+            return {k: ({'entity_tokens': [x.entityToken for x in v]} if isinstance(v, list) else v)
+                    for k, v in params.items()}
+        feats = []
+        for f in pockets:
+            r = f['corner_radius']
+            if f['face'].tempId in slotted or r is None or r >= ENDMILL_D / 2 - 1e-3:
+                continue
+            feats.append({'kind': 'pocket', 'floor': next(k for k, g in enumerate(a['floors'])
+                                                          if g is f),
+                          'corner_radius_mm': r, 'depth_mm': f['depth'],
+                          'params': tokens(dict(bottomHeight_mode="'from contour'", **top_at(0)))})
+        for w in windows:
+            r = w['corner_radius']
+            if r is None or r >= ENDMILL_D / 2 - 1e-3:
+                continue
+            feats.append({'kind': 'window', 'window': a['windows'].index(w),
+                          'corner_radius_mm': r, 'depth_mm': thickness,
+                          'params': tokens(dict(top_at(0), **through_part('bottom')))})
+        if feats:
+            anchor = next((o for o in reversed(ops['main']) if o is not None), None)
+            plan.setdefault('recipe_entries', []).append({
+                'recipe': 'corners', 'setup': setup.name,
+                'after': anchor.name if anchor else None, 'features': feats})
     small = {}
     for h, rough, _ in bored:
         if rough[0] != ENDMILL:
@@ -3257,6 +3846,11 @@ def _side_ops(b, setup, a, side, plan, warnings):
                     _thread_params(t, through, max(0.0, high[0])),
                     _sel_faces('circularFaces', [h['face'] for h in hs])))
 
+    # the finishing bores after the drills and thread mills, to clean up the
+    # burrs they leave on the bores' floors and edges (user, 2026-10-17); tap holes
+    # bored to size keep theirs before the thread mill, which needs the final size
+    end_bores('finish', 'false', ' (finish)')
+
     # the finishing face, after every cut that leaves burrs on the face
     if facing:
         ops['main'].append(face_op('finish', 'false', ' (finish)', 0))
@@ -3276,6 +3870,28 @@ def _side_ops(b, setup, a, side, plan, warnings):
                             % (min(room), side, width))
         ops['main'].append(b.op(setup, 'chamfer2d', CHAMFER, 'Deburr', dict(
             CHAMFER_OP, chamferTipOffset='%gmm' % round(tip, 3)), _sel_face_contours([face])))
+
+    # the edges of the holes under counterbores, at the counterbore's floor, which
+    # the face's deburr does not reach; the point goes down the hole below
+    if plan['chamfer']:
+        width = float(CHAMFER_OP['chamferWidth'][:-2])
+        by_tip = {}
+        for h in holes:
+            g = hole_below(h)
+            if g is None:
+                continue
+            fz = (h['z0'] if top else h['z1']) / 10  # cm
+            floor = next((f for e in h['face'].edges for f in e.faces
+                          if f != h['face'] and isinstance(f.geometry, adsk.core.Plane)
+                          and abs(f.pointOnFace.z - fz) < 1e-4), None)
+            if floor is None:
+                continue
+            room = CHAMFER_TIP_MAX + width + CHAMFER_CLEAR if g['through'] else g['depth']
+            tip = max(CHAMFER_TIP_MIN, min(CHAMFER_TIP_MAX, room - width - CHAMFER_CLEAR))
+            by_tip.setdefault(round(tip, 3), []).append(floor)
+        for tip, fl in sorted(by_tip.items()):
+            ops['main'].append(b.op(setup, 'chamfer2d', CHAMFER, 'Deburr counterbores', dict(
+                CHAMFER_OP, chamferTipOffset='%gmm' % tip), _sel_inner_contours(fl)))
 
     # bottom side: the tab cut, last and in its own NC program
     if not top:
@@ -3335,6 +3951,8 @@ def build(args):
       name:      program name prefix (default: document name)
       face:      face the top and bottom from stock (default true)
       chamfer:   deburr the outer faces (default true)
+      recipes:   leave the features that have a recipe (references/recipes/) to it,
+                 and list them under "recipes" (default false: build cuts them)
       tab_width: tab width along the outline in mm (default 5)
       tab_z:     model Z of the tab band's centre in mm (default: the mid-plane,
                  or the nearest height clear of pockets that open to the side)
@@ -3349,6 +3967,16 @@ def build(args):
     # before reading the body: deleting an earlier build's sketches and vises
     # recomputes any feature added after them, which would leave stale faces
     _delete_previous(cam, design)
+    # a Part design holds one component, but the vise, tabs, face patches and
+    # turned-over copy are components of their own; Fusion turns a Part with
+    # bodies into a Hybrid design, which keeps its modelling
+    was_part = False
+    try:
+        if design.designIntent == adsk.fusion.DesignIntentTypes.PartDesignIntentType:
+            design.designIntent = adsk.fusion.DesignIntentTypes.HybridDesignIntentType
+            was_part = True
+    except AttributeError:  # Fusion before design intents
+        pass
     body, a, flipped, counts = _machined_body(args, design, True)
     if flipped and args.get('tab_z') is not None:  # given in the design's Z
         args = dict(args, tab_z=a['ztop'] + a['zbot'] - args['tab_z'])
@@ -3373,6 +4001,10 @@ def build(args):
     tab_z, tab_clear, openings = _tab_height(a, band, overlap, args.get('tab_z'),
                                              _tab_points(a, tab_width / 10))
     log, warnings = [], []
+    if was_part:
+        warnings.append('the design was a Part design, which holds only one component; it is '
+                        'now a Hybrid design, so that the vise, tabs and face patches can be '
+                        'components. Saving the document keeps the change')
     if not tab_clear:
         warnings.append('the tab band at z=%g mm overlaps a pocket that opens to the side '
                         '(open over z %s mm); pass a clear tab_z' % (tab_z, openings))
@@ -3385,6 +4017,7 @@ def build(args):
         'taps': {str(k): v for k, v in (args.get('taps') or {}).items()},
         'face': args.get('face', True),
         'chamfer': args.get('chamfer', True),
+        'recipes': bool(args.get('recipes', False)),
         'tab': {'band': band, 'overlap': overlap, 'width': tab_width, 'z': tab_z},
         'layout': None,
     }
@@ -3444,6 +4077,12 @@ def build(args):
                       'machined first, as the top (%d features); the design\'s body is hidden '
                       'behind the turned copy in "%s"' % (counts['bottom'], counts['top'],
                                                           PART_COMPONENT))
+    # kept in the document too, for the recipe primitives' later calls
+    attr = design.attributes.itemByName(*RECIPES_ATTR)
+    if attr is not None:
+        attr.deleteMe()
+    design.attributes.add(RECIPES_ATTR[0], RECIPES_ATTR[1],
+                          json.dumps(plan.get('recipe_entries', [])))
     print(json.dumps({
         'turned_over': flipped,
         'tools': [{'T': n, 'tool': d, 'preset': p} for n, d, p in tools.order],
@@ -3451,7 +4090,9 @@ def build(args):
         'nc_programs': [name + s for s in ('_top', '_bottom', '_tabs')],
         'tabs': {'z_mm': tab_z, 'band_mm': band, 'width_mm': tab_width,
                  'count': len(plan['layout']['tabs'])},
-        'pocket_entries': len(plan['layout']['pocket_entries']),
+        'pocket_entries': sum(1 for e in plan['layout']['pocket_entries'].values() if e['drill']),
+        # features build leaves to a recipe in references/recipes/, in run order
+        'recipes': plan.get('recipe_entries', []),
         'warnings': warnings,
         'seconds': round(time.time() - t0, 1),
     }, indent=1))
@@ -3468,8 +4109,8 @@ def _wait(fut, budget):
 def _fit_thread_passes(cam, adjusted):
     """Lower a thread mill's pass count until Fusion stops discarding passes.
 
-    A safety net: with the pass counts and pitch diameter offsets in
-    threads.toml Fusion should keep every pass. If it does discard some, fewer
+    A safety net: _thread_passes counts the passes Fusion should keep, so
+    it should keep every one. If it does discard some, fewer
     passes give the same cut without the warning; generate() lists each change.
     """
     for s in cam.setups:

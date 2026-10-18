@@ -34,11 +34,18 @@ accumulated_peck = 1.0    # accumulated pecking depth, after which the drill ret
 chip_break = 0.1          # retract between pecks
 # Through holes: the tip goes 0.5 mm past the bottom. Blind holes stop at the
 # hole bottom.
+# (A blind bore over a narrower hole goes deeper: see conventions.md, Drill.)
 through_breakthrough = 0.5
 blind_breakthrough = 0.0
 
 [thread]
 direction = "climb"
+# Radial passes 0.1 mm apart, for every size. carvera_cam.py makes as many as
+# fit: the last pass runs the tool's centre on a helix of radius
+# (modelled_hole + pitch_diameter_offset - thread mill diameter) / 2, and each
+# earlier one 0.1 mm further in, down to a radius of zero (M2 3, M2.5 4, M3 4,
+# M4 5 passes).
+stepover = 0.1
 top_offset = 0.0          # start at the hole top
 # Bottom of the thread-mill pass, relative to the hole bottom: 0.3 mm past it
 # in a through hole, inside the 0.5 mm the drill goes past it; at it in a blind
@@ -56,8 +63,6 @@ blind_bottom_offset = 0.0
 #   drill                   pre-drill, by its description in the tool library
 #   thread_mill             thread mill, by its description in the tool library
 #   pitch_diameter_offset   Fusion's "pitch diameter offset" for the thread mill
-#   passes, stepover        radial passes of the thread mill; stepover "tool"
-#                           takes the thread mill's own stepover (0.1 mm)
 
 [M2]
 pitch = 0.4
@@ -65,8 +70,6 @@ modelled_hole = 1.623
 drill = "1.7*9.6mm Drill"
 thread_mill = "Carvera M2 Threadmill"
 pitch_diameter_offset = 0.5
-passes = 3
-stepover = "tool"
 
 ["M2.5"]
 pitch = 0.45
@@ -74,8 +77,6 @@ modelled_hole = 2.0755
 drill = "2.2*8.8mm Drill"
 thread_mill = "Carvera M2.5 Threadmill"
 pitch_diameter_offset = 0.6
-passes = 4
-stepover = "tool"
 
 [M3]
 # The lab's standard, confirmed 2026-10-12. (holes-for-copper-finger drilled
@@ -85,8 +86,6 @@ modelled_hole = 2.529
 drill = "2.6*8.2mm Drill"
 thread_mill = "Carvera M3 Threadmill"
 pitch_diameter_offset = 0.6
-passes = 4
-stepover = "tool"
 
 [M4]
 # No drill matches 3.332 mm, so the 3.175 mm drill opens the hole and the
@@ -105,11 +104,3 @@ through_bottom_offset = -0.5
 # A blind hole gets a second, full-depth pass with the finishing end mill
 # (eccosorb-clamp); a through hole in 1/8" plate gets the roughing pass only.
 blind_finish_pass = true
-
-[M4.through]              # 1/8" plate parts and amir-puck-finger
-passes = 3
-stepover = 0.2
-
-[M4.blind]                # eccosorb-clamp, 9.5 mm deep
-passes = 5
-stepover = 0.1

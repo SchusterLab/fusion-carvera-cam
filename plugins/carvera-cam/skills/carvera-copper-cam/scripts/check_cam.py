@@ -9,6 +9,9 @@ it deletes again, and reads the moves from there.
     check({})                         every milling setup
     check({'setups': ['Setup1']})     only these
     check({'budget': 50})             stop after about 50 s; call again to go on
+    summary({})                       each operation's tool, time, cut length,
+                                      depth, extent and plunges, for comparing
+                                      two builds of a part
 
 Prints JSON: one entry per finding, with the rule's id (see rules.md), its
 severity ('error': likely crash or broken tool; 'warning': review before
@@ -50,6 +53,12 @@ MILLING = ('flat end mill', 'ball end mill', 'bull nose end mill', 'chamfer mill
 
 def _app():
     return adsk.core.Application.get()
+
+
+def _doc_id():
+    """The active document's identity: unsaved documents all share a name."""
+    d = _app().activeDocument
+    return getattr(d, 'creationId', None) or d.name
 
 
 def _v(p, name, default=None):
@@ -107,6 +116,10 @@ def _tool(o):
         'd': _mm(_v(p, 'tool_diameter', 0)),
         'flutes': _v(p, 'tool_numberOfFlutes', 1) or 1,
         'flute_len': _mm(_v(p, 'tool_fluteLength', 0)),
+        # a neck behind the flutes, narrower than the cut (a thread mill's), reaches
+        # as deep as its length without rubbing
+        'shoulder_len': _mm(_v(p, 'tool_shoulderLength', 0)),
+        'shoulder_d': _mm(_v(p, 'tool_shoulderDiameter', 0)),
         'body_len': _mm(_v(p, 'tool_bodyLength', 0)),
         'tip_angle': _v(p, 'tool_tipAngle'),
         'rpm': _v(p, 'tool_spindleSpeed', 0),
@@ -474,9 +487,10 @@ def _segment(to_world, x, y, z0, z1):
 
 
 def _drilled(moves, t, to_world, top, sn):
-    """[(x, y, lowest z, highest z, diameter, setup)] in the design's frame, for
-    each hole a drill operation makes: full width from the stock top down to the
-    drill's deepest point at that spot, raised by the length of its point."""
+    """[(x, y, lowest z, highest z, diameter, setup, point z)] in the design's
+    frame, for each hole a drill operation makes: full width from the stock top
+    down to the drill's deepest point at that spot, raised by the length of its
+    point; below that, the drill's cone narrows to its point at `point z`."""
     tip = 0.0
     if t['tip_angle']:
         tip = t['d'] / 2 / math.tan(math.radians(t['tip_angle']) / 2)
@@ -486,7 +500,7 @@ def _drilled(moves, t, to_world, top, sn):
             continue
         k = (round(m[4], 3), round(m[5], 3))
         deepest[k] = min(deepest.get(k, m[6]), m[6])
-    return [_segment(to_world, x, y, z + tip, top) + (t['d'], sn)
+    return [_segment(to_world, x, y, z + tip, top) + (t['d'], sn, to_world(x, y, z).z * 10)
             for (x, y), z in deepest.items() if z + tip < top]
 
 
@@ -544,12 +558,14 @@ def _cleared_to(x, y, r, top, milled, other=()):
 
 def _check_plunges(rep, rule, severity, sn, o, moves, t, holes, milled, to_world, top,
                    rapids=False, other=()):
-    """E4 (pockets and contours) and TH2 (thread mills, bores and circular cuts):
-    every plunge into the stock must go into stock earlier milling passes have
-    cleared, in this setup or an earlier one, and below that down a hole drilled
-    earlier, in this setup or an earlier one, at least as wide as the tool there
-    and full width over the rest of the plunge. A plunge is a straight move down at the
-    feed, or also at a rapid with `rapids`."""
+    """E4 (pockets, faces and contours) and TH2 (thread mills, bores and circular
+    cuts): every plunge into the stock must go into stock earlier milling passes
+    have cleared, in this setup or an earlier one, and below that down a hole
+    drilled earlier, in this setup or an earlier one, at least as wide as the
+    tool there and full width over the rest of the plunge, but for the drill's
+    cone at its bottom. TH4: where the plunge ends in the cone, the cone must be
+    at least half the tool's width there, centred on it. A plunge is a straight
+    move down at the feed, or also at a rapid with `rapids`."""
     r = t['d'] / 2
     kinds = (0, 1) if rapids else (1,)
     plunges = {}  # (x, y) -> deepest plunge
@@ -558,29 +574,53 @@ def _check_plunges(rep, rule, severity, sn, o, moves, t, holes, milled, to_world
                 and abs(m[5] - m[2]) < 1e-3 and m[6] < m[3] - 1e-3 and m[6] < top - 0.01:
             k = (round(m[4], 3), round(m[5], 3))
             plunges[k] = min(plunges.get(k, m[6]), m[6])
-    bad = []
+    bad, cones = [], []
     for (x, y), z in sorted(plunges.items()):
         cleared = _cleared_to(x, y, r, top, milled, other)
         if cleared <= z + 0.01:
             continue  # into stock an earlier cut has cleared
         px, py, plo, phi = _segment(to_world, x, y, z, cleared)
-        ok, why = False, 'no hole is drilled there before it'
-        for hx, hy, hlo, hhi, hd, hs in holes:
+        ok, why, short_cone = False, 'no hole is drilled there before it', None
+        for hx, hy, hlo, hhi, hd, hs, *pt in holes:
             e = math.hypot(px - hx, py - hy)
             if e > hd / 2:
                 continue
             where = '' if hs == sn else ' (drilled in %s)' % hs
+            zpt = pt[0] if pt else None
             if e + r > hd / 2 + 0.02:
                 why = ('the %.3g mm hole there%s is too narrow for it, or off its centre by '
                        '%.3f mm' % (hd, where, e))
-            elif hlo > plo + 0.01 or hhi < phi - 0.01:
-                short = max(hlo - plo, phi - hhi)
-                why = 'the hole there%s is not full width over %.2f mm of it' % (where, short)
-            else:
+                continue
+            if hlo <= plo + 0.01 and hhi >= phi - 0.01:
                 ok = True
                 break
-        if not ok:
+            # the plunge's deep end in the drill's cone, its shallow part in the
+            # full-width hole: the cone, centred on the tool, must be half its width
+            if zpt is not None and zpt < hlo - 1e-6 and hhi >= phi - 0.01 and plo >= zpt:
+                dist, tip = plo - zpt, hlo - zpt
+            elif zpt is not None and zpt > hhi + 1e-6 and hlo <= plo + 0.01 and phi <= zpt:
+                dist, tip = zpt - phi, zpt - hhi
+            else:
+                why = 'the hole there%s is not full width over %.2f mm of it' % (
+                    where, max(hlo - plo, phi - hhi))
+                continue
+            need = (r + 2 * e) * tip / hd  # the cone's height where it is that wide
+            if dist >= need - 0.01:
+                ok = True
+                break
+            short_cone = need - dist
+        if not ok and short_cone is not None:
+            cones.append((x, y, z, short_cone))
+        elif not ok:
             bad.append((x, y, z, why))
+    if cones:
+        x, y, z, more = cones[0]
+        rep.add('TH4', 'warning', sn, o.name, "the %g mm %s plunges at X%.3f Y%.3f to Z%.3f, "
+                "but the drill's cone there is narrower than half the %s; its point would have "
+                'to go %.2f mm deeper%s' % (t['d'], t['type'], x, y, z, t['type'], more,
+                                            ' (%d of its %d plunges)' % (len(cones), len(plunges))
+                                            if len(plunges) > 1 else ''),
+                plunges=len(cones))
     if bad:
         x, y, z, why = bad[0]
         rep.add(rule, severity, sn, o.name, 'the %g mm %s plunges at X%.3f Y%.3f to '
@@ -602,7 +642,7 @@ def _check_thread_depth(rep, sn, o, cuts, setup, holes):
             continue
         dia, cx, cy, hole_bottom, _ = h
         r = dia / 2
-        for hx, hy, hlo, hhi, hd, _ in holes:
+        for hx, hy, hlo, hhi, hd, *_ in holes:
             p, q = (wcs(adsk.core.Point3D.create(hx / 10, hy / 10, z / 10)) for z in (hlo, hhi))
             if hd >= 2 * r - 0.01 and math.hypot(p[0] - cx, p[1] - cy) < 0.05:
                 hole_bottom = min(hole_bottom, p[2], q[2])
@@ -612,6 +652,229 @@ def _check_thread_depth(rep, sn, o, cuts, setup, holes):
             rep.add('TH3', 'error', sn, o.name, 'the thread mill goes %.2f mm deeper than the '
                     'hole at X%.3f Y%.3f' % (hole_bottom - min(inside), cx, cy),
                     z_min=round(min(inside), 3), hole_bottom=round(hole_bottom, 3))
+
+
+def _drill_points(moves, t):
+    """[(x, y, point z, point length, diameter)] in the WCS, in mm, for each hole a
+    drill operation makes: its deepest point at each spot."""
+    if not t['tip_angle']:
+        return []
+    tip = t['d'] / 2 / math.tan(math.radians(t['tip_angle']) / 2)
+    deepest = {}
+    for m in moves:
+        if None in m[1:]:
+            continue
+        k = (round(m[4], 3), round(m[5], 3))
+        deepest[k] = min(deepest.get(k, m[6]), m[6])
+    return [(x, y, z, tip, t['d']) for (x, y), z in deepest.items()]
+
+
+def _check_cones(rep, sn, o, cuts, setup, points, milled, top, em):
+    """TH4: a bore needs a pre-drilled hole under it at least half as wide as its
+    end mill (`em`, mm) all the way down: wherever it cuts below the depth where
+    the drill's cone narrows to half the end mill's diameter, or where no drill
+    went, it bores into copper the drill never cut, unless an earlier pass in
+    the setup (`milled`, as _cleared_to takes it) has cleared it. `points` are
+    this setup's drill points (see _drill_points)."""
+    wcs = _wcs_fn(setup)
+    half = em / 2
+    for f in _selected(o, 'circularFaces'):
+        h = _hole(f, wcs)
+        if h is None:
+            continue
+        dia, cx, cy, _, _ = h
+        inside = [min(m[3], m[6]) for m in cuts if math.hypot(m[4] - cx, m[5] - cy) < dia / 2]
+        if not inside:
+            continue
+        zb = min(inside)
+        if _cleared_to(cx, cy, half / 2, top, milled) <= zb + 0.01:
+            continue
+        drills = [(zp, tip, d) for x, y, zp, tip, d in points
+                  if math.hypot(x - cx, y - cy) <= 0.05 and d <= dia + 0.01]
+        if not drills:
+            why = 'no hole is drilled there before it'
+        else:
+            # the drill's width at a height z above its point: its cone, then its diameter
+            width = lambda z, zp, tip, d: min(d, max(0.0, z - zp) * d / tip)
+            zp, tip, d = max(drills, key=lambda k: width(zb, *k))
+            if width(zb, zp, tip, d) >= half - 0.01:
+                continue
+            if d < half - 0.01:
+                why = 'the %g mm drill there is narrower than half the end mill' % d
+            else:
+                need = zp + tip * half / d  # where the cone is half the end mill wide
+                why = ("the %g mm drill's cone is narrower than half the end mill below Z%.3f; "
+                       'its point would have to go %.2f mm deeper' % (d, need, need - zb))
+        rep.add('TH4', 'warning', sn, o.name, 'the %g mm end mill bores the hole at X%.3f '
+                'Y%.3f down to Z%.3f, but %s' % (em, cx, cy, zb, why), z_min=round(zb, 3))
+
+
+def _setup_bodies(setup):
+    """The solid bodies of a setup's model, as the setup sees them."""
+    out = []
+    try:
+        models = list(setup.models)
+    except RuntimeError:  # a model selection the design no longer has
+        return []
+    for m in models:
+        b = adsk.fusion.BRepBody.cast(m)
+        if b is not None:
+            out.append(b)
+            continue
+        occ = adsk.fusion.Occurrence.cast(m)
+        if occ is not None:
+            stack = [occ]
+            while stack:
+                c = stack.pop()
+                try:
+                    out += list(c.bRepBodies)
+                    stack += list(c.childOccurrences)
+                except RuntimeError:
+                    pass
+    return [b for b in out if b.isSolid]
+
+
+def _chamfer_cone(t):
+    """(tip radius, tan of the half angle, radius) of a chamfering bit, in mm."""
+    p = t['params']
+    tip_d = _mm(_v(p, 'tool_tipDiameter', 0) or 0)
+    taper = _v(p, 'tool_taperAngle', math.pi / 4) or math.pi / 4
+    if taper > 2 * math.pi + 1e-6:  # degrees
+        taper = math.radians(taper)
+    return tip_d / 2, math.tan(taper), t['d'] / 2
+
+
+def _seg_dist(px, py, m):
+    """Horizontal distance from (px, py) to a move, and the move's Z there."""
+    ax, ay, az, bx, by, bz = m[1:]
+    dx, dy = bx - ax, by - ay
+    ll = dx * dx + dy * dy
+    u = 0.0 if ll < 1e-12 else max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / ll))
+    return math.hypot(px - ax - u * dx, py - ay - u * dy), az + u * (bz - az)
+
+
+def _deburr_edges(setup):
+    """The edges a chamfering bit in this setup should deburr, as sample points
+    in the WCS: every convex edge where a flat face facing up in the setup meets
+    a wall falling away below it (the face's outline, and its holes' and
+    pockets' rims). Concave edges, where a wall rises from a floor, are inside
+    corners."""
+    wcs = _wcs_fn(setup)
+    zx = setup.workCoordinateSystem.getAsCoordinateSystem()[3]
+    out = []
+    for body in _setup_bodies(setup):
+        for face in body.faces:
+            if not isinstance(face.geometry, adsk.core.Plane):
+                continue
+            ok, n = face.evaluator.getNormalAtPoint(face.pointOnFace)
+            if not ok or n.dotProduct(zx) < 0.999:
+                continue
+            for loop in face.loops:
+                for ce in loop.coEdges:
+                    e = ce.edge
+                    other = [g for g in e.faces if g != face]
+                    if not other:
+                        continue
+                    ev = e.evaluator
+                    ok, p0, p1 = ev.getParameterExtents()
+                    mid = (p0 + p1) / 2
+                    ok, pt = ev.getPointAtParameter(mid)
+                    ok, tan = ev.getFirstDerivative(mid)
+                    if ce.isOpposedToEdge:
+                        tan.scaleBy(-1)
+                    # into the face: the face lies left of its co-edges, seen from its normal
+                    into = n.crossProduct(tan)
+                    ok, nw = other[0].evaluator.getNormalAtPoint(pt)
+                    if not ok or abs(nw.dotProduct(zx)) > 0.999:
+                        continue  # a face beside it in the same plane
+                    if nw.dotProduct(into) >= -1e-6:
+                        continue  # the wall rises from the face: an inside corner
+                    pts = []
+                    for k in range(1, 6):
+                        ok, q = ev.getPointAtParameter(p0 + (p1 - p0) * k / 6)
+                        pts.append(wcs(q))
+                    out.append(pts)
+    return out
+
+
+def _check_chamfers(rep, setup, chamfers, to_world):
+    """DB1: every edge _deburr_edges lists is chamfered: at each of its sample
+    points, a chamfering bit's cone in this setup passes through it. Fusion
+    leaves out edges where the point would go below a floor, so the G-code, not
+    the selection, decides. DB2: the bit does not cut into the tabs (the bodies
+    in the generator's tabs component, which still stand when it deburrs).
+    `chamfers` holds (operation, tool, cuts) per chamfering operation."""
+    sn = setup.name
+    cones = [(o, _chamfer_cone(t), cuts) for o, t, cuts in chamfers]
+    missed = []
+    for pts in _deburr_edges(setup):
+        bad = 0
+        for px, py, pz in pts:
+            hit = False
+            for o, (tip_r, k, rad), cuts in cones:
+                for m in cuts:
+                    if min(m[1], m[4]) > px + rad or max(m[1], m[4]) < px - rad or \
+                            min(m[2], m[5]) > py + rad or max(m[2], m[5]) < py - rad:
+                        continue
+                    d, z = _seg_dist(px, py, m)
+                    h = pz - z
+                    if h > 0 and d < min(rad, tip_r + h * k) - 0.02:
+                        hit = True
+                        break
+                if hit:
+                    break
+            bad += not hit
+        if bad:
+            missed.append(pts[len(pts) // 2])
+    if missed:
+        x, y, z = missed[0]
+        rep.add('DB1', 'warning', sn, None, '%d edge%s not deburred, the first at X%.3f Y%.3f '
+                'Z%.3f' % (len(missed), '' if len(missed) == 1 else 's', x, y, z),
+                edges=len(missed), at=[[round(v, 3) for v in q] for q in missed[:10]])
+    # DB2: the tabs
+    des = adsk.fusion.Design.cast(_app().activeDocument.products.itemByProductType(
+        'DesignProductType'))
+    tabs = [b for occ in des.rootComponent.allOccurrences
+            if occ.component.name == 'carvera-cam tabs' for b in occ.bRepBodies]
+    if not tabs or not cones:
+        return
+    wcs = _wcs_fn(setup)
+    boxes = []
+    for b in tabs:
+        bb = b.boundingBox
+        lo, hi = bb.minPoint, bb.maxPoint
+        cs = [wcs(adsk.core.Point3D.create(x, y, z)) for x in (lo.x, hi.x)
+              for y in (lo.y, hi.y) for z in (lo.z, hi.z)]
+        boxes.append((b, min(c[0] for c in cs), min(c[1] for c in cs),
+                      max(c[0] for c in cs), max(c[1] for c in cs), max(c[2] for c in cs)))
+    for o, (tip_r, k, rad), cuts in cones:
+        hit = None
+        for m in cuts:
+            for px, py, pz in ((m[4], m[5], m[6]), ((m[1] + m[4]) / 2, (m[2] + m[5]) / 2,
+                                                     (m[3] + m[6]) / 2)):
+                for b, x0, y0, x1, y1, ztop in boxes:
+                    if pz > ztop - 0.01:
+                        continue
+                    r = min(rad, tip_r + (ztop - pz) * k)
+                    qx, qy = min(max(px, x0), x1), min(max(py, y0), y1)
+                    if math.hypot(qx - px, qy - py) > r - 0.005:
+                        continue
+                    # the tab point nearest the bit, just inside the tab's top
+                    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+                    l = math.hypot(cx - qx, cy - qy) or 1.0
+                    qx, qy = qx + 0.02 * (cx - qx) / l, qy + 0.02 * (cy - qy) / l
+                    if b.pointContainment(to_world(qx, qy, ztop - 0.005)) == \
+                            adsk.fusion.PointContainment.PointInsidePointContainment:
+                        hit = (px, py, pz, ztop)
+                        break
+                if hit:
+                    break
+            if hit:
+                break
+        if hit:
+            rep.add('DB2', 'error', sn, o.name, 'the chamfering bit cuts into a tab: its point '
+                    'is at Z%.3f at X%.3f Y%.3f, below the tab top at Z%.3f'
+                    % (hit[2], hit[0], hit[1], hit[3]))
 
 
 def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=None):
@@ -644,6 +907,8 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
         a, b, c = to_wcs(ax, ay, az), to_wcs(bx, by, bz), to_wcs(ax, ay, cz)
         other.append((a[0], a[1], b[0], b[1], min(a[2], c[2]), max(a[2], c[2]), rm))
     milled = []  # (moves, tool radius) of the milling operations so far in this setup
+    points = []  # this setup's drill points, for TH4
+    chamfers = []  # (operation, tool, cuts) of the chamfering bits, for DB1 and DB2
     fx_boxes = []
     for b in fixture:
         bb = b.boundingBox
@@ -659,11 +924,16 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
         cuts = [m for m in moves if m[0] != 0 and None not in m[1:]]
         if not cuts:
             continue
+        if t['type'] == 'chamfer mill':
+            chamfers.append((o, dict(t, params=o.parameters), cuts))
         if t['type'] == 'drill':
             holes += _drilled(moves, t, to_world, top, sn)
+            points += _drill_points(moves, t)
         elif o.strategy in ('thread', 'bore', 'circular'):
             _check_plunges(rep, 'TH2', 'error' if o.strategy == 'thread' else 'warning', sn, o,
                            moves, t, holes, milled, to_world, top, rapids=True, other=other)
+            if o.strategy != 'thread':
+                _check_cones(rep, sn, o, cuts, s, points, milled, top, t['d'])
             if t['type'] in MILLING:
                 milled.append((cuts, t['d'] / 2))
         elif t['type'] in MILLING:
@@ -703,7 +973,11 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
         feed_z = next((m[3] for m in moves if m[0] == 1 and m[3] is not None), top)
         off = _mm(_v(o.parameters, 'feedHeight_offset')) if \
             (_v(o.parameters, 'feedHeight_mode') == 'from top') else None
-        op_top = min(top, feed_z - off) if off is not None else top
+        if off is not None:
+            op_top = min(top, feed_z - off)
+        else:  # no feed height from the top: the operation's top height, if set
+            top_h = _mm(_v(o.parameters, 'topHeight_value'))
+            op_top = min(top, top_h) if top_h is not None else top
         depth = op_top - zmin
         tip = 0.0
         if t['type'] == 'drill' and t['tip_angle']:
@@ -714,9 +988,13 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
                     'stops %.1f mm below%s)' % (below, BELOW_STOCK_MAX,
                                                ', plus the drill tip' if tip else ''),
                     z_min=round(zmin, 3))
-        if t['flute_len'] and depth > t['flute_len'] + tip + 0.01 and t['type'] != 'chamfer mill':
+        reach_len = t['flute_len']
+        if t['shoulder_d'] and t['d'] and t['shoulder_d'] < t['d'] - 0.01:
+            reach_len = max(reach_len, t['shoulder_len'])
+        if reach_len and depth > reach_len + tip + 0.01 and t['type'] != 'chamfer mill':
             rep.add('H5', 'error' if t['type'] == 'drill' else 'warning', sn, o.name,
-                    'cuts %.2f mm deep with a %.2f mm flute' % (depth, t['flute_len']),
+                    'cuts %.2f mm deep with a %.2f mm %s' % (
+                        depth, reach_len, 'flute' if reach_len == t['flute_len'] else 'neck'),
                     depth=round(depth, 2))
         reach = top - zmin
         if t['body_len']:
@@ -753,6 +1031,7 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
                 hits += 1
                 rep.add('X1', 'error', sn, o.name, 'the tool enters the fixture body %r at '
                         'X%.2f Y%.2f Z%.2f' % (hit[3], hit[0], hit[1], hit[2]))
+    _check_chamfers(rep, s, chamfers, to_world)
 
 
 # ------------------------------------------------------------------ check
@@ -777,11 +1056,11 @@ def check(args=None):
     try:
         with open(STATE, encoding='utf-8') as f:
             state = json.load(f)
-        if state.get('doc') != _app().activeDocument.name or state.get('setups') != [s.name for s in setups]:
+        if state.get('doc') != _doc_id() or state.get('setups') != [s.name for s in setups]:
             state = None
     except (OSError, ValueError):
         state = None
-    state = state or {'doc': _app().activeDocument.name, 'setups': [s.name for s in setups],
+    state = state or {'doc': _doc_id(), 'setups': [s.name for s in setups],
                       'done': [], 'items': []}
     rep = Report()
     rep.items = state['items']
@@ -833,6 +1112,18 @@ def check(args=None):
             earlier.append({'strategy': o.strategy, 'type': t['type'], 'd': t['d'] or 0,
                             'multi': bool(_v(o.parameters, 'doMultipleDepths')),
                             'number': t['number']})
+        # N4: the document's NC programs hold some of this setup's operations
+        # but leave one out, so the machine never cuts it
+        held, programmed = set(), False
+        for nc in cam.ncPrograms:
+            for item in nc.operations:
+                inner = list(item.allOperations) if hasattr(item, 'allOperations') else [item]
+                held |= {x.operationId for x in inner}
+                programmed |= any(x.parentSetup.name == sn for x in inner)
+        if programmed:
+            for o in ops:
+                if o.operationId not in held:
+                    rep.add('N4', 'error', sn, o.name, 'no NC program includes this operation')
         if ok:
             folder = tempfile.mkdtemp(prefix='carvera-check-')
             text = _post_setup(cam, s, ok, post, folder)
@@ -855,3 +1146,62 @@ def check(args=None):
         except OSError:
             pass
     print(json.dumps(out, indent=1))
+
+
+# ------------------------------------------------------------------ summary
+
+def summary(args=None):
+    """Facts per operation, read from the G-code, for comparing two builds of a
+    part (the script's and the recipes'): the tool, machining time, cut length,
+    deepest Z, the area the cuts span, and every plunge (a straight move down at
+    the feed), in each setup's WCS, in mm, with the plunges also in the design's
+    frame. Prints them as JSON."""
+    args = args or {}
+    cam = adsk.cam.CAM.cast(_app().activeDocument.products.itemByProductType('CAMProductType'))
+    cc = runpy.run_path(os.path.join(HERE, 'carvera_cam.py'))
+    post = cc['_post'](cc['_fetch_community']([])['post'])
+    out = {'document': _app().activeDocument.name, 'setups': []}
+    for s in cam.setups:
+        if s.operationType != adsk.cam.OperationTypes.MillingOperation:
+            continue
+        ops = [o for o in s.allOperations if not o.isSuppressed and o.hasToolpath
+               and o.isToolpathValid]
+        if not ops:
+            continue
+        text = _post_setup(cam, s, ops, post, tempfile.mkdtemp(prefix='carvera-summary-'))
+        names = [_norm(o.name) for o in ops]
+        by_op, i = {}, 0
+        for name, moves in parse_gcode(text):
+            if i < len(names) and name == names[i]:
+                by_op[i] = moves
+                i += 1
+            elif i and (i - 1) in by_op:
+                by_op[i - 1] += moves
+        tw = _wcs_to_world(s)
+        rows = []
+        for k, o in enumerate(ops):
+            moves = [m for m in by_op.get(k, []) if None not in m[1:]]
+            cuts = [m for m in moves if m[0] != 0]
+            plunges = sorted({(round(m[4], 3), round(m[5], 3), round(m[6], 3)) for m in cuts
+                              if m[0] == 1 and abs(m[4] - m[1]) < 1e-3 and abs(m[5] - m[2]) < 1e-3
+                              and m[6] < m[3] - 1e-3})
+            t = _tool(o)
+            try:
+                sec = cam.getMachiningTime(o, 1, 1, 1).machiningTime
+            except RuntimeError:
+                sec = None
+            rows.append({
+                'operation': o.name, 'strategy': o.strategy, 'T': t['number'], 'tool': t['desc'],
+                'seconds': round(sec, 1) if sec is not None else None,
+                'cut_length_mm': round(sum(math.dist(m[1:4], m[4:7]) for m in cuts), 1),
+                'z_min': round(min((min(m[3], m[6]) for m in cuts), default=0), 3),
+                'xy_extent': [round(f(m[j] for m in cuts), 2) for f, j in
+                              ((min, 4), (min, 5), (max, 4), (max, 5))] if cuts else None,
+                'plunges': len(plunges),
+                'plunge_points': [list(p) for p in plunges[:args.get('max_points', 40)]],
+                # the same points in the design's frame, as analyze gives features
+                'plunge_points_design': [[round(v * 10, 3) for v in tw.coords(*p)]
+                                         for p in plunges[:args.get('max_points', 40)]]})
+        out['setups'].append({'setup': s.name, 'operations': rows})
+    print(json.dumps(out, indent=1))
+    return out
