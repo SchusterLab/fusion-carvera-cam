@@ -139,10 +139,11 @@ Each name below is the operation's name; the multi-depth ones (`doMultipleDepths
 
 ### Finishing passes
 
-T3, each in one pass, in this order:
+T3, each in one pass, in this order, with the drills of step 16a among them:
 
 15. **Ends (finish)**, as Ends.
 16. **Outline (finish)**, as Outline.
+16a. **Drill <diameter>** for the holes whose `opens_in` is a pocket floor: as in step 25, with `topHeight_offset` `0.2mm` (the floor still carries the rough pocket's allowance), so that the finishing pocket cleans up the burrs they leave on the floor.
 17. **Pockets (finish)**: as Pockets, with top at H and no floor allowance; a shelf region that holds deeper ones is finished on its own (`Pockets (finish) at <depth> mm`) with `useStockContours` `true` and `stock_contours` that region less the deeper regions and floors inside it, so the tool runs over them only as far as its radius.
 18. **Bore M4 <diameter> (finish)**, for blind M4 holes only (threads.toml's `blind_finish_pass`).
 19. **Narrow pocket (finish)**, as Narrow pocket.
@@ -155,7 +156,7 @@ T3, each in one pass, in this order:
 23. **Corners**: pockets and windows whose `corner_radius` is more than 0.001 mm below 1.5875 mm (an R1.5875 corner is the end mill's own), by [corners.md](corners.md), in their place here.
     The heights it needs: a pocket's corner cut starts at H, or, for a floor inside a shelf region, at that region's floor; its bottom is `'from contour'`; a window's runs from H through the part.
 24. **Bore <diameter>** for the holes small end mills bore: that end mill, `bore`, `stepover` `0.2mm`, `numberOfStepovers` `2`, top at the hole top, `bottomHeight_offset` `-0.5mm` through, `0mm` blind.
-25. **Drill <diameter>**, one per drill and through or blind (` (blind)`): the plain drilled holes first, then the tap drills of threads.toml.
+25. **Drill <diameter>**, one per drill and through or blind (` (blind)`), for the holes not drilled before the finishing passes: the plain drilled holes first, then the tap drills of threads.toml.
     `drill`, `holes`, top at the hole top, the `[drill]` cycle, through holes `breakThroughDepth` `0.5mm` and `drillTipThroughBottom` `true`, blind holes `breakThroughDepth` `0mm` and `drillTipThroughBottom` `true` (full diameter to the bottom: the point goes its length deeper).
     Warn about each blind hole with no modelled point, or one whose `point_angle` differs from the drill's by more than 0.5°.
 26. **Thread <size>**, one per size and through or blind: the size's thread mill, `thread`, `holes`, with

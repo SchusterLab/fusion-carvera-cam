@@ -4302,6 +4302,83 @@ def _side_ops(b, setup, a, side, plan, warnings):
             staged_bore(hs, which, (ENDMILL, which), params,
                         bottom, 'Bore %.2f%s' % (h['dia'], suffix))
 
+    def blind_tip_warning(desc, hs):
+        if b.dry:
+            return
+        angle = b.tools.tip_angle(desc)
+        # a hole whose modelled point matches the drill's is cut as modelled
+        hs = [h for h in hs if h['point_angle'] is None or abs(h['point_angle'] - angle) > 0.5]
+        if not hs:
+            return
+        tip = b.tools.tip_length(desc)
+        name = desc.split('*')[0]
+        model = 'Model the point in the design (in the Hole command, a %g° drill point) so '                 'the design shows what is cut' % round(angle, 1)
+        plain = [h for h in hs if h['point_angle'] is None]
+        if plain:
+            where = ', '.join('(%g, %g)' % (h['x'], h['y']) for h in plain)
+            warnings.append('the %d blind %s mm hole%s drilled by the %s mm drill %s no modelled '
+                            "point: drilled full diameter to the bottom, the drill's %g° point "
+                            "goes %.2f mm deeper than the hole's bottom and leaves a cone there. "
+                            '%s; at x, y = %s mm'
+                            % (len(plain), name, '' if len(plain) == 1 else 's', name,
+                               'has' if len(plain) == 1 else 'have', round(angle, 1), tip,
+                               model, where))
+        for h in hs:
+            if h['point_angle'] is None:
+                continue
+            # how far the modelled point reaches below the hole's full diameter
+            modelled = h['dia'] / 2 / math.tan(math.radians(h['point_angle'] / 2))
+            if modelled < tip:
+                what = 'goes %.2f mm deeper than the modelled point' % (tip - modelled)
+            else:
+                what = 'stops %.2f mm short of the modelled tip and leaves material there' % (
+                    modelled - tip)
+            warnings.append("the blind %s mm hole at x, y = (%g, %g) mm has a %g° point modelled, "
+                            "but the %s mm drill's point is %g°: it %s. %s"
+                            % (name, h['x'], h['y'], round(h['point_angle'], 1), name,
+                               round(angle, 1), what, model))
+        thin = [h['depth'] for h in hs if thickness - h['depth'] < tip + 0.2]
+        if thin:
+            warnings.append("a blind %s mm hole's drill point comes within 0.2 mm of the part's "
+                            'other face, or through it, under a hole %g mm deep' % (name, max(thin)))
+
+    pocket_floors = {f['face'].tempId for f in pockets}
+
+    def in_floor(h):
+        rim = _hole_ends(h, top)[0]
+        return rim is not None and rim.face.tempId in pocket_floors
+
+    def drill_ops(floor):
+        """The drills (plain holes, then tap drills), grouped by tool, of the
+        holes that open in a pocket floor (floor true) or of the others. Those in
+        a floor are drilled before the finishing pockets, so that the finishing
+        pass cleans up the burrs the drill leaves on the floor."""
+        out = []
+        by_drill = {}
+        for h, desc in [(h, d) for h, d in drilled if in_floor(h) == floor]:
+            by_drill.setdefault(desc, []).append(h)
+        for h, t in [(h, t) for h, t in tapped if in_floor(h) == floor]:
+            if THREADS[t][1]:
+                by_drill.setdefault(THREADS[t][1], []).append(h)
+        for desc, hs in by_drill.items():
+            for through in (True, False):
+                sub = [h for h in hs if h['through'] == through]
+                if not sub:
+                    continue
+                params = dict(DRILL, **_drill_ends(through), **from_hole_top())
+                if floor:
+                    # the floor still carries the rough pocket's allowance
+                    params['topHeight_offset'] = '%gmm' % POCKET_FLOOR_ALLOWANCE
+                if not through:
+                    # full diameter to the bottom: the drill's point goes below it
+                    params['drillTipThroughBottom'] = 'true'
+                    blind_tip_warning(desc, sub)
+                out.append(b.op(
+                    setup, 'drill', desc,
+                    'Drill ' + desc.split('*')[0] + ('' if through else ' (blind)'),
+                    params, _sel_faces('holeFaces', [h['face'] for h in sub])))
+        return out
+
     for which, multi, suffix in passes:
         tk = (ENDMILL, which)
         # outline: the top setup cuts down to the tab band, the bottom setup up to it
@@ -4324,6 +4401,8 @@ def _side_ops(b, setup, a, side, plan, warnings):
                 _sel_silhouette(), _sel_faces('entryPositions', entry), set_lo)))
         if which == 'rough':
             ops['main'] += later_drills()
+        if which == 'finish':
+            ops['main'] += drill_ops(True)
         if pockets:
             shelves = lay['shelves'] if lay else {}
             # what a pocket op selects: the plain floors, and one chain per shelf
@@ -4679,67 +4758,8 @@ def _side_ops(b, setup, a, side, plan, warnings):
             ops['main'].append(b.op(setup, 'bore', em, 'Bore %.2f' % hs[0]['dia'], params,
                                     _sel_faces('circularFaces', [x['face'] for x in hs])))
 
-    def blind_tip_warning(desc, hs):
-        if b.dry:
-            return
-        angle = b.tools.tip_angle(desc)
-        # a hole whose modelled point matches the drill's is cut as modelled
-        hs = [h for h in hs if h['point_angle'] is None or abs(h['point_angle'] - angle) > 0.5]
-        if not hs:
-            return
-        tip = b.tools.tip_length(desc)
-        name = desc.split('*')[0]
-        model = 'Model the point in the design (in the Hole command, a %g° drill point) so '                 'the design shows what is cut' % round(angle, 1)
-        plain = [h for h in hs if h['point_angle'] is None]
-        if plain:
-            where = ', '.join('(%g, %g)' % (h['x'], h['y']) for h in plain)
-            warnings.append('the %d blind %s mm hole%s drilled by the %s mm drill %s no modelled '
-                            "point: drilled full diameter to the bottom, the drill's %g° point "
-                            "goes %.2f mm deeper than the hole's bottom and leaves a cone there. "
-                            '%s; at x, y = %s mm'
-                            % (len(plain), name, '' if len(plain) == 1 else 's', name,
-                               'has' if len(plain) == 1 else 'have', round(angle, 1), tip,
-                               model, where))
-        for h in hs:
-            if h['point_angle'] is None:
-                continue
-            # how far the modelled point reaches below the hole's full diameter
-            modelled = h['dia'] / 2 / math.tan(math.radians(h['point_angle'] / 2))
-            if modelled < tip:
-                what = 'goes %.2f mm deeper than the modelled point' % (tip - modelled)
-            else:
-                what = 'stops %.2f mm short of the modelled tip and leaves material there' % (
-                    modelled - tip)
-            warnings.append("the blind %s mm hole at x, y = (%g, %g) mm has a %g° point modelled, "
-                            "but the %s mm drill's point is %g°: it %s. %s"
-                            % (name, h['x'], h['y'], round(h['point_angle'], 1), name,
-                               round(angle, 1), what, model))
-        thin = [h['depth'] for h in hs if thickness - h['depth'] < tip + 0.2]
-        if thin:
-            warnings.append("a blind %s mm hole's drill point comes within 0.2 mm of the part's "
-                            'other face, or through it, under a hole %g mm deep' % (name, max(thin)))
-
-    # drills (plain holes, then tap drills), grouped by tool
-    by_drill = {}
-    for h, desc in drilled:
-        by_drill.setdefault(desc, []).append(h)
-    for h, t in tapped:
-        if THREADS[t][1]:
-            by_drill.setdefault(THREADS[t][1], []).append(h)
-    for desc, hs in by_drill.items():
-        for through in (True, False):
-            sub = [h for h in hs if h['through'] == through]
-            if not sub:
-                continue
-            params = dict(DRILL, **_drill_ends(through), **from_hole_top())
-            if not through:
-                # full diameter to the bottom: the drill's point goes below it
-                params['drillTipThroughBottom'] = 'true'
-                blind_tip_warning(desc, sub)
-            ops['main'].append(b.op(
-                setup, 'drill', desc,
-                'Drill ' + desc.split('*')[0] + ('' if through else ' (blind)'),
-                params, _sel_faces('holeFaces', [h['face'] for h in sub])))
+    # drills (plain holes, then tap drills) of the holes not in a pocket floor
+    ops['main'] += drill_ops(False)
 
     # thread mills
     by_thread = {}
