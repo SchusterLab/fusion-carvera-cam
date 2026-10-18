@@ -28,6 +28,7 @@ The stock decides how the part is machined, and `build` works it out from the st
 
 **Window machining** cuts the part out of larger stock.
 An outline cut, one end mill (3.175 mm) wide, runs round the part and leaves four tabs holding it to the stock, and the last program, `_tabs`, cuts them and frees the part.
+Before `_tabs` runs, the operator hot-glues the part to the stock round it, so that the freed part stays put instead of being thrown by the end mill.
 The stock must reach at least 6.2 mm past the part on every side: the outline cut, plus a 3 mm frame of stock round it that holds the part through the tabs and takes the vise's grip.
 With two setups, the tabs sit at mid-thickness, and the bottom setup cuts them from below.
 With one, the tabs sit on the part's bottom face, and the top setup cuts them.
@@ -238,7 +239,7 @@ Ask the user to run Fusion's simulation with collision checking on each setup be
 Report to the user, plainly:
 
 - the tool list by slot (T1, T2, …), and which slots need a manual tool change;
-- the NC programs and their order on the machine: run `_top`; with two setups, flip the part and run `_bottom`; in window machining, run `_tabs` last, which cuts the four tabs and frees the part (in Fusion they are named `<part>_top (carvera-cam)` and so on; the files they write are `<part>_top.nc` and so on);
+- the NC programs and their order on the machine: run `_top`; with two setups, flip the part and run `_bottom`; in window machining, hot-glue the part to the stock round it, then run `_tabs` last, which cuts the four tabs and frees the part (in Fusion they are named `<part>_top (carvera-cam)` and so on; the files they write are `<part>_top.nc` and so on);
 - the total machining time, and that aluminum runs the same programs at 200% feed and spindle override;
 - every warning from `build`, `generate` and the check, and every feature the generator did not machine;
 - how the two ways compared, and any change you made to the skill.

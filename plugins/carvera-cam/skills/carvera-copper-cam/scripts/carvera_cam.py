@@ -5070,6 +5070,9 @@ def build(args):
         warnings.append('the design was a Part design, which holds only one component; it is '
                         'now a Hybrid design, so that the vise, tabs and face patches can be '
                         'components. Saving the document keeps the change')
+    if outline:
+        warnings.append('before running the _tabs program, hot-glue the part to the stock '
+                        'round it, so that the part stays put when the tab cut frees it')
     if outline and not tab_clear:
         warnings.append('the tab band at z=%g mm overlaps a pocket that opens to the side '
                         '(open over z %s mm); pass a clear tab_z' % (tab_z, openings))

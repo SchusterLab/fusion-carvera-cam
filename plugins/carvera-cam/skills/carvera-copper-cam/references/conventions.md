@@ -225,4 +225,4 @@ Each part gets one program per setup, plus one for the tabs in window machining,
 |---|---|
 | `<part>_top` | the top setup, except the tab cut with one setup |
 | `<part>_bottom` | the bottom setup, if any, except the tab cut |
-| `<part>_tabs` | the tab cut only, from the last setup; window machining only |
+| `<part>_tabs` | the tab cut only, from the last setup; window machining only. Before running it, the operator hot-glues the part to the stock round it, so the freed part stays put |
