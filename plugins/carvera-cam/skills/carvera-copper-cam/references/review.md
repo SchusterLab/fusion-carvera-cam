@@ -33,7 +33,9 @@ Each item names the checker rule that covers the same ground, from [rules.md](ru
    An operation's deepest cut, below where it starts, fits within the tool's flute, or within its neck for a tool with a neck narrower than its cut, such as a thread mill; and the depth below the stock top stays under three quarters of how far the tool sticks out of its holder.
 6. **Every edge is deburred, and the bit stays out of the tabs** (DB1, DB2).
    Every outer edge of a face facing up in the setup, and the rim of every hole and pocket in it, a counterbore's floor included, should have a chamfering pass along it; select the chamfer operations and look.
+   That includes the edges where a floor open to the side meets the part's sides, and the rim of an island's top.
    The exception is an edge on the stock's own sides, where the stock fits the part and the face is not faced: no tool cuts it, so it is not deburred (DB1 skips it too).
+   The bit also cannot reach within its radius, 1.59 mm, of a wall rising beside an edge, so the pass stops that short of the wall (DB1 skips those points too).
    Fusion silently leaves out an edge where the bit's point would go below a floor, so an edge with no pass is likely one of those.
    At the outline, the bit's deepest Z must stay above the tabs' top.
 7. **The part stays held** (TB1 checks that only the tab program cuts the tabs).

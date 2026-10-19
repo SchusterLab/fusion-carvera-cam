@@ -220,7 +220,8 @@ def make_open_floor(args=None):
     """A throwaway 30 x 20 x 3 mm plate whose top is cut 1.2 mm down all over but
     for two islands: an 8 x 8 mm boss and a 2.2 mm pin, close enough that the
     passes round them meet. The floor runs out to every side of the part, so
-    it has no walls along its sides, for the passes round islands. Its stock
+    it has no walls along its sides, for the passes round islands, and a 3 mm
+    hole goes through it, for the deburr of its rim beside them. Its stock
     must be larger than the part (for example 45 x 35 x 4 mm, "y_offset" 7):
     in stock of the part's own size, the passes would run into the jaws."""
     app = adsk.core.Application.get()
@@ -245,6 +246,10 @@ def make_open_floor(args=None):
     # everything but the two islands: the profile with the largest area
     prof = max(s.profiles, key=lambda p: p.areaProperties().area)
     ext.addSimple(prof, V('-1.2 mm'), adsk.fusion.FeatureOperations.CutFeatureOperation)
+    # a 3 mm hole through the floor, whose rim the deburr takes beside the islands
+    s2 = root.sketches.add(root.xYConstructionPlane)
+    s2.sketchCurves.sketchCircles.addByCenterRadius(P(9, -5), 0.15)
+    ext.addSimple(s2.profiles.item(0), V('3 mm'), adsk.fusion.FeatureOperations.CutFeatureOperation)
 
     bad = [des.timeline.item(i).name for i in range(des.timeline.count)
            if des.timeline.item(i).healthState != adsk.fusion.FeatureHealthStates.HealthyFeatureHealthState]

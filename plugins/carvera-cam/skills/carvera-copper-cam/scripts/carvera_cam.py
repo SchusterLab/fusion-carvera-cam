@@ -1344,6 +1344,8 @@ def _sel_items(design, a, L, param, items, top):
       face_deburr:<top|bottom>  the face's edges a deburr takes: all of them, but
                          where the stock fits the part and the face is not faced,
                          not the edges on the stock's own sides, which no tool cuts
+      floor_deburr:<i>   the edges where walls fall away from floor i (or another
+                         face level with the part's face), which a deburr takes
       patch:<name>       a face patch (pockets)
       patch_outline:<n>  a patch's outer loop, as a closed boundary (pockets)
       region:<k>         a shelf region's closed chain
@@ -1395,6 +1397,8 @@ def _sel_items(design, a, L, param, items, top):
                 axes = [] if st['outline'] or faced else ['y'] if st['ends'] else ['x', 'y']
                 face = _ref(design, a, L, 'face:' + rest)
                 _add_deburr(sels, face, _raw_edges(face, a['body'], axes) if axes else set())
+            elif kind == 'floor_deburr':
+                _add_falling_edges(sels, a['floors'][int(rest)]['face'])
             elif kind == 'patch':
                 sels.createNewPocketSelection().inputGeometry = [_ref(design, a, L, it)]
             elif kind == 'patch_outline':
@@ -2011,11 +2015,86 @@ def _add_deburr(sels, face, raw):
         s.isReverted = not run[0].isOpposedToEdge
 
 
-def _sel_deburr(face, raw):
+def _falls_away(face, ce):
+    """Does the wall at co-edge `ce` of the up-facing `face` fall away below it,
+    making a convex edge with a burr to take off? A wall that rises from the
+    face makes an inside corner, and a face in the same plane no edge at all."""
+    e = ce.edge
+    other = [g for g in e.faces if g != face]
+    if not other:
+        return False
+    ev = e.evaluator
+    ok, t0, t1 = ev.getParameterExtents()
+    ok, pt = ev.getPointAtParameter((t0 + t1) / 2)
+    ok, tan = ev.getFirstDerivative((t0 + t1) / 2)
+    if ce.isOpposedToEdge:
+        tan.scaleBy(-1)
+    ok, n = face.evaluator.getNormalAtPoint(pt)
+    into = n.crossProduct(tan)  # the face lies left of its co-edges, seen from its normal
+    ok, nw = other[0].evaluator.getNormalAtPoint(pt)
+    if not ok or abs(nw.dotProduct(n)) > 0.999:
+        return False
+    return nw.dotProduct(into) < -1e-6
+
+
+def _add_falling_edges(sels, face):
+    """Add to `sels` the edges where walls fall away from `face` (see
+    _falls_away): a loop whose edges all do, as the face's contour (Fusion
+    selects a face's outer loop, its inner loops or all of them), and each run
+    of such edges in a loop where walls also rise, as an open chain with the
+    bit outside the part, as _add_deburr runs it."""
+    loops = [(lp, [_falls_away(face, ce) for ce in lp.coEdges]) for lp in face.loops]
+    outer = [fl for lp, fl in loops if lp.isOuter][0]
+    inner = [fl for lp, fl in loops if not lp.isOuter]
+    whole_outer = all(outer)
+    whole_inner = bool(inner) and all(all(fl) for fl in inner)
+    if whole_outer or whole_inner:
+        s = sels.createNewFaceContourSelection()
+        s.inputGeometry = [face]
+        if whole_outer and (whole_inner or not inner):
+            pass  # every loop
+        elif whole_outer:
+            s.loopType = adsk.cam.LoopTypes.OnlyOutsideLoops
+        else:
+            s.loopType = adsk.cam.LoopTypes.OnlyInsideLoops
+    for lp, fl in loops:
+        if all(fl) and (whole_inner if not lp.isOuter else True):
+            continue  # in the face's contour
+        ces = list(lp.coEdges)
+        if all(fl):
+            runs = [ces]  # a whole inner loop beside inner loops that rise: one open chain
+        else:
+            k0 = fl.index(False)
+            runs, run = [], []
+            for ce, ok in zip(ces[k0:] + ces[:k0], fl[k0:] + fl[:k0]):
+                if ok:
+                    run.append(ce)
+                elif run:
+                    runs.append(run)
+                    run = []
+            if run:
+                runs.append(run)
+        for run in runs:
+            s = sels.createNewChainSelection()
+            s.inputGeometry = [ce.edge for ce in run]
+            s.isOpen = True
+            s.isReverted = not run[0].isOpposedToEdge
+
+
+def _has_falling_edges(face):
+    return any(_falls_away(face, ce) for lp in face.loops for ce in lp.coEdges)
+
+
+def _sel_deburr_faces(faces, main=None, raw=()):
+    """The deburr's contours: the main face's edges but the raw ones (see
+    _add_deburr), and the falling edges of each of `faces`."""
     def f(params):
         v = params.itemByName('contours').value
         sels = v.getCurveSelections()
-        _add_deburr(sels, face, raw)
+        if main is not None:
+            _add_deburr(sels, main, raw)
+        for face in faces:
+            _add_falling_edges(sels, face)
         v.applyCurveSelections(sels)
     return f
 
@@ -3101,13 +3180,16 @@ def _planned_cuts(a, plan, box):
         if plan['outline']:
             cuts[side].append(('the outline cut', ring(D), band_top if top else band_bot))
         # the passes of a pocket open to the side run out to one tool radius
-        # past the outline
+        # past the outline, and its deburr goes below its floor
         for f in a['floors']:
             if f['role'] == 'pocket' and f['side_open'] and f['side'] == side:
                 ob = [lp for lp in f['face'].loops if lp.isOuter][0].boundingBox
+                fz = f['z'] / 10
+                if plan['chamfer']:
+                    fz = fz - deburr if top else fz + deburr
                 cuts[side].append(('the pocket open to the side at z=%g mm' % f['z'],
                                    (ob.minPoint.x - D, ob.minPoint.y - D,
-                                    ob.maxPoint.x + D, ob.maxPoint.y + D), f['z'] / 10))
+                                    ob.maxPoint.x + D, ob.maxPoint.y + D), fz))
     for e in (lay['ends'] if plan.get('ends') else []):
         x0, y0, x1, y1 = e['box']
         cuts['top'].append(("the cut at the part's end", (x0 - D, y0 - TOOL_R, x1 + D, y1 + TOOL_R),
@@ -5143,25 +5225,48 @@ def _side_ops(b, setup, a, side, plan, warnings):
 
     # deburr the outer face's edges, the bit's point kept off the shallowest floor
     # and blind hole bottom below the face, and off the tabs, which still stand in
-    # the outline cut; Fusion leaves out any edge where the point would go deeper
+    # the outline cut; Fusion leaves out any edge where the point would go deeper.
+    # The other faces level with it, such as an island's top, go with it; each
+    # floor open to the side, whose edges fall away where it meets the part's
+    # sides, gets the same below its own height
     if face is not None and plan['chamfer']:
         width = float(CHAMFER_OP['chamferWidth'][:-2])
-        room = [f['depth'] for f in floors if f['role'] == 'pocket']
-        room += [h['depth'] for h in holes if not h['through']]
-        if plan['outline']:
-            room.append(a['ztop'] - band_top if top else band_bot - a['zbot'])
-        room.append(CHAMFER_TIP_MAX + width + CHAMFER_CLEAR)
-        tip = max(CHAMFER_TIP_MIN, min(CHAMFER_TIP_MAX, min(room) - width - CHAMFER_CLEAR))
-        if width + tip > min(room) - 0.02:
-            warnings.append('a floor or the tabs lie %.2f mm below the %s face, too close for '
-                            'a %g mm chamfer: the Deburr leaves those edges out or cuts the tabs'
-                            % (min(room), side, width))
+
+        def chamfer_tip(depth, what):
+            # the point's offset below a chamfer at `depth` mm below the face
+            room = [f['depth'] - depth for f in floors
+                    if f['role'] == 'pocket' and f['depth'] > depth + 1e-6]
+            room += [h['depth'] - depth for h in holes
+                     if not h['through'] and h['depth'] > depth + 1e-6]
+            if plan['outline']:
+                room.append((a['ztop'] - band_top if top else band_bot - a['zbot']) - depth)
+            room.append(CHAMFER_TIP_MAX + width + CHAMFER_CLEAR)
+            tip = max(CHAMFER_TIP_MIN, min(CHAMFER_TIP_MAX, min(room) - width - CHAMFER_CLEAR))
+            if width + tip > min(room) - 0.02:
+                warnings.append('a floor or the tabs lie %.2f mm below %s, too close for a '
+                                '%g mm chamfer: the deburr leaves those edges out or cuts the '
+                                'tabs' % (min(room), what, width))
+            return tip
+        tip = chamfer_tip(0.0, 'the %s face' % side)
         # the stock's own sides, where it fits the part, are left as they are when
         # the face is not faced: no tool cuts them, so they have no burrs
         axes = [] if plan['outline'] or facing else ['y'] if plan['ends'] else ['x', 'y']
         raw = _raw_edges(face, body, axes) if axes else set()
+        level = [f['face'] for f in floors if f['role'] == 'face' and f['face'] != face
+                 and _has_falling_edges(f['face'])]
         ops['main'].append(b.op(setup, 'chamfer2d', CHAMFER, 'Deburr', dict(
-            CHAMFER_OP, chamferTipOffset='%gmm' % round(tip, 3)), _sel_deburr(face, raw)))
+            CHAMFER_OP, chamferTipOffset='%gmm' % round(tip, 3)),
+            _sel_deburr_faces(level, face, raw)))
+        by_depth = {}
+        for f in floors:
+            if f['role'] == 'pocket' and f['side_open'] and _has_falling_edges(f['face']):
+                by_depth.setdefault(round(f['depth'], 3), []).append(f['face'])
+        for dep, fs in sorted(by_depth.items()):
+            t = chamfer_tip(dep, 'the pocket open to the side %g mm deep' % dep)
+            ops['main'].append(b.op(
+                setup, 'chamfer2d', CHAMFER,
+                'Deburr open pockets' + (' %g mm' % dep if len(by_depth) > 1 else ''),
+                dict(CHAMFER_OP, chamferTipOffset='%gmm' % round(t, 3)), _sel_deburr_faces(fs)))
 
     # the edges of the holes under counterbores, at the counterbore's floor, which
     # the face's deburr does not reach; the point goes down the hole below

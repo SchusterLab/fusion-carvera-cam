@@ -47,6 +47,7 @@ ATC_SLOTS = 6
 RETRACT_MIN = 2.0            # lateral rapids at least this far above the stock top
 CHAMFER_TIP_MIN = 0.1        # the chamfering bit's point kept this far off the edge
 CHAMFER_WIDTH_MAX = 0.2      # a deburr's chamfer (the generator's: 0.1 mm)
+CHAMFER_R = 1.5875           # the 1/8" chamfering bit's radius, where no deburr says otherwise
 BREAKTHROUGH = 0.5           # a through hole's drill goes this far past its bottom
 SURFACES = '(part surfaces)'  # the check's last step, after every setup
 MILLING = ('flat end mill', 'ball end mill', 'bull nose end mill', 'chamfer mill',
@@ -809,7 +810,9 @@ def _deburr_edges(setup):
     in the WCS: every convex edge where a flat face facing up in the setup meets
     a wall falling away below it (the face's outline, and its holes' and
     pockets' rims). Concave edges, where a wall rises from a floor, are inside
-    corners."""
+    corners. Each edge comes with points along the walls rising from its face,
+    every 0.2 mm, in the WCS: the bit's body cannot come nearer them than its
+    radius."""
     wcs = _wcs_fn(setup)
     zx = setup.workCoordinateSystem.getAsCoordinateSystem()[3]
     out = []
@@ -820,6 +823,7 @@ def _deburr_edges(setup):
             ok, n = face.evaluator.getNormalAtPoint(face.pointOnFace)
             if not ok or n.dotProduct(zx) < 0.999:
                 continue
+            rising, edges = [], []
             for loop in face.loops:
                 for ce in loop.coEdges:
                     e = ce.edge
@@ -839,12 +843,22 @@ def _deburr_edges(setup):
                     if not ok or abs(nw.dotProduct(zx)) > 0.999:
                         continue  # a face beside it in the same plane
                     if nw.dotProduct(into) >= -1e-6:
-                        continue  # the wall rises from the face: an inside corner
+                        # the wall rises from the face: an inside corner
+                        n_ = max(2, int(e.length / 0.02))
+                        for k in range(n_ + 1):
+                            try:  # the end parameters can fall just outside the edge's range
+                                ok, q = ev.getPointAtParameter(p0 + (p1 - p0) * k / n_)
+                            except RuntimeError:
+                                continue
+                            if ok:
+                                rising.append(wcs(q))
+                        continue
                     pts = []
                     for k in range(1, 6):
                         ok, q = ev.getPointAtParameter(p0 + (p1 - p0) * k / 6)
                         pts.append(wcs(q))
-                    out.append(pts)
+                    edges.append(pts)
+            out += [(pts, rising) for pts in edges]
     return out
 
 
@@ -868,12 +882,17 @@ def _check_chamfers(rep, setup, chamfers, to_world, box=None, top=None):
     `chamfers` holds (operation, tool, cuts) per chamfering operation."""
     sn = setup.name
     cones = [(o, _chamfer_cone(t), cuts) for o, t, cuts in chamfers]
+    # where a wall rises from the face within the bit's radius of an edge, the
+    # bit's body meets the wall before its point reaches the edge
+    reach = min((c[2] for _, c, _ in cones), default=CHAMFER_R)
     missed = []
-    for pts in _deburr_edges(setup):
+    for pts, rising in _deburr_edges(setup):
         if _raw_stock_edge(pts, box, top):
             continue
         bad = 0
         for px, py, pz in pts:
+            if any(math.hypot(px - wx, py - wy) < reach for wx, wy, _ in rising):
+                continue
             hit = False
             for o, (tip_r, k, rad), cuts in cones:
                 for m in cuts:

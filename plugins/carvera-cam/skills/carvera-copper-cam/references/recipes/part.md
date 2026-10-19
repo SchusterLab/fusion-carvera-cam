@@ -47,7 +47,7 @@ Call `build` with the same arguments as the script's build, and with `"mode": "r
 `face:<top|bottom>`, `floor:<i>`, `hole_bottom:<i>` (a blind hole's bottom face), `window_top:<j>` (the face a window opens in), `patch:<top|bottom>` and `patch:<top|bottom> finish` (the face patches), `tab:<top|bottom>`.
 
 **What it cuts**, in `select`:
-- `pockets`, `contours` and `stock_contours`, lists of: `floor:<i>`, `floor_outline:<i>` (the floor's outer loop, the tool inside), `floor_inner:<i>` (its inner loops), `hole_floor_inner:<i>` (the inner loops of a counterbore's floor), `face:<top|bottom>`, `face_deburr:<top|bottom>` (the edges of the face a deburr takes; see Deburr), `patch:<name>`, `patch_outline:<top|bottom>` (a patch's outer edge as a closed boundary), `region:<k>`, `window:<j>`, `hole_rim:<i>`, `chains:<corner|tabs|ends>`, `slot:<k>`, `silhouette`, `path:<id>`.
+- `pockets`, `contours` and `stock_contours`, lists of: `floor:<i>`, `floor_outline:<i>` (the floor's outer loop, the tool inside), `floor_inner:<i>` (its inner loops), `hole_floor_inner:<i>` (the inner loops of a counterbore's floor), `face:<top|bottom>`, `face_deburr:<top|bottom>` (the edges of the face a deburr takes; see Deburr), `floor_deburr:<i>` (the edges where walls fall away from floor i), `patch:<name>`, `patch_outline:<top|bottom>` (a patch's outer edge as a closed boundary), `region:<k>`, `window:<j>`, `hole_rim:<i>`, `chains:<corner|tabs|ends>`, `slot:<k>`, `silhouette`, `path:<id>`.
 - `holes`: hole indices as integers (`[2, 3]`), for a drill, bore or thread mill, which then keeps its default hole mode.
 - `points` (a drill's points), `predrill` (a pocket's entry holes) and `entries` (a contour's entry points): point names, `entry`, `corner:<k>`, `pocket:<floor>`, `window:<j>`, `hole:<i>`, `slot_end:<k>`.
 
@@ -171,13 +171,17 @@ T3, each in one pass, in this order, with the drills of step 16a among them:
 
 ### Deburring and the tabs
 
-29. **Deburr** (when `chamfer` and the setup's side has a flat face): the chamfering bit, `chamfer2d`, `contours` `[face_deburr:<side>]`, `chamferTipOffset` t, and no heights: a chamfer sits at the edges it follows.
+29. **Deburr** (when `chamfer` and the setup's side has a flat face): the chamfering bit, `chamfer2d`, `contours` `[face_deburr:<side>, floor_deburr:<i>, …]`, `chamferTipOffset` t, and no heights: a chamfer sits at the edges it follows.
     `face_deburr` takes every edge of the face, but where the stock fits the part and the face is not faced, it leaves out the edges on the stock's own sides: no tool cuts them, so they have no burrs.
+    `floor_deburr:<i>` takes the edges where walls fall away from floor i; add one for every other floor of the side whose `role` is `face`, such as the top of an island level with the face.
     The bit's point sits t below the 0.1 mm chamfer, and Fusion leaves out an edge where the point would go below a floor.
     Room: the smallest of the setup's pocket depths, its blind holes' depths, in window machining the depth below the part's face of the tab band's face on this setup's side (the band's top in the top setup, its bottom in the bottom one), and 0.7 mm.
     t = room − 0.2 mm, kept between 0.1 and 0.5 mm; warn when even 0.1 mm leaves the point within 0.02 mm of a floor or the tabs.
-30. **Deburr counterbores**, for each hole with a `hole_below`: the chamfering bit, `chamfer2d`, `contours` `[hole_floor_inner:<i>]`, `chamferTipOffset` 0.5 mm when the lower hole is through, else its depth less 0.2 mm, kept between 0.1 and 0.5 mm; one operation per tip offset.
-31. **Cut tabs** (window machining, in the last setup: the bottom one with two sides, the top with one): T2, `contour2d`, multi-depth, `maximumStepdown` `0.2mm`, `contours` `[chains:tabs]`, `"program": "tabs"`.
+30. **Deburr open pockets** (when `chamfer`), for each depth of the side's floors open to the side (`side_open`): the chamfering bit, `chamfer2d`, `contours` `[floor_deburr:<i>, …]` for those floors, `chamferTipOffset` t, no heights; named `Deburr open pockets`, then ` <depth> mm` when the open floors have more than one depth.
+    These floors' edges fall away where they meet the part's sides, below the face, where step 29 does not reach.
+    t follows step 29's rule with the room measured from the floor down: the depths of the deeper pockets and blind holes less the floor's depth, in window machining the tab band's depth less the floor's depth, and 0.7 mm.
+31. **Deburr counterbores**, for each hole with a `hole_below`: the chamfering bit, `chamfer2d`, `contours` `[hole_floor_inner:<i>]`, `chamferTipOffset` 0.5 mm when the lower hole is through, else its depth less 0.2 mm, kept between 0.1 and 0.5 mm; one operation per tip offset.
+32. **Cut tabs** (window machining, in the last setup: the bottom one with two sides, the top with one): T2, `contour2d`, multi-depth, `maximumStepdown` `0.2mm`, `contours` `[chains:tabs]`, `"program": "tabs"`.
     Top setup: top at `tab:top` (offset 0), bottom at `tab:bottom` with offset −`overlap`.
     Bottom setup: top at `tab:bottom` (offset 0), bottom at `tab:top` with offset −`overlap`.
 
@@ -237,4 +241,4 @@ It prints `rejected` when Fusion refused a point or face, which leaves that cut 
 Pair the operations in run order, which is also the order of their names; where both ways made the same operations with the same settings, the summaries agree to the 0.001 mm and the second.
 For each difference, decide which way is right, from conventions.md and the checks, and fix the recipe or the script (SKILL.md, "Improving the skill").
 
-Report to the user, as SKILL.md's "Report" says, that in window machining the part must be hot-glued to the stock round it before the `_tabs` program runs, the warnings this recipe raises (the dimples the pocket entry holes leave, blind holes with no modelled point, holes skipped) and the check's: a tool past T6 needs a manual change (N3), and a hole or window that opens in a pocket floor gets no deburr pass on its rim there (DB1).
+Report to the user, as SKILL.md's "Report" says, that in window machining the part must be hot-glued to the stock round it before the `_tabs` program runs, the warnings this recipe raises (the dimples the pocket entry holes leave, blind holes with no modelled point, holes skipped) and the check's: a tool past T6 needs a manual change (N3), and a hole or window that opens in the floor of a closed pocket gets no deburr pass on its rim there (DB1).
