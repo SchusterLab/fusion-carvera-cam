@@ -49,7 +49,7 @@ The skill lists every finding with its rule, from out-of-date toolpaths and cuts
 | `.../scripts/check_cam.py` | the toolpath check, run inside Fusion's Python: `check`, and `summary`, for comparing two builds |
 | `.../scripts/tool_library.py` | builds the tool library from Makera's tool files and McMaster-Carr's table, with the presets; run with plain Python |
 | `.../scripts/dump_cam.py` | dumps a project's existing CAM setups to JSON, for re-learning the conventions |
-| `.../scripts/make_test_part.py` | builds test parts, one with one of each feature and one with pockets open to the side, for testing changes |
+| `.../scripts/make_test_part.py` | builds test parts, one with one of each feature, one with pockets open to the side and one with a floor open on every side round islands, for testing changes |
 
 ## Limits
 

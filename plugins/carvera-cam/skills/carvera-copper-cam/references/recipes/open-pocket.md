@@ -5,6 +5,7 @@ The outline cut is the contour that cuts round the part, one end mill wide, and 
 It has already cleared the stock there, so every plunge goes into empty space.
 In stock of the part's own size there is no outline cut, and that path lies beside the part, outside the stock, so the plunges are clear all the same.
 A pocket toolpath is the wrong tool here: Fusion picks where it enters an open pocket, whatever the ramp type or lead-in, and it plunges with the edge of the tool in copper that nothing has cut.
+A floor open on every side of the part has no walls along its sides to follow, so its passes run round the islands standing on it instead (see "A floor open on every side").
 
 ## When it applies
 
@@ -22,6 +23,8 @@ One operation cuts the open floors of one depth, in one pass (`rough` or `finish
 1. **Read the walls.**
    `walls({"floor": i})` lists the walls that rise from the floor, as runs between the pocket's openings, and `reach_mm`, the farthest any part of the floor lies from its walls.
    The farthest point often lies on the opening, where nothing else cuts inside the part, so the passes must reach it.
+   `walls` also lists `islands`: for each island standing on the floor, the walls all round it.
+   A floor with no runs but with islands, such as the floor round a boss that runs out to every side of the part, is cut by passes round its islands instead (see "A floor open on every side").
 2. **Plan the passes.**
    The first pass runs one radius of the 3.175 mm end mill (1.5875 mm) off the walls, so it finishes them.
    Each further pass runs 0.6 × the tool diameter (1.905 mm) farther out, until the passes reach the whole floor: with diameter D, that takes n = ⌈(reach_mm + 0.1 − D) / 0.6D⌉ + 1 passes, and at least one.
@@ -29,7 +32,7 @@ One operation cuts the open floors of one depth, in one pass (`rough` or `finish
    `pass_path({"floor": i, "run": k, "offset_mm": d})` draws the tool centre's path d mm off run k of the walls.
    At each end it runs the path on, along the walls' direction there, to the outline cut's path; where the offset walls already reach past that path, it cuts the path back to it.
    It returns the path's id, its two ends and its length.
-   It returns `"ok": false`, and leaves nothing sketched, when an end run on 10 mm does not reach the outline cut's path, or the walls offset that far leave no path; see "Shapes the steps do not cover".
+   It returns `"ok": false`, and leaves nothing sketched, when an end run on 10 mm does not reach the outline cut's path, when the walls offset that far leave no path, or when the pass would come within a tool radius of another wall rising from the floor, such as an island's; see "Shapes the steps do not cover".
    Each call returns a new id, so two passes along the same walls have different ids.
 4. **Check the passes cover the floor.**
    `coverage({"floor": i})` samples the floor every 0.1 mm against every pass sketched for it and returns `uncut_area_mm2`, split into `in_corners_mm2`, stock within a tool radius of the walls, and `elsewhere_mm2`, with the extent of what stays uncut and its point farthest from a pass.
@@ -43,6 +46,20 @@ One operation cuts the open floors of one depth, in one pass (`rough` or `finish
    `program` puts it, last, in the setup's NC program.
 6. **Generate and check**, as in SKILL.md.
    Rule E4 must report nothing for the new operations: it accepts a plunge only into stock that an end mill in this setup or an earlier one has cleared, or down a drilled hole.
+
+## A floor open on every side
+
+A floor that runs out to every side of the part, round one or more islands, has no runs of walls, so the passes go round the islands instead: the first one tool radius (1.5875 mm) off them, each further one 1.905 mm farther out, n passes as in step 2.
+
+1. **Sketch each pass.**
+   `pass_path({"floor": i, "islands": true, "offset_mm": d})` offsets every island's walls by d mm at once and cuts each offset loop back to the outline cut's path, and to where it goes inside another island's loop.
+   Where two islands' loops cross, the pieces join there into one, so no two passes cross: Fusion splits a contour wherever its curves cross and plunges again at each piece, into copper nothing has cut.
+   It returns `paths`, one per piece, each with its id, its ends, its length and `entry`.
+   A piece that starts and ends on the outline cut's path has `entry` null.
+   A piece that never reaches that path, one island's whole loop or the loops of several joined all round them, closes on itself, stopping 0.05 mm short of its start, and `entry` names its start, `path_entry:<id>`: the end mill enters there down a hole drilled to the floor, since a line in from the outline would cross the passes farther out.
+2. **Drill the entries.**
+   Sketch these passes before part.md's step 6, Pocket entry holes, and add every `entry` to that step's points, so that the holes are drilled to the floor with the other pocket entry holes and leave the same 1.59 mm dimple; warn about each one.
+3. **Check and add the operations** as in steps 4 to 6, with `paths` every piece's id, in the order sketched, from the islands out.
 
 ## Calling the primitives
 
@@ -70,6 +87,7 @@ for x in pockets:
     if x['side_open']:
         by_depth.setdefault(round(x['depth'], 3), []).append(x['floor'])
 paths = {}
+entries = []  # where closed passes round islands enter: add them to part.md's step 6
 for dep, floors in by_depth.items():
     ids = []
     for i in floors:
@@ -82,6 +100,15 @@ for dep, floors in by_depth.items():
                     ids.append(p['path'])
                 else:
                     print('floor', i, 'run', k, 'pass', j, 'failed')  # see below
+        if not w['runs'] and w['islands']:  # open on every side: round the islands
+            for j in range(n):
+                p = call('pass_path', {'floor': i, 'islands': True,
+                                       'offset_mm': D / 2 + j * 0.6 * D})
+                if p['ok']:
+                    ids += [q['path'] for q in p['paths']]
+                    entries += [q['entry'] for q in p['paths'] if q['entry']]
+                else:
+                    print('floor', i, 'pass', j, 'failed:', p['why'])
         print('floor', i, call('coverage', {'floor': i}))
     paths[dep] = ids
 
@@ -113,4 +140,5 @@ Look at the part before trusting them, and after `generate`, look at the operati
   A pass the floor does not need can be left out: `coverage` shows whether the floor is covered without it.
   When the floor needs it, add the operations with the passes that work, and tell the user where copper stays (the uncut extent `coverage` gives) and that the pocket needs another way in, such as a drilled entry.
 - **A pocket open on two sides that are not next to each other**, such as a channel across the part, has two runs of walls; give each run its own passes.
-- **An island in the floor** has walls of its own that no run includes; the steps do not cut round it, so tell the user.
+- **An island in a floor that also has runs of walls** is not cut round: the passes follow only the runs, and `pass_path` refuses a pass that would come within a tool radius of the island.
+  Tell the user where copper stays round the island (the uncut extent `coverage` gives).

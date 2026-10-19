@@ -214,3 +214,38 @@ def make_open_pockets(args=None):
     bad = [des.timeline.item(i).name for i in range(des.timeline.count)
            if des.timeline.item(i).healthState != adsk.fusion.FeatureHealthStates.HealthyFeatureHealthState]
     print('open-pocket part: %d faces, %.1f mm3, unhealthy: %s' % (body.faces.count, body.volume * 1000, bad))
+
+
+def make_open_floor(args=None):
+    """A throwaway 30 x 20 x 3 mm plate whose top is cut 1.2 mm down all over but
+    for two islands: an 8 x 8 mm boss and a 2.2 mm pin, close enough that the
+    passes round them meet. The floor runs out to every side of the part, so
+    it has no walls along its sides, for the passes round islands. Its stock
+    must be larger than the part (for example 45 x 35 x 4 mm, "y_offset" 7):
+    in stock of the part's own size, the passes would run into the jaws."""
+    app = adsk.core.Application.get()
+    app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType)
+    des = adsk.fusion.Design.cast(app.activeProduct)
+    des.designType = adsk.fusion.DesignTypes.ParametricDesignType
+    root = des.rootComponent
+    ext = root.features.extrudeFeatures
+    V = adsk.core.ValueInput.createByString
+
+    sk = root.sketches.add(root.xYConstructionPlane)
+    sk.sketchCurves.sketchLines.addCenterPointRectangle(P(0, 0), P(15, 10))
+    body = ext.addSimple(sk.profiles.item(0), V('3 mm'),
+                         adsk.fusion.FeatureOperations.NewBodyFeatureOperation).bodies.item(0)
+    body.name = 'OpenFloor'
+    top = max((f for f in body.faces if isinstance(f.geometry, adsk.core.Plane)),
+              key=lambda f: f.pointOnFace.z)
+    s = root.sketches.add(top)
+    M = s.modelToSketchSpace
+    s.sketchCurves.sketchLines.addCenterPointRectangle(M(P(-5, 0, 3)), M(P(-1, 4, 3)))
+    s.sketchCurves.sketchCircles.addByCenterRadius(M(P(8, 4, 3)), 0.11)
+    # everything but the two islands: the profile with the largest area
+    prof = max(s.profiles, key=lambda p: p.areaProperties().area)
+    ext.addSimple(prof, V('-1.2 mm'), adsk.fusion.FeatureOperations.CutFeatureOperation)
+
+    bad = [des.timeline.item(i).name for i in range(des.timeline.count)
+           if des.timeline.item(i).healthState != adsk.fusion.FeatureHealthStates.HealthyFeatureHealthState]
+    print('open-floor part: %d faces, %.1f mm3, unhealthy: %s' % (body.faces.count, body.volume * 1000, bad))
