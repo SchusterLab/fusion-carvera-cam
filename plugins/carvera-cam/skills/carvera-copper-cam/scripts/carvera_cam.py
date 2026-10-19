@@ -1207,7 +1207,8 @@ def features(args=None):
         floors.append(dict(_strip(f), floor=i, **{
             'entry': None if e is None else {'point': 'pocket:%d' % i, 'drilled': e['drill'],
                                              'hole_depth_mm': e['depth_mm']},
-            'narrow': i in L['narrow'], 'region': region_of.get(i),
+            'narrow': i in L['narrow'], 'falls_away': _has_falling_edges(f['face']),
+            'region': region_of.get(i),
             'inside_region': L['inside_region'].get(str(i)), 'slot': slot_of.get(i),
             'fed_by_slot': next((k for k, sl in enumerate(L['slots']) if i in sl['fed']), None)}))
     holes = []
@@ -5227,8 +5228,9 @@ def _side_ops(b, setup, a, side, plan, warnings):
     # and blind hole bottom below the face, and off the tabs, which still stand in
     # the outline cut; Fusion leaves out any edge where the point would go deeper.
     # The other faces level with it, such as an island's top, go with it; each
-    # floor open to the side, whose edges fall away where it meets the part's
-    # sides, gets the same below its own height
+    # pocket floor whose edges fall away, where it meets the part's sides or a
+    # deeper pocket, or round a hole or window through it, gets the same below
+    # its own height
     if face is not None and plan['chamfer']:
         width = float(CHAMFER_OP['chamferWidth'][:-2])
 
@@ -5259,13 +5261,13 @@ def _side_ops(b, setup, a, side, plan, warnings):
             _sel_deburr_faces(level, face, raw)))
         by_depth = {}
         for f in floors:
-            if f['role'] == 'pocket' and f['side_open'] and _has_falling_edges(f['face']):
+            if f['role'] == 'pocket' and _has_falling_edges(f['face']):
                 by_depth.setdefault(round(f['depth'], 3), []).append(f['face'])
         for dep, fs in sorted(by_depth.items()):
-            t = chamfer_tip(dep, 'the pocket open to the side %g mm deep' % dep)
+            t = chamfer_tip(dep, 'the pocket floor %g mm deep' % dep)
             ops['main'].append(b.op(
                 setup, 'chamfer2d', CHAMFER,
-                'Deburr open pockets' + (' %g mm' % dep if len(by_depth) > 1 else ''),
+                'Deburr pocket floors' + (' %g mm' % dep if len(by_depth) > 1 else ''),
                 dict(CHAMFER_OP, chamferTipOffset='%gmm' % round(t, 3)), _sel_deburr_faces(fs)))
 
     # the edges of the holes under counterbores, at the counterbore's floor, which

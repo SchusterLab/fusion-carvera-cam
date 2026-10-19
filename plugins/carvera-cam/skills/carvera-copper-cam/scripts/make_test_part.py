@@ -5,7 +5,8 @@ a top pocket with R0.8 corners (needs a small end mill), a bottom pocket, a
 through window, two 3.8 mm bores, two M2 tapped holes (Hole command, tapped,
 not modeled), a blind 2.2 mm hole, and a slot open to the side
 (args {"side_slot": false} leaves it out). {"angled_notch": true} adds a notch
-open to the side whose walls meet the outline at a slant. Used to test
+open to the side whose walls meet the outline at a slant, and {"pocket_hole":
+true} a 2.2 mm hole through the top pocket's floor. Used to test
 carvera_cam.py.
 """
 
@@ -91,6 +92,10 @@ def make(args=None):
         ext.add(ei)
 
     circles(xy, [(-12, -6), (-12, 6)], 3.8)
+    # a hole through the top pocket's floor, whose rim the pocket floor's deburr
+    # takes (args {"pocket_hole": true})
+    if (args or {}).get('pocket_hole'):
+        circles(xy, [(0, 0)], 2.2)
     circles(top_plane, [(6, -7)], 2.2, '-2 mm')
 
     s = root.sketches.add(xy)
