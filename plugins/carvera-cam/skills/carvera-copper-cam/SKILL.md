@@ -267,7 +267,8 @@ An installed plugin's folder is overwritten when the plugin updates, so a fix ma
 ## Checking existing toolpaths
 
 `scripts/check_cam.py` checks the toolpaths of the active document against the lab's rules for avoiding crashes, spindle stalls and tool wear, which [references/rules.md](references/rules.md) lists with their thresholds and evidence.
-It works on any milling setups, including ones the lab programmed by hand.
+It works on any milling setups: ones the lab programmed by hand, ones `build` made, and either kind after someone has edited them.
+For an edited toolpath, rules G1, U1 and TB1 compare every setup's cuts with the part's model, so they catch an edit that cuts into the part, leaves a face uncut or oversize, or cuts a tab before the tab program.
 Open the document (Workflow, step 1), then run:
 
 ```python
@@ -275,8 +276,8 @@ def run(_context: str):
     runpy.run_path(SCRIPTS + r'\check_cam.py')['check']({})
 ```
 
-`{'setups': ['Setup1']}` checks only the named setups.
-The check takes a few seconds per setup; if it prints `"status": "running"`, call it again, and it goes on with the setups in `pending`.
+`{'setups': ['Setup1']}` checks only the named setups, and then skips G1, U1 and TB1, which need every setup's cuts.
+The check takes a few seconds per setup, plus a few seconds at the end to compare the cuts with the part's faces (`(part surfaces)`); if it prints `"status": "running"`, call it again, and it goes on with the steps in `pending`.
 It prints every finding with its rule id, its severity (`error` or `warning`), the setup, the operation and a message.
 To read each setup's moves, it adds a temporary NC program to the document and deletes it again, so the document then counts as changed: close it without saving unless the user asks otherwise.
 

@@ -46,7 +46,9 @@ STICKOUT_ERROR = 0.95
 ATC_SLOTS = 6
 RETRACT_MIN = 2.0            # lateral rapids at least this far above the stock top
 CHAMFER_TIP_MIN = 0.1        # the chamfering bit's point kept this far off the edge
+CHAMFER_WIDTH_MAX = 0.2      # a deburr's chamfer (the generator's: 0.1 mm)
 BREAKTHROUGH = 0.5           # a through hole's drill goes this far past its bottom
+SURFACES = '(part surfaces)'  # the check's last step, after every setup
 MILLING = ('flat end mill', 'ball end mill', 'bull nose end mill', 'chamfer mill',
            'face mill', 'slot mill', 'lollipop mill', 'tapered mill', 'dovetail mill')
 
@@ -307,6 +309,11 @@ def _check_op(rep, s, o, t, earlier, lab, threaded=frozenset()):
         if tip is not None and tip < CHAMFER_TIP_MIN - 1e-6:
             rep.add('CH1', 'warning', sn, on, "chamfer tip offset %.2f mm is below %.1f mm: the "
                     "bit's point cuts the edge" % (tip, CHAMFER_TIP_MIN), tip_offset=tip)
+        width = _mm(_v(p, 'chamferWidth'))
+        if width is not None and width > CHAMFER_WIDTH_MAX + 1e-6:
+            rep.add('CH2', 'warning', sn, on, "chamfer width %.2f mm is above a deburr's %.1f mm: "
+                    'it cuts a chamfer the design does not have' % (width, CHAMFER_WIDTH_MAX),
+                    width=width)
     # a finishing pass: a single-depth pass after a multi-depth roughing pass of
     # the same kind by an end mill of the same size (as in D4)
     if strat in ('pocket2d', 'contour2d') and milling and t['type'] != 'chamfer mill' \
@@ -638,6 +645,42 @@ def _check_plunges(rep, rule, severity, sn, o, moves, t, holes, milled, to_world
                 plunges=len(bad))
 
 
+def _check_rapids(rep, sn, o, moves, t, milled, top, box=None, other=(), deadline=None):
+    """H2: a rapid move sideways below the stock top runs only through stock that
+    earlier passes, this operation's own included, have cleared, sampled every
+    0.5 mm along it. A sample with the whole tool outside `box`, the stock's
+    (x0, x1, y0, y1), is in the air beside the stock."""
+    r = (t['d'] or 0) / 2
+    done = []  # this operation's cuts so far
+    for m in moves:
+        if None in m[1:]:
+            continue
+        if m[0] != 0:
+            done.append(m)
+            continue
+        run = math.hypot(m[4] - m[1], m[5] - m[2])
+        if run < 1e-3 or min(m[3], m[6]) >= top - 0.01:
+            continue
+        n = max(1, int(math.ceil(run / 0.5)))
+        for i in range(n + 1):
+            if deadline and time.time() > deadline:
+                return
+            f = i / n
+            x, y, z = (m[1] + (m[4] - m[1]) * f, m[2] + (m[5] - m[2]) * f,
+                       m[3] + (m[6] - m[3]) * f)
+            if z >= top - 0.01:
+                continue
+            if box and (x + r <= box[0] + 0.01 or x - r >= box[1] - 0.01 or
+                        y + r <= box[2] + 0.01 or y - r >= box[3] - 0.01):
+                continue
+            cleared = _cleared_to(x, y, r, top, milled + [(done, r)], other)
+            if cleared > z + 0.01:
+                rep.add('H2', 'error', sn, o.name, 'a rapid move runs at Z%.3f through uncut '
+                        'stock at X%.3f Y%.3f, which is cut only down to Z%.3f'
+                        % (z, x, y, cleared))
+                return
+
+
 def _check_thread_depth(rep, sn, o, cuts, setup, holes):
     """TH3: a thread mill never goes deeper than the hole it threads. The holes
     are the operation's selected faces; each reaches its modelled bottom, or as
@@ -898,12 +941,15 @@ def _check_chamfers(rep, setup, chamfers, to_world, box=None, top=None):
                     % (hit[2], hit[0], hit[1], hit[3]))
 
 
-def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=None):
+def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=None,
+                 surf=None, tab_ids=frozenset()):
     """The rules read from the setup's G-code. `holes` lists the holes earlier
     setups drilled (see _drilled), and `swept` the stock their end mills cut, as
     (ax, ay, az, bx, by, bz, cz, tool radius) in the design's frame, in mm: the
     tool swept the column from z = az to z = cz along the line from a to b.
-    This setup's holes and cuts are added to them."""
+    This setup's holes and cuts are added to them. `surf` collects every cut
+    and the setup's stock for _check_surfaces; `tab_ids` holds the operation
+    ids of the tab programs."""
     sn = s.name
     sp = s.parameters
     top = _mm(_v(sp, 'stockZHigh', 0))
@@ -922,6 +968,11 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
             by_op[i - 1] += moves  # a comment inside the operation
     fixture = _fixture_bodies(s)
     to_world = _wcs_to_world(s)
+    if surf is not None and box is not None:
+        # the stock block in the design's frame, for the faces no tool needs to cut
+        cs = [to_world.coords(x, y, z) for x in box[:2] for y in box[2:] for z in (top, bottom)]
+        surf['stocks'].append([round(10 * f(c[j] for c in cs), 4) for j in range(3)
+                               for f in (min, max)])
     holes = holes if holes is not None else []
     swept = swept if swept is not None else []
     to_wcs = _world_to_wcs(s)
@@ -947,6 +998,7 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
         cuts = [m for m in moves if m[0] != 0 and None not in m[1:]]
         if not cuts:
             continue
+        _check_rapids(rep, sn, o, moves, t, milled, top, box, other, deadline)
         if t['type'] == 'chamfer mill':
             chamfers.append((o, dict(t, params=o.parameters), cuts))
         if t['type'] == 'drill':
@@ -964,6 +1016,8 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
                 _check_plunges(rep, 'E4', 'warning', sn, o, moves, t, holes, milled, to_world, top,
                                other=other, box=box)
             milled.append((cuts, t['d'] / 2))
+        if surf is not None and t['type'] != 'chamfer mill' and t['d']:
+            _add_cuts(surf, s, o, t, cuts, to_world, top, o.operationId in tab_ids)
         if t['type'] in MILLING and t['type'] != 'chamfer mill':
             # what this cut clears, for the setups after this one: the column
             # from the move's shallower end up to the stock top
@@ -1066,6 +1120,280 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
     _check_chamfers(rep, s, chamfers, to_world, box, top)
 
 
+# ------------------------------------------------- the part's own surfaces
+
+GOUGE_TOL = 0.02             # a tool this far into the part is a gouge (a drill: 0.03)
+UNCUT_TOL = 0.03             # stock this thin left on a face counts as cut
+FACE_POINTS = 4000           # sample points per face, at most, 0.5 mm apart at least
+EDGE_MARGINS = (0.1, 0.3, 0.55)  # sample points kept this far off a face's edges
+
+
+def _add_cuts(surf, setup, o, t, cuts, to_world, top, in_tabs):
+    """Adds an operation's cutting moves to `surf`, in the design's frame, in mm,
+    as (ax, ay, az, bx, by, bz, cz, tool radius, operation index): the tool's
+    tip ran from a to b, and its body rises from there towards cz, the stock top.
+    A drill's tip is raised to where its point reaches full width."""
+    kind = 'drill' if t['type'] == 'drill' else 'thread' if o.strategy == 'thread' else 'mill'
+    lift = 0.0
+    if kind == 'drill' and t['tip_angle']:
+        lift = t['d'] / 2 / math.tan(math.radians(t['tip_angle']) / 2)
+    surf['ops'].append([setup.name, o.name, kind, bool(in_tabs)])
+    k = len(surf['ops']) - 1
+    for m in cuts:
+        a = to_world.coords(m[1], m[2], m[3] + lift)
+        b = to_world.coords(m[4], m[5], m[6] + lift)
+        c = to_world.coords(m[1], m[2], top)
+        surf['cuts'].append([round(v * 10, 4) for v in a + b + (c[2],)] + [t['d'] / 2, k])
+
+
+def _face_points(face):
+    """Sample points on a face: a flat face square to the Z axis ('floor'), a
+    wall parallel to it, flat or round ('wall'), or another flat face
+    ('slanted'). [(x, y, z), margin, kind)] in the design's frame, in mm, where
+    margin counts the EDGE_MARGINS the point keeps off the face's edges. [] for
+    other faces."""
+    geo = face.geometry
+    ev = face.evaluator
+    bb = face.boundingBox
+    lo, hi = bb.minPoint, bb.maxPoint
+    sp = max(0.05, math.sqrt(face.area / FACE_POINTS))  # cm
+    P, V = adsk.core.Point3D.create, adsk.core.Vector3D.create
+    plane = adsk.core.Plane.cast(geo)
+    cyl = adsk.core.Cylinder.cast(geo)
+    grid = []  # (point, u direction, v direction), unit vectors along the face
+    if plane is not None:
+        n = plane.normal
+        if abs(n.z) > 0.999:
+            kind, u, v = 'floor', V(1, 0, 0), V(0, 1, 0)
+        elif abs(n.z) < 1e-3:
+            kind, u, v = 'wall', V(-n.y, n.x, 0), V(0, 0, 1)
+            u.normalize()
+        else:  # slanted: no flat end mill cuts it to size, but none may cut into it
+            kind, u = 'slanted', V(-n.y, n.x, 0)
+            u.normalize()
+            v = n.crossProduct(u)
+            v.normalize()
+        o = plane.origin
+        corners = [(x - o.x, y - o.y, z - o.z) for x in (lo.x, hi.x) for y in (lo.y, hi.y)
+                   for z in (lo.z, hi.z)]
+        ra = [c[0] * u.x + c[1] * u.y + c[2] * u.z for c in corners]
+        rb = [c[0] * v.x + c[1] * v.y + c[2] * v.z for c in corners]
+        na = max(1, int((max(ra) - min(ra)) / sp))
+        nb = max(1, int((max(rb) - min(rb)) / sp))
+        for i in range(na):
+            a = min(ra) + (max(ra) - min(ra)) * (i + 0.5) / na
+            for j in range(nb):
+                b = min(rb) + (max(rb) - min(rb)) * (j + 0.5) / nb
+                grid.append((P(o.x + a * u.x + b * v.x, o.y + a * u.y + b * v.y,
+                               o.z + a * u.z + b * v.z), u, v))
+    elif cyl is not None and abs(cyl.axis.z) > 0.999:
+        kind = 'wall'
+        o, rad = cyl.origin, cyl.radius
+        na = max(4, int(2 * math.pi * rad / sp))
+        nb = max(1, int((hi.z - lo.z) / sp))
+        for i in range(na):
+            th = 2 * math.pi * (i + 0.5) / na
+            u = V(-math.sin(th), math.cos(th), 0)
+            for j in range(nb):
+                z = lo.z + (hi.z - lo.z) * (j + 0.5) / nb
+                grid.append((P(o.x + rad * math.cos(th), o.y + rad * math.sin(th), z), u,
+                             V(0, 0, 1)))
+    else:
+        return []
+
+    def on(p):
+        ok, prm = ev.getParameterAtPoint(p)
+        return ok and ev.isParameterOnFace(prm)
+
+    out = []
+    for p, u, v in grid:
+        if not on(p):
+            continue
+        level = 0
+        for m in EDGE_MARGINS:
+            m /= 10
+            if not all(on(P(p.x + su * m * u.x + sv * m * v.x, p.y + su * m * u.y + sv * m * v.y,
+                            p.z + su * m * u.z + sv * m * v.z))
+                       for su, sv in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                break
+            level += 1
+        if level:
+            out.append(((p.x * 10, p.y * 10, p.z * 10), level, kind))
+    return out
+
+
+def _cut_index(cuts, cell=1.0):
+    """{(i, j): [cut]}: each cut under every cell of `cell` mm its footprint reaches."""
+    idx = {}
+    for c in cuts:
+        r = c[7] + 0.1
+        for i in range(int(math.floor((min(c[0], c[3]) - r) / cell)),
+                       int(math.floor((max(c[0], c[3]) + r) / cell)) + 1):
+            for j in range(int(math.floor((min(c[1], c[4]) - r) / cell)),
+                           int(math.floor((max(c[1], c[4]) + r) / cell)) + 1):
+                idx.setdefault((i, j), []).append(c)
+    return idx
+
+
+def _probe(px, py, pz, cands, ops):
+    """What the cuts did at a point on a face: (covered, [(depth, operation
+    index)]): covered when some tool passed through or against the point, and
+    a gouge for each tool body the point lies inside, more than GOUGE_TOL deep."""
+    covered = False
+    gouges = []
+    for ax, ay, az, bx, by, bz, cz, r, k in cands:
+        dx, dy = bx - ax, by - ay
+        ll = dx * dx + dy * dy
+        if ll < 1e-12:  # straight down or up: the deeper end
+            u = 0.0
+            tip = az if abs(cz - az) >= abs(cz - bz) else bz
+        else:
+            u = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / ll))
+            tip = az + u * (bz - az)
+        d = math.hypot(px - ax - u * dx, py - ay - u * dy)
+        if d > r + UNCUT_TOL:
+            continue
+        s = 1.0 if cz >= tip else -1.0
+        h = (pz - tip) * s  # how far the point is above the tool's tip, along the tool
+        if (cz - pz) * s < -UNCUT_TOL:
+            continue  # above the stock
+        if h >= -UNCUT_TOL:
+            covered = True
+        kind = ops[k][2]
+        if kind == 'thread':
+            continue  # it cuts the thread into the wall
+        # a drill may be a little wider than its hole (carvera_cam's DRILL_OVER)
+        if r - d > GOUGE_TOL + (0.01 if kind == 'drill' else 0) and h > GOUGE_TOL:
+            gouges.append((min(r - d, h), k))
+    return covered, gouges
+
+
+def _check_surfaces(rep, cam, surf, threaded, deadline):
+    """G1: no tool cuts into the part; U1: every face a tool can reach from above
+    or below, floors and walls, is cut to size; TB1: no operation outside the
+    tab program cuts into a tab. Read from every setup's cuts at once, in the
+    design's frame, against sample points on the faces of the setups' models."""
+    bodies, seen = [], set()
+    for s in cam.setups:
+        if s.operationType != adsk.cam.OperationTypes.MillingOperation:
+            continue
+        for b in _setup_bodies(s):
+            if b.entityToken not in seen:
+                seen.add(b.entityToken)
+                bodies.append(b)
+    des = adsk.fusion.Design.cast(_app().activeDocument.products.itemByProductType(
+        'DesignProductType'))
+    tabs = [b for occ in des.rootComponent.allOccurrences
+            if occ.component.name == 'carvera-cam tabs' for b in occ.bRepBodies]
+    ops = surf['ops']
+    idx = _cut_index(surf['cuts'])
+    stocks = surf['stocks']
+
+    def raw(p, kind):
+        # a face of the stock itself: its top or bottom, or a side of its box
+        x, y, z = p
+        for x0, x1, y0, y1, z0, z1 in stocks:
+            if kind == 'floor' and min(abs(z - z0), abs(z - z1)) < 0.01:
+                return True
+            if kind == 'wall' and min(abs(x - x0), abs(x - x1), abs(y - y0), abs(y - y1)) < 0.01:
+                return True
+        return False
+
+    gouged = {}  # operation index -> [deepest, point, points]
+    uncut = []   # (point, kind) per face left uncut
+    points = 0
+    late = 0     # faces and tool tips left out for want of time
+    for b in bodies:
+        for f in b.faces:
+            if time.time() > deadline:
+                late += 1
+                continue
+            thread = f.entityToken in threaded
+            first = None
+            for p, level, kind in _face_points(f):
+                points += 1
+                cands = idx.get((int(math.floor(p[0])), int(math.floor(p[1]))), ())
+                covered, gs = _probe(*p, cands, ops)
+                if not thread:
+                    for depth, k in gs:
+                        g = gouged.setdefault(k, [0.0, None, 0])
+                        g[2] += 1
+                        if depth > g[0]:
+                            g[0], g[1] = depth, p
+                if not covered and first is None and kind != 'slanted' \
+                        and level >= (3 if kind == 'wall' else 2) and not raw(p, kind):
+                    first = (p, kind)
+            if first:
+                uncut.append(first)
+    # a cut smaller than the points' spacing on a large face: the tool's tip,
+    # just above it along the tool, inside the part
+    boxes = []
+    for b in bodies:
+        bb = b.boundingBox
+        boxes.append((b, bb.minPoint.x * 10, bb.minPoint.y * 10, bb.minPoint.z * 10,
+                      bb.maxPoint.x * 10, bb.maxPoint.y * 10, bb.maxPoint.z * 10))
+    tips = {}
+    for c in surf['cuts']:
+        k = c[8]
+        if ops[k][2] == 'thread':
+            continue
+        ends = (c[0:3], c[3:6])
+        if (c[3] - c[0]) ** 2 + (c[4] - c[1]) ** 2 < 1e-12:  # down or up: the deeper end
+            ends = (max(ends, key=lambda e: abs(c[6] - e[2])),)
+        for x, y, z in ends:
+            z += GOUGE_TOL if c[6] >= z else -GOUGE_TOL
+            if any(x0 < x < x1 and y0 < y < y1 and z0 < z < z1
+                   for _, x0, y0, z0, x1, y1, z1 in boxes):
+                tips.setdefault((round(x / 0.25), round(y / 0.25), round(z / 0.25)),
+                                (x, y, z, k))
+    inside = adsk.fusion.PointContainment.PointInsidePointContainment
+    for x, y, z, k in tips.values():
+        if time.time() > deadline:
+            late += 1
+            break
+        if k in gouged:
+            continue
+        q = adsk.core.Point3D.create(x / 10, y / 10, z / 10)
+        if any(b.pointContainment(q) == inside for b, *_ in boxes):
+            gouged[k] = [None, (x, y, z), 1]
+    if late:
+        rep.add('G0', 'warning', None, None, "the check of the part's faces ran out of time, so "
+                'G1, U1 and TB1 are incomplete: run check again with a larger budget')
+    for k, (depth, p, n) in sorted(gouged.items()):
+        sn, on, kind = ops[k][:3]
+        if depth is None:
+            rep.add('G1', 'error', sn, on, "the tool's tip runs inside the part at X%.3f Y%.3f "
+                    'Z%.3f (design frame)' % p, at=[round(v, 3) for v in p])
+            continue
+        rep.add('G1', 'error', sn, on, 'the tool cuts %.3f mm into the part at X%.3f Y%.3f '
+                'Z%.3f (design frame)%s' % (depth, p[0], p[1], p[2],
+                                            ', and at %d more points' % (n - 1) if n > 1 else ''),
+                depth=round(depth, 3), at=[round(v, 3) for v in p])
+    if uncut:
+        p, kind = uncut[0]
+        rep.add('U1', 'warning', None, None, '%d face%s of the part %s left uncut or oversize: '
+                'no tool reaches %s, the first a %s at X%.3f Y%.3f Z%.3f (design frame)'
+                % (len(uncut), '' if len(uncut) == 1 else 's', 'is' if len(uncut) == 1 else 'are',
+                   'it' if len(uncut) == 1 else 'them', kind, p[0], p[1], p[2]),
+                faces=len(uncut), at=[[kind] + [round(v, 3) for v in q] for q, kind in uncut[:10]])
+    # the tabs: only the tab program may cut them
+    hit = {}
+    for b in tabs:
+        for f in b.faces:
+            for p, level, kind in _face_points(f):
+                cands = [c for c in idx.get((int(math.floor(p[0])), int(math.floor(p[1]))), ())
+                         if not ops[c[8]][3]]
+                for depth, k in _probe(*p, cands, ops)[1]:
+                    if depth > hit.get(k, (0,))[0]:
+                        hit[k] = (depth, p)
+    for k, (depth, p) in sorted(hit.items()):
+        sn, on = ops[k][:2]
+        rep.add('TB1', 'error', sn, on, 'cuts %.3f mm into a tab at X%.3f Y%.3f Z%.3f (design '
+                'frame), but only the tab program may cut the tabs' % (depth, *p),
+                depth=round(depth, 3))
+    return points
+
+
 # ------------------------------------------------------------------ check
 
 def check(args=None):
@@ -1096,6 +1424,11 @@ def check(args=None):
                       'done': [], 'items': []}
     rep = Report()
     rep.items = state['items']
+    # the operations of the tab programs, the only ones that may cut the tabs
+    tab_ids = frozenset(x.operationId for nc in cam.ncPrograms if re.search(r'_tabs\b', nc.name)
+                        for item in nc.operations
+                        for x in (list(item.allOperations) if hasattr(item, 'allOperations')
+                                  else [item]))
     numbers = {}  # tool number -> description, across the document
     for s in setups:
         for o in s.allOperations:
@@ -1156,22 +1489,44 @@ def check(args=None):
             for o in ops:
                 if o.operationId not in held:
                     rep.add('N4', 'error', sn, o.name, 'no NC program includes this operation')
+        for o in s.allOperations:
+            if o.isSuppressed:
+                rep.add('N4', 'warning', sn, o.name, 'the operation is suppressed, so no NC '
+                        'program runs it')
         if ok:
             folder = tempfile.mkdtemp(prefix='carvera-check-')
             text = _post_setup(cam, s, ok, post, folder)
             # holes drilled and stock cut in an earlier setup can serve this
             # one's entries too
             _check_gcode(rep, cam, s, ok, tools, parse_gcode(text), deadline,
-                         state.setdefault('holes', []), state.setdefault('swept', []))
+                         state.setdefault('holes', []), state.setdefault('swept', []),
+                         state.setdefault('surf', {'ops': [], 'cuts': [], 'stocks': []}),
+                         tab_ids)
         state['done'].append(sn)
         state['items'] = rep.items
         with open(STATE, 'w', encoding='utf-8') as f:
             json.dump(state, f)
     pending = [s.name for s in setups if s.name not in state['done']]
+    # the part's faces against every setup's cuts: only once all of them are in
+    whole = {s.name for s in setups} >= {s.name for s in cam.setups
+                                         if s.operationType == adsk.cam.OperationTypes.MillingOperation}
+    if not pending and whole and SURFACES not in state['done']:
+        if time.time() > deadline - 10:
+            pending = [SURFACES]
+        else:
+            state['surface_points'] = _check_surfaces(
+                rep, cam, state.get('surf') or {'ops': [], 'cuts': [], 'stocks': []}, threaded,
+                deadline + 30)
+            state['done'].append(SURFACES)
+            state['items'] = rep.items
+            with open(STATE, 'w', encoding='utf-8') as f:
+                json.dump(state, f)
     out = {'status': 'running' if pending else 'done', 'pending': pending,
            'errors': sum(1 for i in rep.items if i['severity'] == 'error'),
            'warnings': sum(1 for i in rep.items if i['severity'] == 'warning'),
            'findings': rep.items, 'seconds': round(time.time() - t0, 1)}
+    if 'surface_points' in state:
+        out['surface_points'] = state['surface_points']  # sampled on the part's faces
     if not pending:
         try:
             os.remove(STATE)

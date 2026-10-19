@@ -5,7 +5,7 @@ Open a part in Autodesk Fusion, tell Claude Code what stock you have, and it wri
 It picks the tools, the speeds and the order of the cuts, works out how the vise will hold the part, and checks that no cut runs into the vise.
 The same programs cut aluminum when run at double speed (200% feed and spindle override on the Carvera).
 
-It can also review toolpaths you already have, and points out cuts likely to break a tool, stall the spindle or crash the machine.
+It can also review toolpaths you already have, including ones it made that you have since edited, and points out cuts likely to break a tool, stall the spindle or crash the machine, cuts into the part, and faces left uncut.
 
 ## Install
 
@@ -26,7 +26,7 @@ The skill drives Fusion through the Fusion MCP server, so Claude Code needs that
 
 Ask Claude Code, for example, "Generate Carvera toolpaths for `my-part` in copper, from a 2-inch bar 0.25 inch thick".
 The skill opens the part, reports the features it recognized, asks whether the stock has the part's own size and thickness and, if not, its dimensions, tells you the machining strategy that follows, confirms any tapped holes with you, builds the setups and generates the toolpaths.
-It programs the whole part two ways: by its script, and by following written recipes step by step in a throwaway copy of the part.
+It programs the whole part two ways: by its script, and by following written recipes step by step, with smaller functions of the same script, in a throwaway copy of the part.
 It checks the toolpaths two ways too, with its checker and by reading the G-code, compares the results, and tells you how they compared; where one way falls short, it fixes the skill and offers the fix to this repository as a pull request, once you agree.
 It does not save the document or write G-code unless you ask.
 

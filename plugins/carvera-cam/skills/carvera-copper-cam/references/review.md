@@ -15,11 +15,13 @@ Each item names the checker rule that covers the same ground, from [rules.md](ru
 ## What to look for
 
 1. **Every plunge goes into cleared stock or down a hole** (E4, TH2).
+   Every rapid move below the stock top likewise runs through stock already cleared (H2).
    For each plunge point, find what made room for it: an earlier operation whose cuts pass within its tool's radius at that depth or deeper, in this setup or the other one, or a drill whose plunge lands on the same point at least as deep.
    A plunge with nothing under it plunges into solid copper, unless the whole tool is outside the stock, as where the facing enters beside stock of the part's own size.
    A plunge that ends in the drill's cone, below the hole's full width, is fine only where the cone is at least half the end mill wide, centred on it (TH4); a pocket entry hole stops exactly there at the floor, so its finishing pass plunges to the depth where the cone is half the end mill wide.
    A bore spirals down rather than plunging, so also check the hole under it (TH4): all the way to the bore's deepest Z, a hole drilled before it must be at least half as wide as its end mill, so below the depth where the drill's cone narrows to half the end mill's diameter the bore cuts copper the drill never reached.
-2. **Every floor is cut, and only to its depth** (H3 checks the depth below the stock; no rule checks for uncut floor).
+2. **Every floor and wall is cut, and only to its line** (U1 checks for faces left uncut or oversize, G1 for cuts into the part, H3 for the depth below the stock).
+   After an edit to an operation, look hardest at what it cuts: a changed height, stock to leave, tool or compensation moves the cut off the model, and a suppressed or deleted operation leaves its feature uncut.
    An operation's deepest Z should match its feature: a pocket's floor, a rough pass 0.2 mm above it, a through cut 0.5 mm past the far face.
    Nothing should go deeper than 0.5 mm below the stock's bottom, besides a drill's point: the main entry hole is drilled through the stock, 0.5 mm past it with the tip through, so that the bottom setup can enter it from the other side; with one setup, the through cuts, the outline between tabs and the tab cut also go 0.5 mm below the stock's bottom, since the part's bottom face is the stock's.
    For a pocket cut by passes, `coverage` must report no uncut area; for others, the screenshot should show the toolpath filling the pocket.
@@ -34,7 +36,7 @@ Each item names the checker rule that covers the same ground, from [rules.md](ru
    The exception is an edge on the stock's own sides, where the stock fits the part and the face is not faced: no tool cuts it, so it is not deburred (DB1 skips it too).
    Fusion silently leaves out an edge where the bit's point would go below a floor, so an edge with no pass is likely one of those.
    At the outline, the bit's deepest Z must stay above the tabs' top.
-7. **The part stays held** (no rule checks this).
+7. **The part stays held** (TB1 checks that only the tab program cuts the tabs).
    With the outline selected, the screenshot shows four tabs left standing, and only the tab program cuts them.
    Stock of the part's own size, and stock that fits the part along one side (cut free by the Ends cut), have no outline or tabs; there the vise holds the part, so check item 8 with care.
 8. **The tool stays clear of the vise** (X1).

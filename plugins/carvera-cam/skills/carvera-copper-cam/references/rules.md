@@ -2,7 +2,7 @@
 
 The `carvera-copper-cam` skill checks the toolpaths of an open Fusion document against the lab's rules for avoiding crashes, spindle stalls and tool wear on the Carvera, and lists each breach as a finding.
 Ask Claude to check a document's Carvera toolpaths, or run `check({})` from `scripts/check_cam.py` inside Fusion as SKILL.md shows.
-The check covers every milling setup in the document: setups the lab programmed by hand as well as those made by `build`, the skill's toolpath generator.
+The check covers every milling setup in the document: setups the lab programmed by hand as well as those made by `build`, the skill's toolpath generator, and those toolpaths after someone has edited them.
 Its written counterpart, [review.md](review.md), judges the same toolpaths by reading their G-code and screenshots; the skill runs both and compares them, so that each catches what the other misses.
 
 Each finding gives a rule id from the tables below, a severity, the setup, the operation and a message with the numbers behind it; in short, for example:
@@ -73,6 +73,7 @@ A roughing pass below means a multi-depth pass that cuts the feature to size in 
 | D6 | a pocket's stepover is more than 0.6 × the tool's diameter | warning | 261 of 263 pockets step over 0.6 × the diameter | an overloaded end mill |
 | D8 | a bore's radial stepover is more than 0.3 mm | warning | 23 of 33 bores in the current parts step over 0.1 mm, the rest 0.3 to 0.5 mm | stall and broken end mills |
 | CH1 | a deburr (2D chamfer) keeps the chamfering bit's point less than 0.1 mm off the edge (Fusion's tip offset) | warning | all 104 deburr operations keep it at least 0.1 mm off, most 0.3 to 0.5 mm | the bit's sharp point doing the cutting and chipping |
+| CH2 | a deburr's chamfer width is more than 0.2 mm | warning | the generator deburrs 0.1 mm wide | a chamfer the design does not have |
 
 ### How the tool enters the cut
 
@@ -93,10 +94,24 @@ A tool's stick-out is its length below the holder, Fusion's body length: 28 mm f
 | Id | Finding when | Severity | Evidence | Guards against |
 |---|---|---|---|---|
 | H1 | the retract height, set from the stock top, is less than 2 mm above it | warning | 992 of 1004 operations retract 5 mm above the stock top and clear 15 mm above it | rapid moves grazing the stock or the clamps |
+| H2 | a rapid move runs sideways below the stock top, sampled every 0.5 mm, through stock that no earlier pass, in its setup or an earlier one or earlier in the same operation, has cleared to below it; a sample with the whole tool outside the setup's stock box is in the air and passes | error | none in the generator's builds or in `sample-clamp-6port7x7` and `sample-puck-v2-2port10x10`; Fusion itself refuses heights that would plan such a move, so the rule guards against toolpaths that are posted or edited outside Fusion's height checks | the tool crashing into the stock at rapid speed |
 | H3 | the tool goes more than 0.5 mm below the stock bottom, not counting a drill's point | error | none of the 426 part operations whose depth is known goes further, and through-cuts end 0.5 mm below; blanks squared in the project's folder `stock` go up to 2 mm below | cutting into the vise or the fixture plate |
 | H5 | an operation cuts deeper than the tool's flute length, or than its neck's length for a tool whose neck is narrower than its cut (a thread mill), measured from its top height | error for a drill, warning otherwise | 196 of the 210 operations in the current parts whose depth is known; deeper holes are drilled by two operations, each at most 7.5 mm deep | packed chips and broken drills; the shank rubbing the wall |
 | H6 | the tool goes deeper below the stock top than 0.75 × its stick-out (0.95 × is an error) | warning | 433 of 435 operations stay within 0.75 ×, and all but those in `hanger-for-bluefors-sd` within 0.68 × | the holder hitting the stock |
 | X1 | the tool, sampled every 0.5 mm along each move as its tip's centre and eight points on a circle of its diameter (for a drill, where its point reaches full diameter), lies inside a body of the setup's fixture: a jaw beside the stock, or the ledge each jaw has under the stock's gripped edge, which a cut through the stock's bottom reaches; checked only in setups with a fixture (rule M2) | error | — | crashing into the vise or the fixture plate |
+
+### The part's shape
+
+These rules compare every setup's cuts with the part's model, so they catch a toolpath that no longer cuts what the design shows: after an edit to an operation's heights, stock to leave, tool, compensation or geometry, after an operation was suppressed or deleted, or after the design changed.
+They run once every milling setup has been checked, on sample points spread over the part's faces: the flat faces square to the Z axis (floors), the walls parallel to it, flat or round, and, for G1 only, the other flat faces, at most 4000 points per face and 0.5 mm apart at the closest.
+Each tool is taken as a cylinder of its diameter from its tip up to the stock top, a drill's from where its point reaches full width; a chamfering bit is left out, since a deburr cuts into the part by design.
+On a large face the points lie up to a few millimetres apart, so G1 also tests each end of every cut: a tool tip 0.02 mm above it, along the tool, inside the part is a gouge however small.
+
+| Id | Finding when | Severity | Evidence | Guards against |
+|---|---|---|---|---|
+| G1 | a tool's cylinder takes in a point on the part's surface more than 0.02 mm deep (0.03 mm sideways for a drill, which may be up to 0.05 mm wider than its hole); a thread mill, which cuts the thread into the wall, and a face a thread mill threads are left out | error | no finding on the generator's builds of the two test parts or on the lab's `sample-clamp-6port7x7` and `sample-puck-v2-2port10x10`; a finishing pocket set 0.3 mm deeper, and a window finish with −0.2 mm stock to leave, each gave G1 at the edited depth | a spoiled part: a floor cut too deep, a wall cut past its line, a hole drilled oversize or in the wrong place |
+| U1 | no tool reaches some point of a floor or a wall, at least 0.3 mm (a floor) or 0.55 mm (a wall) from the face's edges, within 0.03 mm; faces of the stock itself, at its top or bottom or on a side of its box, are left out | warning | `sample-puck-v2-2port10x10`: four Ø3.8 mm holes, blind 2.4 mm into the bottom face, that no operation cuts; on the generator's builds, a suppressed finishing pass, corner pass, finishing face or tab cut, a smaller drill in a hole, and roughing and finishing passes both left 0.2 mm oversize each gave U1. The 0.55 mm margin on walls leaves out the uncut strip a 1 mm end mill leaves in a sharp inside corner | a feature left uncut, too shallow or oversize, which the part then lacks |
+| TB1 | an operation outside a tab program (an NC program whose name ends in `_tabs`) cuts more than 0.02 mm into a tab (a body in the generator's `carvera-cam tabs` component) | error | an outline cut taken down through the stock's bottom gave TB1. Hand-programmed documents have no tab bodies, so the rule does not check them | the part cut free before the tab program, loose in the outline cut under a spinning end mill |
 
 ### Drilling and threading
 
@@ -125,15 +140,16 @@ The Carvera's automatic tool changer holds six tools, numbered 1 to 6, and the o
 |---|---|---|---|---|
 | N1 | one tool number names two different tools in a setup (error), or in two setups of the document (warning) | as given | never within one of the lab's 88 setups; across setups, in 3 documents | the wrong tool in the changer, and a crash at its first move |
 | N3 | a tool number is above 6 | warning | 12 current setups use tools 7 to 10 | a missed manual tool change |
-| N4 | the document's NC programs hold some of a setup's operations but leave one out | error | `build` puts every operation in a program; an operation added after it, by hand or by a recipe, must be added to the program too | an operation the machine never runs, leaving its feature uncut |
+| N4 | the document's NC programs hold some of a setup's operations but leave one out (error), or an operation is suppressed (warning) | as given | `build` puts every operation in a program; an operation added after it, by hand or by a recipe, must be added to the program too. A suppressed operation is left out of the posted G-code | an operation the machine never runs, leaving its feature uncut |
 | N5 | the tool is not in the skill's tool library, or has no holder | warning | a few of the lab's tools have no preset, such as the 1/8″ two-flute end mill in `sample-clamp-6port7x7`, which also has no holder | feeds unchecked against a preset; holder collisions unchecked in simulation |
 | N6 | a finishing pass (a single-depth pocket or contour after a multi-depth one of the same kind, as in D4) uses the tool number of the roughing pass before it | warning | the lab's finishing passes run on T3, a second 3.175 mm end mill, and never on T2, the roughing one | a worn roughing edge spoiling the finished wall and floor |
 | M1 | the setup has no machine | warning | 3 of the 88 setups have none | simulation not checking the machine |
 | M2 | the setup has no fixture | warning | only 10 of the 88 setups set one, all in older versions such as `2026-01-20_sample-puck-6port7x7`, whose fixture setup the skill copies | simulation, and rule X1, not checking the vise |
-| G0 | no posted G-code could be matched to the operation | warning | — | an operation left out of the depth and fixture checks |
+| G0 | no posted G-code could be matched to the operation, or the check ran out of time while comparing the cuts with the part's faces | warning | — | an operation left out of the depth and fixture checks; G1, U1 and TB1 left incomplete |
 
 ## What the check does not cover
 
 Fusion's simulation with collision checking still has to run on each setup before machining, because the API cannot run it.
 The check does not test the tool, its shank or its holder against the machine, against the stock, or against the fixture above the tool's tip.
-It does not check that a drill is wide enough for its hole (K3 checks only one too wide), and it does not know whether a rapid move between cuts crosses uncut stock; Fusion plans those moves against its own model of the stock, which rule P3 shows can be out of date.
+G1 and U1 do not sample round faces other than walls parallel to the Z axis, such as fillets, modelled chamfers and drill points, and U1 does not check slanted faces, which no flat end mill cuts to size.
+If the check runs out of time while comparing the cuts with the part's faces, it says so (G0) and leaves G1, U1 and TB1 incomplete.
