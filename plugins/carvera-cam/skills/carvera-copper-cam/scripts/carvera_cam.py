@@ -1478,6 +1478,8 @@ def add_operation(args):
     program:   "top", "bottom" or "tabs": the NC program '<name>_<program>' it goes
                in last, made on first use
     bottom_at_floor: the floor its bottom height sits at
+    body:      as build takes it (needed only when the design has more than one
+               visible body)
     The operation goes last in its setup, so add the operations in run order.
     """
     design, body, a = _built(args)
@@ -2763,7 +2765,7 @@ def _both(*selectors):
 # come from the tool preset, not from here.
 
 # Fusion rejects a pocket's entry hole unless the end mill has about 5 x the
-# tolerance of room around it: 0.5 mm at the lab's 0.1 mm tolerance. A pocket
+# tolerance of room around it: 0.05 mm at the lab's 0.01 mm tolerance. A pocket
 # with less room is cut by a contour along its wall instead (_make_layout).
 POCKET_TOL = 0.01  # mm
 POCKET = {
@@ -3356,7 +3358,7 @@ LAYOUT_SKETCH = 'carvera-cam'
 VISE_PREFIX = LAYOUT_SKETCH + ' vise '
 TABS_COMPONENT = LAYOUT_SKETCH + ' tabs'
 FACES_COMPONENT = LAYOUT_SKETCH + ' faces'
-PART_COMPONENT = LAYOUT_SKETCH + ' part'  # the part turned over, when its bottom is machined first
+PART_COMPONENT = LAYOUT_SKETCH + ' part'  # the part's turned copy: turned over, a quarter turned, or both
 HIDDEN_ATTR = ('carvera-cam', 'hidden')  # on the design's body while the turned copy stands in
 TOOL_R = ENDMILL_D / 2 / 10  # cm
 ENTRY_R = TOOL_R + 5 * POCKET_TOL / 10  # cm, the room a pocket's entry hole needs
@@ -5465,7 +5467,9 @@ def build(args):
       taps:      {"1.6": "M2", ...} hole diameter (as analyze prints it) -> thread
       name:      program name prefix (default: document name)
       face:      face the top and bottom from stock (default true)
-      chamfer:   deburr the outer faces (default true)
+      chamfer:   deburr the machined edges: the outer faces, the pocket floors
+                 where walls fall away from them, and the holes under
+                 counterbores (default true)
       mode:      "script" (default): build makes every operation; "recipe": build
                  makes the setups, the layout, the tabs, the face patches and the
                  vise, and no operations or NC programs, which the recipes in

@@ -153,7 +153,7 @@ T3, each in one pass, in this order, with the drills of step 16a among them:
 
 ### Small tools, holes and threads
 
-22. **Slots <width>** and **Pockets through slots <width>**, for each slot (see conventions.md's "Slots"): the slot's end mill, `contour2d`, multi-depth, `compensationType` `'off'`, `contours` `[slot:<k>]`, top at H, bottom at the slot's floor; then `pocket2d`, multi-depth, `pockets` the floors it feeds, `predrill` `[slot_end:<k>]`, top at H, `bottomHeight_mode` `'from contour'`.
+22. **Slots <width>** and **Pockets through slots <width>**, for each slot width, that is, each slot end mill (see conventions.md's "Slots"): the slot's end mill, `contour2d`, multi-depth, `compensationType` `'off'`, `contours` every `slot:<k>` of that width, top at H, bottom at the first of those slots' floors; then, when those slots feed pockets, `pocket2d`, multi-depth, `pockets` the floors they feed, `predrill` the `slot_end:<k>` of each slot that feeds one, top at H, `bottomHeight_mode` `'from contour'`.
 23. **Corners**: pockets and windows whose `corner_radius` is more than 0.001 mm below 1.5875 mm (an R1.5875 corner is the end mill's own), by [corners.md](corners.md), in their place here.
     The heights it needs: a pocket's corner cut starts at H, or, for a floor inside a shelf region, at that region's floor; its bottom is `'from contour'`; a window's runs from H through the part.
 24. **Bore <diameter>** for the holes small end mills bore: that end mill, `bore`, `stepover` `0.2mm`, `numberOfStepovers` `2`, top at the hole top, `bottomHeight_offset` `-0.5mm` through, `0mm` blind.
@@ -177,10 +177,10 @@ T3, each in one pass, in this order, with the drills of step 16a among them:
     The bit's point sits t below the 0.1 mm chamfer, and Fusion leaves out an edge where the point would go below a floor.
     Room: the smallest of the setup's pocket depths, its blind holes' depths, in window machining the depth below the part's face of the tab band's face on this setup's side (the band's top in the top setup, its bottom in the bottom one), and 0.7 mm.
     t = room − 0.2 mm, kept between 0.1 and 0.5 mm; warn when even 0.1 mm leaves the point within 0.02 mm of a floor or the tabs.
-30. **Deburr pocket floors** (when `chamfer`), for each depth of the side's pocket floors with `falls_away` set: the chamfering bit, `chamfer2d`, `contours` `[floor_deburr:<i>, …]` for those floors, `chamferTipOffset` t, no heights; named `Deburr pocket floors`, then ` <depth> mm` when those floors have more than one depth.
+30. **Deburr pocket floors** (when `chamfer` and the setup's side has a flat face), for each depth of the side's pocket floors with `falls_away` set: the chamfering bit, `chamfer2d`, `contours` `[floor_deburr:<i>, …]` for those floors, `chamferTipOffset` t, no heights; named `Deburr pocket floors`, then ` <depth> mm` when those floors have more than one depth.
     These floors' edges fall away below the face, where step 29 does not reach: where a floor open to the side meets the part's sides, where a shelf steps down into a deeper pocket, and round a hole or window through a floor.
     t follows step 29's rule with the room measured from the floor down: the depths of the deeper pockets and blind holes less the floor's depth, in window machining the tab band's depth less the floor's depth, and 0.7 mm.
-31. **Deburr counterbores**, for each hole with a `hole_below`: the chamfering bit, `chamfer2d`, `contours` `[hole_floor_inner:<i>]`, `chamferTipOffset` 0.5 mm when the lower hole is through, else its depth less 0.2 mm, kept between 0.1 and 0.5 mm; one operation per tip offset.
+31. **Deburr counterbores** (when `chamfer`), for each hole with a `hole_below`: the chamfering bit, `chamfer2d`, `contours` `[hole_floor_inner:<i>]`, `chamferTipOffset` 0.5 mm when the lower hole is through, else its depth less 0.2 mm, kept between 0.1 and 0.5 mm; one operation per tip offset.
 32. **Cut tabs** (window machining, in the last setup: the bottom one with two sides, the top with one): T2, `contour2d`, multi-depth, `maximumStepdown` `0.2mm`, `contours` `[chains:tabs]`, `"program": "tabs"`.
     Top setup: top at `tab:top` (offset 0), bottom at `tab:bottom` with offset −`overlap`.
     Bottom setup: top at `tab:bottom` (offset 0), bottom at `tab:top` with offset −`overlap`.

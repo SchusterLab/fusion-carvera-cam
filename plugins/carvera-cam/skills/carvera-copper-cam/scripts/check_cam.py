@@ -1561,7 +1561,8 @@ def summary(args=None):
     part (the script's and the recipes'): the tool, machining time, cut length,
     deepest Z, the area the cuts span, and every plunge (a straight move down at
     the feed), in each setup's WCS, in mm, with the plunges also in the design's
-    frame. Prints them as JSON."""
+    frame. Prints them as JSON. args['max_points'] caps the plunges listed per
+    operation (default 40)."""
     args = args or {}
     cam = adsk.cam.CAM.cast(_app().activeDocument.products.itemByProductType('CAMProductType'))
     cc = runpy.run_path(os.path.join(HERE, 'carvera_cam.py'))

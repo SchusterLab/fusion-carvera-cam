@@ -20,14 +20,14 @@ For each, the cut runs:
 1. **List the tools.**
    `features({})` gives the small end mills under `library`, with their diameters and flutes.
 2. **Choose a tool for each feature.**
-   A tool fits a feature when its radius is no larger than the corner radius and its flute is at least 0.5 mm longer than `depth_mm`.
+   A tool fits a feature when its radius is no larger than the corner radius and its flute is at least 0.5 mm longer than the cut's depth: a pocket floor's `depth`, or for a window the part's thickness plus 0.5 mm.
    Of the tools that fit, take one already chosen for another corner, in either setup, if any, so the part needs fewer tools; otherwise take the largest.
    A corner tighter than the smallest end mill's radius (0.5 mm for the 1 mm end mill) cannot be cut to size: take the smallest end mill, and tell the user the corner stays at that radius.
    When no tool's flute is long enough, leave the feature out and tell the user its corners keep the 3.175 mm end mill's radius.
 3. **Add one operation per tool and kind**, in the setup, in its NC program:
    - pockets: `add_operation` with `strategy` `pocket2d`, the tool's description as `tool`, `name` `Pocket corners <diameter>` (for example `Pocket corners 2`), followed by ` from <depth> mm` for a cut that starts at a region's floor, `select` `{"pockets": ["floor:<i>", ...]}`, and as `params` its heights plus `doMultipleDepths` `true`, `useRestMachining` `true` and `rampType` `'plunge'`;
-   - windows: the same, with `name` `Window corners <diameter>` and `select` `{"pockets": ["window:<j>", ...]}`.
-   Features of one kind that share a tool and the same start go in one operation, those starting highest first, and the windows' operations after the pockets'.
+   - windows: the same, with `name` `Window corners <diameter>` and `select` `{"pockets": ["window:<j>"]}`, one operation per window.
+   Pockets that share a tool and the same start go in one operation, those starting highest first, and the windows' operations come after the pockets', in window order.
 4. **Renumber the tools.**
    `renumber_tools({})` puts any new tool in its slot: tools after T3 are numbered in the order the programs first use them.
    Then report the slots: the Carvera's tool changer holds six, and the seventh and later tools need a manual change.
@@ -53,7 +53,7 @@ if side == 'top':
     feats += [('window', w['window'], w['corner_radius'], f['part']['thickness_mm'] + 0.5, None)
               for w in f['windows'] if tight(w['corner_radius'])]
 for kind in ('pocket', 'window'):
-    groups = {}  # (tool, region) -> features
+    groups = {}  # (tool, diameter, region, window) -> features; one window per operation
     for _, i, r, depth, reg in [x for x in feats if x[0] == kind]:
         fits = [t for t in small if t['dia_mm'] / 2 <= max(r, 0.5) + 1e-3
                 and t['flute_mm'] >= depth + 0.5]
@@ -62,10 +62,12 @@ for kind in ('pocket', 'window'):
             continue
         t = max([t for t in fits if t['tool'] in used] or fits, key=lambda t: t['dia_mm'])
         used.add(t['tool'])
-        groups.setdefault((t['tool'], t['dia_mm'], reg), []).append(i)
+        groups.setdefault((t['tool'], t['dia_mm'], reg, i if kind == 'window' else None),
+                          []).append(i)
     # the cuts that start highest first: from H, then from the shallowest region floor
-    for (tool, d, reg), items in sorted(groups.items(), key=lambda g: (
-            g[0][2] is not None, 0 if g[0][2] is None else abs(region_floor[g[0][2]]['z']))):
+    depth = lambda reg: f['floors'][region_floor[reg]['floors'][0]]['depth']
+    for (tool, d, reg, _), items in sorted(groups.items(), key=lambda g: (
+            g[0][2] is not None, 0 if g[0][2] is None else depth(g[0][2]), g[0][3] or 0)):
         name = '%s corners %g' % (kind.capitalize(), d)
         if kind == 'pocket':
             if reg is None:
@@ -73,7 +75,7 @@ for kind in ('pocket', 'window'):
             else:
                 heights = {'topHeight_mode': "'from point'", 'topHeight_offset': '0mm',
                            'topHeight_ref': {'ref': 'floor:%d' % region_floor[reg]['floors'][0]}}
-                name += ' from %g mm' % f['floors'][region_floor[reg]['floors'][0]]['depth']
+                name += ' from %g mm' % depth(reg)
             heights['bottomHeight_mode'] = "'from contour'"
         else:
             heights = dict(top_at_h, **through)
@@ -85,8 +87,6 @@ for kind in ('pocket', 'window'):
                                    for i in items]}})
 call('renumber_tools', {})
 ```
-
-For a bottom-setup region, sort by the region floor's depth below the bottom face instead of its z.
 
 ## Shapes the steps do not cover
 
