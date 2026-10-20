@@ -329,6 +329,7 @@ def _check_op(rep, s, o, t, earlier, lab, threaded=frozenset()):
 
 # ------------------------------------------------------------- the G-code
 
+ARC_SAG = 0.002  # mm: how far the straight moves of an arc may run inside it
 _WORD = re.compile(r'([A-Z])\s*([-+]?\d*\.?\d+)')
 
 
@@ -338,8 +339,9 @@ def _norm(name):
 
 def parse_gcode(text):
     """[(comment, moves)] per section; a move is (G, x0, y0, z0, x1, y1, z1). An
-    arc in the XY plane comes as straight moves at most 5 degrees round, so a
-    cut round a corner sweeps the corner, not its chord."""
+    arc in the XY plane comes as straight moves at most 5 degrees round and at most
+    ARC_SAG off the arc, so a cut round a corner sweeps the corner, not its chord,
+    and a cut round a large arc does not seem to cut inside it."""
     sections = []
     moves = None
     x = y = z = None
@@ -390,7 +392,10 @@ def parse_gcode(text):
                 sweep %= 2 * math.pi
                 if sweep < 1e-9:
                     sweep = 2 * math.pi  # a full circle
-                n = max(1, int(math.ceil(sweep / math.radians(5))))
+                step = math.radians(5)
+                if rad > ARC_SAG:
+                    step = min(step, 2 * math.acos(1 - ARC_SAG / rad))
+                n = max(1, int(math.ceil(sweep / step)))
                 px, py, pz = x, y, z
                 for i in range(1, n + 1):
                     a = a0 + (sweep * i / n) * (-1 if g == 2 else 1)
@@ -646,11 +651,14 @@ def _check_plunges(rep, rule, severity, sn, o, moves, t, holes, milled, to_world
                 plunges=len(bad))
 
 
-def _check_rapids(rep, sn, o, moves, t, milled, top, box=None, other=(), deadline=None):
-    """H2: a rapid move sideways below the stock top runs only through stock that
-    earlier passes, this operation's own included, have cleared, sampled every
-    0.5 mm along it. A sample with the whole tool outside `box`, the stock's
-    (x0, x1, y0, y1), is in the air beside the stock."""
+def _check_rapids(rep, sn, o, moves, t, milled, top, box=None, other=(), deadline=None,
+                  points=()):
+    """H2: a rapid move below the stock top runs only through stock that earlier
+    passes, this operation's own included, have cleared: a move sideways sampled
+    every 0.5 mm along it, and a move straight down at its end, where a hole an
+    earlier drill in this setup made (`points`, see _drill_points) counts too,
+    down to where its point starts. A sample with the whole tool outside `box`,
+    the stock's (x0, x1, y0, y1), is in the air beside the stock."""
     r = (t['d'] or 0) / 2
     done = []  # this operation's cuts so far
     for m in moves:
@@ -660,7 +668,22 @@ def _check_rapids(rep, sn, o, moves, t, milled, top, box=None, other=(), deadlin
             done.append(m)
             continue
         run = math.hypot(m[4] - m[1], m[5] - m[2])
-        if run < 1e-3 or min(m[3], m[6]) >= top - 0.01:
+        if min(m[3], m[6]) >= top - 0.01:
+            continue
+        if run < 1e-3:
+            x, y, z = m[4], m[5], m[6]
+            if z >= m[3] or (box and (x + r <= box[0] + 0.01 or x - r >= box[1] - 0.01 or
+                                      y + r <= box[2] + 0.01 or y - r >= box[3] - 0.01)):
+                continue
+            cleared = _cleared_to(x, y, r, top, milled + [(done, r)], other)
+            for px, py, pz, tip, d in points:
+                if d >= 2 * r - 0.01 and math.hypot(px - x, py - y) <= d / 2 - r + 0.01:
+                    cleared = min(cleared, pz + tip)
+            if cleared > z + 0.01:
+                rep.add('H2', 'error', sn, o.name, 'a rapid move runs down to Z%.3f into uncut '
+                        'stock at X%.3f Y%.3f, which is cut only down to Z%.3f'
+                        % (z, x, y, cleared))
+                return
             continue
         n = max(1, int(math.ceil(run / 0.5)))
         for i in range(n + 1):
@@ -1017,7 +1040,7 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
         cuts = [m for m in moves if m[0] != 0 and None not in m[1:]]
         if not cuts:
             continue
-        _check_rapids(rep, sn, o, moves, t, milled, top, box, other, deadline)
+        _check_rapids(rep, sn, o, moves, t, milled, top, box, other, deadline, points)
         if t['type'] == 'chamfer mill':
             chamfers.append((o, dict(t, params=o.parameters), cuts))
         if t['type'] == 'drill':
