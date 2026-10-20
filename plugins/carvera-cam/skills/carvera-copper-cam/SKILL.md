@@ -112,6 +112,7 @@ The JSON lists, among other things:
 - `tap_candidate`: the hole's thread: the one its tapped Hole feature names, or, for a plain hole, a thread whose minor diameter matches it;
 - `floors`: pocket floors and the faces level with the part's top or bottom (the two outer faces, and any other face at that height, such as a boss's top), each with its smallest inside-corner radius (0 for a sharp corner, null when the walls have no inside corners), `side_open` for a pocket open to the side of the part, and `shelf` for a floor that steps down into a deeper pocket;
 - `windows`: through openings that are not round holes;
+- `side_holes`: holes whose axis does not run along Z, which nothing cuts, each with its diameter, the middle of its axis and the axis's direction;
 - `tab_z`: the height of the tab band's centre that `build` will use with two setups: halfway between the part's top and bottom, unless a pocket open to the side is at that height and within an end mill's width of a tab. `tab_z_one_sided` is the same with one setup: the band on the part's bottom face, or the lowest height above it clear of such pockets.
 - `turned_over` and `features_per_face`: the face with more features (pocket floors and blind holes; through holes and windows count for neither face) is machined first, as the top. When the design's bottom face has more, `turned_over` is true and the rest of the JSON describes the part turned over about its X axis: `top` is the design's bottom face, and y and z are mirrored about the part's centre.
 
@@ -308,6 +309,10 @@ Then, unless the user asks to skip it, check the toolpaths by Fusion's simulatio
 - A call that runs past about a minute times out, and one that keeps Fusion busy much longer can crash it. One call that ran `build` and then `generate` on the sample puck did both.
 - Keep `build`, `generate` and `check` in separate calls, and let `generate` resume over several.
 
+**A failed call.**
+- When a script fails, Fusion undoes what it did. A script that made the document's CAM product and then failed, such as a `build` that stopped on the part's shape, or a call that ran `build` and then failed in code of its own, leaves the document with no working workspace: every later `build` in it fails with "InternalValidationError : pCurrentSession". Close the document without saving and make a new copy.
+- `build` checks the stock against the part before it makes the CAM product, so a stock it refuses does not do this.
+
 **After a crash.**
 1. Fusion's window is gone and only a "Fusion Error Report" window is left (`cer_dialog.exe`). Close it; stopping the process is fine.
 2. Unsaved documents are lost apart from Fusion's crash recovery. That includes a throwaway copy, so make a new copy for the recipes' way.
@@ -338,6 +343,7 @@ Then, unless the user asks to skip it, check the toolpaths by Fusion's simulatio
 - A pocket's inside corners finish at the radius of the smallest end mill that fits: 1 mm diameter leaves R0.5 in a sharp corner.
 - A through window's inside corners below R1.59 finish the same way, with a small end mill from the face through the part.
 - A hole closed at both ends, or one no tool in the library fits, is skipped with a warning.
+- A hole whose axis does not run along Z, such as a hole into the part's side, is not cut; `build` warns about each one.
 
 ## Re-learning the conventions
 

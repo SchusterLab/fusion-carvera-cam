@@ -173,12 +173,15 @@ def _design():
     return adsk.fusion.FusionDocument.cast(_app().activeDocument).design
 
 
-def _cam():
+def _cam(create=True):
+    """The document's CAM product; with create false, None when it has none yet."""
     doc = _app().activeDocument
     try:
         cam = doc.products.itemByProductType('CAMProductType')
     except RuntimeError:
         cam = None
+    if cam is None and not create:
+        return None
     if cam is None:
         # activating the Manufacture workspace creates the CAM product; if it is
         # already active (say after a failed script), leave it and come back
@@ -645,8 +648,37 @@ def analyze_body(body, design=None, threads=None):
                  mm(ztop - zbot)],
         'ztop': mm(ztop), 'zbot': mm(zbot),
         'holes': holes, 'floors': floors, 'windows': windows,
+        'side_holes': _side_holes(body),
         'top_face': top_face, 'bottom_face': bot_face,
     }
+
+
+def _side_holes(body):
+    """Holes whose axis does not run along Z, such as holes into the part's sides:
+    no tool reaches them from the top or the bottom. One entry per hole, at the
+    middle of its axis, with the axis's direction."""
+    out = {}
+    for f in body.faces:
+        g = f.geometry
+        if not isinstance(g, adsk.core.Cylinder) or abs(g.axis.z) > 0.99 or                 not _is_concave_cylinder(f):
+            continue
+        a = g.axis.copy()
+        a.normalize()
+        # the face's extent along its axis, from points on its edges
+        ts, o = [], g.origin
+        for e in f.edges:
+            for q in (e.startVertex, e.endVertex):
+                if q is not None:
+                    ts.append(o.vectorTo(q.geometry).dotProduct(a))
+        if not ts:
+            continue
+        t = (min(ts) + max(ts)) / 2
+        c = [o.x + a.x * t, o.y + a.y * t, o.z + a.z * t]
+        key = (round(g.radius * 200), round(c[0] * 100), round(c[1] * 100), round(c[2] * 100))
+        if key not in out:
+            out[key] = {'dia': mm(2 * g.radius), 'at': [mm(v) for v in c],
+                        'axis': [round(v, 3) for v in (a.x, a.y, a.z)]}
+    return list(out.values())
 
 
 def _tap_candidate(dia):
@@ -791,6 +823,7 @@ def analyze(args=None):
         'holes': list(groups.values()),
         'floors': [_strip(f) for f in a['floors']],
         'windows': [_strip(w) for w in a['windows']],
+        'side_holes': a['side_holes'],
         'tab_z': _tab_height(a, min(1.0, 0.4 * a['size'][2]), min(0.5, 0.2 * a['size'][2]),
                              tab_points=_tab_points(a, 0.5))[0],
         # with one side: the tab band on the part's bottom (see _strategy)
@@ -2508,6 +2541,14 @@ def _too_near(paths, walls, clear):
     return False
 
 
+def _same_path(p, q):
+    """True when two sketched paths run over the same points, either way round."""
+    pt = lambda sp: (round(sp.geometry.x, 4), round(sp.geometry.y, 4))
+    ends = lambda pth: sorted(tuple(sorted((pt(c.startSketchPoint), pt(c.endSketchPoint))))
+                              for c in pth)
+    return ends(p) == ends(q)
+
+
 def _pass_path(sk, run, walls, d, ring, face):
     """One contour pass along a pocket's open walls (`run`, co-edges, drawn as
     `walls`, see _draw_walls): the tool centre's path `d` cm off the walls,
@@ -3465,7 +3506,8 @@ def _add_tabs(design, lay, tab):
             for u in (t0, (t0 + t1) / 2, t1):
                 ok, q = ev.getPointAtParameter(u)
                 ok, der = ev.getFirstDerivative(u)
-                if der.x * d0.x + der.y * d0.y < 0:  # run along the tab, as the outline does
+                backward = der.x * d0.x + der.y * d0.y < 0
+                if backward:  # run along the tab, as the outline does
                     der = adsk.core.Vector3D.create(-der.x, -der.y, 0)
                 n = math.hypot(der.x, der.y)
                 # a clockwise loop has its outside on the left of the direction of travel
@@ -3474,7 +3516,8 @@ def _add_tabs(design, lay, tab):
                 # the end mill's centre where the cut beside the tab stops, and the
                 # deepest point of the arc it leaves in the tab's end
                 cx, cy = q.x - der.y / n * TOOL_R, q.y + der.x / n * TOOL_R
-                k = TOOL_R if u == t0 else -TOOL_R
+                # the arc bulges into the tab: forward at the end the tab starts from
+                k = TOOL_R if (u == t0) != backward else -TOOL_R
                 ends.append(adsk.core.Point3D.create(cx + der.x / n * k, cy + der.y / n * k, 0))
             if isinstance(c, adsk.fusion.SketchLine):
                 lines.addByTwoPoints(pts[0], pts[2])
@@ -4043,6 +4086,13 @@ def _make_layout(design, a, plan, warnings):
                         warnings.append('a pass along the walls of the pocket open to the side '
                                         'at z=%g mm does not end on the outline cut; it is left '
                                         'out, so check that pocket' % f['z'])
+                    elif any(_same_path(pth, q) for _, q in passes):
+                        # a slot as wide as the end mill: the passes along its two
+                        # walls are one line, which Fusion would chain into a closed
+                        # contour of no area
+                        for c in pth:
+                            if c.isValid:
+                                c.deleteMe()
                     else:
                         passes.append((k, pth))
                 for c in walls:
@@ -4633,6 +4683,10 @@ def _side_ops(b, setup, a, side, plan, warnings):
             hi, set_hi = _at_tab('top', tab_top)
             lo, set_lo = _at_tab('bottom', tab_bottom, -tab['overlap'])
             params.update(hi, **lo)
+            # the drill is as wide as the outline cut's slot: it feeds down the
+            # slot from above the stock, since at rapid it would rub the slot's
+            # walls (Fusion's simulation flags that as a rapid move into stock)
+            params.update(feedHeight_mode="'from stock top'", feedHeight_offset='1mm')
             out.append(b.op(setup, 'drill', drill_for(band_top - chain_bot), 'Tab entry holes',
                             params, _both(points([c['entry'] for c in lay['corner'][1:]]
                                                  if lay else []), set_hi, set_lo)))
@@ -4656,17 +4710,28 @@ def _side_ops(b, setup, a, side, plan, warnings):
                                 'its bore enters solid copper' % (h['dia'], h['x'], h['y']))
             else:
                 pre.append((h, d))
+        # a hole in a pocket floor is pre-drilled once the pocket is roughed, just
+        # before the bores: drilled now, from its top on the floor, the drill would
+        # rapid down into the copper still over the floor
+        in_floor = lambda h: depth_of(h['z1'] if top else h['z0']) > 1e-6
+        floor_pre.extend((h, d) for h, d in pre if in_floor(h))
+        return out + pre_drills([(h, d) for h, d in pre if not in_floor(h)])
+
+    floor_pre = []  # (hole, drill) pre-drilled after the rough pockets
+
+    def pre_drills(pre, suffix=''):
         groups = {}
         for h, d in pre:
             ends = pre_drill_ends(h)
             groups.setdefault((d, h['through'], tuple(sorted(ends.items()))), (ends, []))[1].append(h)
+        out = []
         for (d, through, _), (ends, hs) in sorted(groups.items(),
                                                   key=lambda kv: (kv[0][0] != DRILL_3175,
                                                                   kv[0][0], not kv[0][1])):
             name = 'Pre-drill bores' if d == DRILL_3175 else 'Pre-drill bores %s' % d.split('*')[0]
             out.append(b.op(setup, 'drill',
                             drill_for(max(h['depth'] for h in hs)) if d == DRILL_3175 else d,
-                            name + ('' if through else ' (blind)'),
+                            name + suffix + ('' if through else ' (blind)'),
                             dict(DRILL, **ends, **from_hole_top()),
                             _sel_faces('holeFaces', [h['face'] for h in hs])))
         return out
@@ -5031,6 +5096,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
                                                 [u[1] for u in gu if u[1] is not None], top),
                             _sel_faces('predrillPositions', pts), sel)))
         if which == 'rough':
+            ops['main'] += pre_drills(floor_pre, ' in floors')
             end_bores(which, multi, suffix)
         # tap holes bored to size: one light pass, plus a finishing pass in blind holes
         for hs in _group([h for h, _ in tap_bored]):
@@ -5314,9 +5380,9 @@ def _side_ops(b, setup, a, side, plan, warnings):
 
 
 def _delete_previous(cam, design):
-    for s in [s for s in cam.setups if s.name.endswith(SETUP_TAG)]:
+    for s in [s for s in cam.setups if s.name.endswith(SETUP_TAG)] if cam else []:
         s.deleteMe()
-    for n in [n for n in cam.ncPrograms if SETUP_TAG in n.name]:
+    for n in [n for n in cam.ncPrograms if SETUP_TAG in n.name] if cam else []:
         n.deleteMe()
     root = design.rootComponent
     for sk in [sk for sk in root.sketches if sk.name.startswith(LAYOUT_SKETCH)]:
@@ -5488,11 +5554,24 @@ def build(args):
         raise RuntimeError('"mode" must be "script" or "recipe"')
     if 'stock' not in args:
         raise RuntimeError('args["stock"] is required: {"x":..,"y":..,"z":..} in mm')
-    cam = _cam()
     design = _design()
     # before reading the body: deleting an earlier build's sketches and vises
     # recomputes any feature added after them, which would leave stale faces
-    _delete_previous(cam, design)
+    _delete_previous(_cam(create=False), design)
+    # check the stock against the part before making the CAM product: a script
+    # that fails after activating the Manufacture workspace leaves the document
+    # without a working workspace, so that every later build in it fails
+    if not _cam(create=False):
+        body0 = _find_body(args)
+        stock0 = args['stock']
+        if _quarter_turn(body0, stock0):
+            stock0 = dict(stock0, x=stock0['y'], y=stock0['x'])
+        a0 = _machined_body(args, design, False, _quarter_turn(body0, args['stock']))[1]
+        if stock0['z'] < a0['ztop'] - a0['zbot'] - 1e-3:
+            raise RuntimeError('stock is %g mm thick but the part is %g mm'
+                               % (stock0['z'], a0['ztop'] - a0['zbot']))
+        _strategy(a0, stock0, args.get('sides'))
+    cam = _cam()
     # a Part design holds one component, but the vise, tabs, face patches and
     # turned-over copy are components of their own; Fusion turns a Part with
     # bodies into a Hybrid design, which keeps its modelling
@@ -5545,6 +5624,14 @@ def build(args):
         warnings.append('the design was a Part design, which holds only one component; it is '
                         'now a Hybrid design, so that the vise, tabs and face patches can be '
                         'components. Saving the document keeps the change')
+    if a['side_holes']:
+        warnings.append('%d hole%s not along Z (%s mm across), such as holes into the '
+                        "part's sides, which no tool reaches from the top or the bottom: "
+                        'nothing cuts %s, so make %s by hand'
+                        % (len(a['side_holes']), '' if len(a['side_holes']) == 1 else 's',
+                           ', '.join(sorted({'%g' % h['dia'] for h in a['side_holes']})),
+                           'it' if len(a['side_holes']) == 1 else 'them',
+                           'it' if len(a['side_holes']) == 1 else 'them'))
     if outline:
         warnings.append('before running the _tabs program, hot-glue the part to the stock '
                         'round it, so that the part stays put when the tab cut frees it')
@@ -5715,6 +5802,42 @@ def _fit_thread_passes(cam, adjusted):
                 adjusted.append('%s: %s passes' % (o.name, p.expression))
 
 
+def _fit_predrill(cam, adjusted):
+    """Move a pocket's entry 0.01 mm when Fusion finds it unusable.
+
+    Fusion now and then refuses a pre-drill position that lies well inside the
+    pocket, apparently when it falls exactly on some point of its own construction:
+    of two mirror-image D-shaped windows, each entered at its centre, one cut and the
+    other was "Drill position is unusable", and the same point moved 0.01 mm either
+    way cut. The pocket then plunges 0.01 mm off its hole's centre, well within the
+    0.02 mm that check_cam's rule E4 allows; generate() lists each change.
+    """
+    for s in cam.setups:
+        if not s.name.endswith(SETUP_TAG):
+            continue
+        for o in s.allOperations:
+            if o.strategy != 'pocket2d' or 'Drill position is unusable' not in (o.warning or ''):
+                continue
+            p = o.parameters.itemByName('predrillPositions')
+            pts = list(p.value.value) if p else []
+            if not pts or not all(isinstance(q, adsk.fusion.SketchPoint) for q in pts):
+                continue
+            for dx, dy in ((0.001, 0), (0, 0.001), (-0.001, 0), (0, -0.001)):
+                moved = [q.parentSketch.sketchPoints.add(adsk.core.Point3D.create(
+                    q.geometry.x + dx, q.geometry.y + dy, q.geometry.z)) for q in pts]
+                p.value.value = moved
+                _wait(cam.generateToolpath(o), 20)
+                if 'Drill position is unusable' not in (o.warning or ''):
+                    adjusted.append('%s: entry moved 0.01 mm, since Fusion found it unusable'
+                                    % o.name)
+                    break
+                for q in moved:
+                    q.deleteMe()
+            else:
+                p.value.value = pts
+                _wait(cam.generateToolpath(o), 20)
+
+
 def generate(args=None):
     """Generate toolpaths of this module's setups, within a time budget (args['budget'] s).
 
@@ -5738,6 +5861,7 @@ def generate(args=None):
                               'of': fut.numberOfOperations}))
             return
     _fit_thread_passes(cam, adjusted)
+    _fit_predrill(cam, adjusted)
     report = []
     pending = []
     for s in cam.setups:
