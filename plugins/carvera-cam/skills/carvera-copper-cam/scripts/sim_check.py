@@ -257,7 +257,8 @@ def compare(args):
 def export_part(args):
     """In Fusion: write a body as a binary STL in mm, in the design's frame.
 
-    args: path; body (name, or '<occurrence>/<body>'), default the machined body: the
+    args: path; deviation (mm, default 0.005: how far the mesh may stand off the faces);
+    body (name, or '<occurrence>/<body>'), default the machined body: the
     copy in the 'carvera-cam part' component when build turned the part over, else the
     one visible solid body in the root component.
     """
@@ -286,7 +287,12 @@ def export_part(args):
         raise ValueError('no body %r' % name)
     em = des.exportManager
     o = em.createSTLExportOptions(body, args['path'])
-    o.meshRefinement = adsk.fusion.MeshRefinementSettings.MeshRefinementHigh
+    # Fusion's preset refinements scale with the body's size: High gave a 120 x 30 mm plate
+    # 932 triangles, and the comparison then found full-depth rings of overcut round its
+    # 3.4 mm holes that a mesh bound to 0.005 mm does not show.
+    o.meshRefinement = adsk.fusion.MeshRefinementSettings.MeshRefinementCustom
+    o.surfaceDeviation = float(args.get('deviation', 0.005)) / 10  # mm -> cm
+    o.normalDeviation = math.radians(5)
     o.isBinaryFormat = True
     o.unitType = adsk.fusion.DistanceUnits.MillimeterDistanceUnits
     if not em.execute(o):
@@ -317,14 +323,17 @@ def simulate(args):
     setup = cam.setups.itemByName(args['setup'])
     if setup is None:
         raise ValueError('no setup %r; setups: %s' % (args['setup'], [s.name for s in cam.setups]))
-    bad = [o.name for o in setup.allOperations if not o.isSuppressed and not (o.hasToolpath and o.isToolpathValid)]
+    ops = [o for o in setup.allOperations if not o.isSuppressed]
+    bad = [o.name for o in ops if not o.isToolpathValid]
     if bad:
         raise RuntimeError('generate these toolpaths first: %s' % bad)
     ui.activeSelections.clear()
     ui.activeSelections.add(setup)
     ui.commandDefinitions.itemById(SIM_COMMANDS[0]).execute()
     ui.commandDefinitions.itemById('SimulationIssues').execute()
-    print(json.dumps({'simulating': setup.name}))
+    # An operation Fusion generated but found nothing to cut has no toolpath; the
+    # simulation passes over it.
+    print(json.dumps({'simulating': setup.name, 'empty': [o.name for o in ops if not o.hasToolpath]}))
 
 
 def stop(args):

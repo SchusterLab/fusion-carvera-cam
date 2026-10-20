@@ -15,7 +15,8 @@ A setup simulated on its own starts from the whole stock, not from what the setu
 
 For each setup:
 
-1. Start the simulation, with its Issues panel open (a script that is not read-only, so no simulation or other command dialog may be open):
+1. Start the simulation, with its Issues panel open (a script that is not read-only, so no simulation or other command dialog may be open).
+   It refuses a setup with a toolpath not yet generated or out of date, and lists under `empty` the operations Fusion generated but found nothing to cut; report each of those, since an empty operation is one `build` made for a feature it then did not machine:
 
    ```python
    def run(_context: str):
@@ -36,6 +37,7 @@ For each setup:
 
 Then write the part's body to an STL (read-only): `runpy.run_path(SCRIPTS + r'\sim_check.py')['export_part']({'path': r'<scratch>\part.stl'})`.
 It picks the machined body, the copy in `carvera-cam part` when `build` turned the part over; pass `body` for a design with several visible bodies.
+It meshes the faces to within 0.005 mm (`deviation`), not by Fusion's preset refinements, which coarsen with the body's size and put false rings of overcut round the holes of a long part.
 Compare, outside Fusion or inside it:
 
 ```
@@ -57,6 +59,8 @@ It reports two kinds of region, each with its volume, area, deepest difference a
 Regions narrower than 0.1 mm or smaller than 0.001 mm³ are only counted (`*_small_regions`, `*_small_volume_mm3`): along each wall the two meshes facet the curve differently, which leaves strips one grid column wide.
 Differences under 0.02 mm along Z are the simulation's own accuracy and are left out.
 
+A region is a connected patch of columns, so a deburr chamfer round an island's top and a sliver at the island's wall can join into one region whose `depth_mm` is the wall's height; look at its `z_mm` and place before calling it a wall cut back.
+
 Some differences are by design; match each region against `build`'s warnings and the features from `analyze`:
 
 | Region | Expected where |
@@ -68,6 +72,7 @@ Some differences are by design; match each region against `build`'s warnings and
 | left, in an inside corner, out to the corner radius of the smallest end mill that fits | a sharp or tight inside corner |
 
 Anything else is a finding: a floor left high or cut low, a wall left thick or cut back, a feature not cut, or stock left beside the part, such as a tab.
+The comparison cannot see a missing deburr, since the model's edges are sharp and an edge left sharp matches them; rule DB1 checks the deburr.
 Report it with its place and size, find the operation that cut or should have cut there (`check_cam.py`'s `summary`), and treat it as a gap in the checks too (see "Comparing with the other checks").
 
 ## Reading the issues
@@ -75,6 +80,7 @@ Report it with its place and size, find the operation that cut or should have cu
 Every error or warning in the Issues panel needs attention, except those of a simulation run on several setups at once, which is why each setup runs alone.
 An event names what met: the tool's `Cutter`, `Shaft`, `Shoulder` or `Holder`, the `Fixture` (the modelled vise and fixture plate), the stock, or a machine axis such as `Z`.
 A `Fixture` event in a setup's own simulation means a tool or the spindle reaches the vise: look at the operation's moves near the jaws (rule X1) and at where `build` placed that setup's vise.
+`Rapid move into stock` means a rapid, sideways or straight down, meets copper; rule H2 checks only sideways rapids.
 
 ## Comparing with the other checks
 
