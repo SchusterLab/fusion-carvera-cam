@@ -8,6 +8,7 @@ The Fusion API can neither run a simulation nor read its stock, so `scripts/sim_
 It does not use the real mouse or keyboard, so it does not disturb whoever is using the computer.
 Saving the stock needs Windows unlocked, though, since the canvas's right-click menu does not open on a locked screen; the issues can be read either way.
 Only the lock screen of the session Fusion runs in counts: under Remote Desktop, the computer's own console has a lock screen of its own, which does not stop the menu.
+The menu also opens only where Fusion's canvas shows on screen: with another window over it, `sim_ui.ps1` says so under `stock_error`, and the user has to bring Fusion to the front for the few minutes the saves take.
 
 ## Running it
 

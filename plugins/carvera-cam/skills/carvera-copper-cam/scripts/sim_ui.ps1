@@ -34,6 +34,9 @@ public class CcWin {
   [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
   [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
+  public struct PT { public int X, Y; }
+  [DllImport("user32.dll")] static extern IntPtr WindowFromPoint(PT p);
+  public static uint PidAt(int x, int y) { var p = new PT(); p.X = x; p.Y = y; uint pid; GetWindowThreadProcessId(WindowFromPoint(p), out pid); return pid; }
   public struct RECT { public int L, T, R, B; }
   public class Win { public IntPtr H; public string Title; public RECT R; }
   static Win Make(IntPtr h) { var s = new StringBuilder(256); GetWindowText(h, s, 256); var w = new Win(); w.H = h; w.Title = s.ToString(); GetWindowRect(h, out w.R); return w; }
@@ -138,7 +141,14 @@ if ($Stl) { try {
   # The canvas: the largest child of the main window below the toolbar.
   $canvas = [CcWin]::Kids($main) | Where-Object { $_.R.T -gt 100 } | Sort-Object { ($_.R.R - $_.R.L) * ($_.R.B - $_.R.T) } | Select-Object -Last 1
   function Menu {
-    RightClick $canvas.H 60 60
+    # well inside the view: when Fusion's window is not maximized, the child taken as
+    # the canvas starts at the toolbar, and a point near its corner is the workspace menu
+    $x, $y = [int](($canvas.R.R - $canvas.R.L) / 4), [int](($canvas.R.B - $canvas.R.T) * 3 / 4)
+    # the right-click menu opens only where the canvas shows on screen
+    if ([CcWin]::PidAt($canvas.R.L + $x, $canvas.R.T + $y) -ne (Fusion).Id) {
+      throw "another window covers Fusion's canvas, so the right-click menu does not open: bring Fusion to the front, leave it there for a few minutes, and run this again"
+    }
+    RightClick $canvas.H $x $y
     WaitFor { TopWindows | Where-Object { $_.Title -eq 'Marking Menu' } | Select-Object -First 1 } 10 'the right-click menu'
   }
   # The right-click menu: a ring of player buttons (Up and Down step round it; Up first goes
