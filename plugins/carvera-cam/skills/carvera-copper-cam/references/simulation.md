@@ -80,7 +80,7 @@ Some differences are by design; match each region against `build`'s warnings and
 | overcut, 0.1–0.2 mm deep along an edge | the deburr chamfer |
 | left, in an inside corner, out to the corner radius of the smallest end mill that fits | a sharp or tight inside corner |
 | left, a hole's width across, part of the way up the part, under a hole not along Z | a hole into the part's side, which `build` warns that nothing cuts |
-| left, a wedge along an edge, as wide as the face is across | a sloped face, such as a modelled chamfer, which `build` warns that nothing cuts |
+| left, a wedge along an edge, as wide as the face is across | a sloped face other than a 45° chamfer up to 1.4375 mm wide, such as a chamfer at another angle, which `build` warns that nothing cuts |
 | left, a cone at the bottom of a blind threaded hole | a drill point modelled in a hole that is bored with a flat bottom for the thread mill |
 
 Anything else is a finding: a floor left high or cut low, a wall left thick or cut back, a feature not cut, or stock left beside the part, such as a tab.

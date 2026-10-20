@@ -171,11 +171,17 @@ T3, each in one pass, in this order, with the drills of step 16a among them:
 28. **Face (finish)**: T3, `pocket2d` (default `'predrill'` ramp), one pass, `pockets` `[patch:<side> finish]`, `predrill` `[entry]`, top at H (0.2 mm above the face), `bottomHeight_mode` `'from contour'`, no allowance.
     H is now the face.
 
-### Deburring and the tabs
+### Chamfers, deburring and the tabs
 
-29. **Deburr** (when `chamfer` and the setup's side has a flat face): the chamfering bit, `chamfer2d`, `contours` `[face_deburr:<side>, floor_deburr:<i>, …]`, `chamferTipOffset` t, and no heights: a chamfer sits at the edges it follows.
+28a. **Chamfers**, for the setup's side's entries in `features`' `chamfers` (the 45° chamfers and countersinks the design models, each at most 1.4375 mm wide): the chamfering bit, `chamfer2d`, `contours` `[chamfer:<k>, …]`, `chamferWidth` `0mm` and `chamferClearance` `0mm`, so that Fusion takes the chamfer's slope from the model, `chamferTipOffset` t, and no heights; one operation per t, named `Chamfers`, then ` 1`, ` 2`, … in order of t when there are more.
+    The bit's 45° cone reaches 1.5375 mm out from its point's edge, so t = 1.5375 mm − the chamfer's width at most.
+    Room: step 29's, measured from the chamfer's `depth_mm` down.
+    t = the smallest of 0.5 mm, room − 0.1 mm and 1.5375 mm − the width; when t is under 0.1 mm, leave that chamfer out and warn that nothing cuts it.
+    These operations run whether or not `chamfer` is set: the chamfers are the design's, not a deburr.
+29. **Deburr** (when `chamfer` and the setup's side has a flat face, and `face_deburr_edges` for the side, or a `floor_deburr` item, has edges to take): the chamfering bit, `chamfer2d`, `contours` `[face_deburr:<side>, floor_deburr:<i>, …]`, `chamferTipOffset` t, and no heights: a chamfer sits at the edges it follows.
     `face_deburr` takes every edge of the face, but where the stock fits the part and the face is not faced, it leaves out the edges on the stock's own sides: no tool cuts them, so they have no burrs.
-    `floor_deburr:<i>` takes the edges where walls fall away from floor i; add one for every other floor of the side whose `role` is `face`, such as the top of an island level with the face.
+    `floor_deburr:<i>` takes the edges where walls fall away from floor i; add one for every other floor of the side whose `role` is `face` and `falls_away` set, such as the top of an island level with the face.
+    Both leave out the edges of the modelled chamfers, which have no burr; `face_deburr_edges` counts the face's edges left.
     The bit's point sits t below the 0.1 mm chamfer, and Fusion leaves out an edge where the point would go below a floor.
     Room: the smallest of the setup's pocket depths, its blind holes' depths, in window machining the depth below the part's face of the tab band's face on this setup's side (the band's top in the top setup, its bottom in the bottom one), and 0.7 mm.
     t = room − 0.2 mm, kept between 0.1 and 0.5 mm; warn when even 0.1 mm leaves the point within 0.02 mm of a floor or the tabs.

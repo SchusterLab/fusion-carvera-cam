@@ -865,6 +865,10 @@ def _deburr_edges(setup):
                     ok, nw = other[0].evaluator.getNormalAtPoint(pt)
                     if not ok or abs(nw.dotProduct(zx)) > 0.999:
                         continue  # a face beside it in the same plane
+                    if nw.dotProduct(into) < -1e-6 and abs(nw.dotProduct(zx)) > 0.01:
+                        # a slope falling away, such as a modelled chamfer: an obtuse
+                        # edge with no burr, which the chamfer's own cut takes
+                        continue
                     if nw.dotProduct(into) >= -1e-6:
                         # the wall rises from the face: an inside corner
                         n_ = max(2, int(e.length / 0.02))

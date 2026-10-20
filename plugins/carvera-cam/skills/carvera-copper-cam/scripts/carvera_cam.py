@@ -333,6 +333,20 @@ def _classify_hole(face, ztop, zbot, threads):
     bot_open = bool(bot_edges) and _end_open(face, bot_edges[0], False)
     side = 'top' if top_open else ('bottom' if bot_open else 'none')
     closed = bot_edges if top_open and not bot_open else top_edges if bot_open and not top_open else []
+    # a hole that opens into a countersink or chamfer, a cone widening away from
+    # it, starts where that cone does: at the face it is cut from, not in a floor
+    # (Fusion's drills and bores still take the hole's top at the cylinder's end,
+    # so their heights rise by 'rise' from it)
+    rise = {'top': 0.0, 'bottom': 0.0}
+    for edges, at_top in ((top_edges, True), (bot_edges, False)):
+        other = _other_face(edges[0], face) if edges else None
+        if other is not None and isinstance(other.geometry, adsk.core.Cone) and \
+                _end_open(face, edges[0], at_top):
+            c0, c1 = _zrange(other)
+            if at_top:
+                rise['top'], z1 = mm(max(0.0, c1 - z1)), max(z1, c1)
+            else:
+                rise['bottom'], z0 = mm(max(0.0, z0 - c0)), min(z0, c0)
     return {
         'face': face,
         'dia': mm(2 * g.radius),
@@ -343,6 +357,7 @@ def _classify_hole(face, ztop, zbot, threads):
         'x': mm(g.origin.x), 'y': mm(g.origin.y),
         'thread': threads.get(face.tempId),
         'point_angle': _point_angle(face, closed[0]) if closed else None,
+        'rise': rise,
     }
 
 
@@ -642,13 +657,15 @@ def analyze_body(body, design=None, threads=None):
         fl['shelf'] = fl['role'] == 'pocket' and not fl['side_open'] and \
             _steps_down(fl['face'], fl['side'] == 'top', hole_ids)
 
+    chamfers, sloped = _slopes(body)
     return {
         'body': body,
         'size': [mm(bb.maxPoint.x - bb.minPoint.x), mm(bb.maxPoint.y - bb.minPoint.y),
                  mm(ztop - zbot)],
         'ztop': mm(ztop), 'zbot': mm(zbot),
         'holes': holes, 'floors': floors, 'windows': windows,
-        'side_holes': _side_holes(body), 'sloped_faces': _sloped_faces(body),
+        'side_holes': _side_holes(body),
+        'chamfers': chamfers, 'sloped_faces': sloped,
         'top_face': top_face, 'bottom_face': bot_face,
     }
 
@@ -681,23 +698,81 @@ def _side_holes(body):
     return list(out.values())
 
 
-def _sloped_faces(body):
-    """Flat faces neither level nor upright, such as modelled chamfers: the end mills
-    cut level floors and upright walls only, so a sloped face is left square, as copper.
-    One entry per face, with its middle, its area and its slope from level."""
-    out = []
-    for f in body.faces:
-        g = f.geometry
-        if not isinstance(g, adsk.core.Plane):
-            continue
+def _slope_of(face):
+    """A face's slope from level in degrees, for a flat face or a cone about Z
+    neither level nor upright; else None."""
+    g = face.geometry
+    if isinstance(g, adsk.core.Plane):
         n = g.normal.copy()
         n.normalize()
-        if abs(n.z) < 0.01 or abs(n.z) > 0.99:
+        if 0.01 <= abs(n.z) <= 0.99:
+            return math.degrees(math.acos(min(1.0, abs(n.z))))
+    elif isinstance(g, adsk.core.Cone):
+        ax = g.axis.copy()
+        ax.normalize()
+        if abs(ax.z) > 0.999 and 0.5 < math.degrees(g.halfAngle) < 89.5:
+            return 90.0 - math.degrees(g.halfAngle)
+    return None
+
+
+def _is_level(face):
+    g = face.geometry
+    return isinstance(g, adsk.core.Plane) and abs(g.normal.z) > 0.99
+
+
+def _is_upright(face, at):
+    ok, n = face.evaluator.getNormalAtPoint(at)
+    return ok and abs(n.z) < 0.01
+
+
+def _slopes(body):
+    """The sloped faces (see _slope_of) of the part, as (chamfers, others).
+
+    A chamfer is a 45-degree face, flat or a cone about Z such as a countersink,
+    that a level face meets along its edge on the side it faces (up for 'top',
+    down for 'bottom') and upright walls along its far edge, no wider than the
+    chamfering bit reaches (CHAMFER_REACH less its least tip offset): the
+    chamfering bit cuts it. Each chamfer has its face, side, width (mm, as deep
+    as it is wide) and its edges' tempIds. The others, which nothing cuts, have a
+    point on them, their area and slope. A cone at a drill point meets no level
+    face, so it is neither."""
+    chamfers, others = [], []
+    for f in body.faces:
+        slope = _slope_of(f)
+        if slope is None:
+            continue
+        g = f.geometry
+        z0, z1 = _zrange(f)
+        ok, n = f.evaluator.getNormalAtPoint(f.pointOnFace)
+        side = 'top' if n.z > 0 else 'bottom'
+        near, far = (z1, z0) if side == 'top' else (z0, z1)
+        meets_level, far_upright, far_edges = False, True, 0
+        for e in f.edges:
+            other = [h for h in e.faces if h != f]
+            if not other:
+                continue
+            ez0, ez1 = _zrange(e)
+            if ez1 - ez0 > 1e-4:
+                continue  # an edge down the slope, such as a corner between two chamfers
+            if abs(ez0 - near) < 1e-4 and _is_level(other[0]):
+                meets_level = True
+            elif abs(ez0 - far) < 1e-4:
+                far_edges += 1
+                ok, t0, t1 = e.evaluator.getParameterExtents()
+                ok, pt = e.evaluator.getPointAtParameter((t0 + t1) / 2)
+                far_upright = far_upright and _is_upright(other[0], pt)
+        if isinstance(g, adsk.core.Cone) and not meets_level:
+            continue  # a drill point, cut by its drill
+        width = mm(z1 - z0)
+        if abs(slope - 45.0) <= CHAMFER_ANGLE_TOL and meets_level and far_edges and                 far_upright and width <= CHAMFER_REACH - CHAMFER_TIP_MIN + 1e-6:
+            chamfers.append({'face': f, 'side': side, 'width': width,
+                             'z0': mm(z0), 'z1': mm(z1),
+                             'edges': {e.tempId for e in f.edges}})
             continue
         c = f.pointOnFace
-        out.append({'at': [mm(c.x), mm(c.y), mm(c.z)], 'area_mm2': round(f.area * 100, 2),
-                    'slope_deg': round(math.degrees(math.acos(min(1.0, abs(n.z)))), 1)})
-    return out
+        others.append({'at': [mm(c.x), mm(c.y), mm(c.z)], 'area_mm2': round(f.area * 100, 2),
+                       'slope_deg': round(slope, 1), 'width_mm': width})
+    return chamfers, others
 
 
 def _tap_candidate(dia):
@@ -800,18 +875,17 @@ def _turned_threads(body, turned, m, threads):
 
 
 def _top_arg(args):
-    """args['top'] checked against args['flip']: a key of TOPS, or None to choose."""
-    top, flip = args.get('top'), args.get('flip')
+    """args['top'], a key of TOPS, or None to choose."""
+    if 'flip' in args:
+        raise RuntimeError('"flip" is gone: pass "top": "-Z" to machine the bottom face first, '
+                           'or "+Z" for the top')
+    top = args.get('top')
     if top is not None:
         top = str(top).upper()
         if top in ('X', 'Y', 'Z'):
             top = '+' + top
         if top not in TOPS:
             raise RuntimeError('"top" must be one of %s' % ', '.join(TOPS))
-        if flip is not None and bool(flip) != (top == '-Z'):
-            raise RuntimeError('"flip" and "top" disagree: pass only "top"')
-    elif flip is not None:
-        top = '-Z' if flip else '+Z'
     return top
 
 
@@ -821,7 +895,7 @@ def _machined_body(args, design, make, quarter=False):
 
     args['top'] names that face. Without it, the face with more features is
     machined first: when the design's bottom face has more (see _feature_counts),
-    or args['flip'] is true, the part is turned over. With quarter, it is also
+    the part is turned over. With quarter, it is also
     given a quarter turn about Z (see _quarter_matrix). With make, the moved copy
     is added to the design in PART_COMPONENT and the design's body hidden behind it
     (the next build shows it again); otherwise the copy is a temporary body, for
@@ -900,6 +974,7 @@ def analyze(args=None):
         'floors': [_strip(f) for f in a['floors']],
         'windows': [_strip(w) for w in a['windows']],
         'side_holes': a['side_holes'],
+        'chamfers': [{k: v for k, v in _strip(c).items() if k != 'edges'} for c in a['chamfers']],
         'sloped_faces': a['sloped_faces'],
         'tab_z': _tab_height(a, min(1.0, 0.4 * a['size'][2]), min(0.5, 0.2 * a['size'][2]),
                              tab_points=_tab_points(a, 0.5))[0],
@@ -1317,7 +1392,8 @@ def features(args=None):
         floors.append(dict(_strip(f), floor=i, **{
             'entry': None if e is None else {'point': 'pocket:%d' % i, 'drilled': e['drill'],
                                              'hole_depth_mm': e['depth_mm']},
-            'narrow': i in L['narrow'], 'falls_away': _has_falling_edges(f['face']),
+            'narrow': i in L['narrow'],
+            'falls_away': _has_falling_edges(f['face'], _chamfer_edges(a)),
             'region': region_of.get(i),
             'inside_region': L['inside_region'].get(str(i)), 'slot': slot_of.get(i),
             'fed_by_slot': next((k for k, sl in enumerate(L['slots']) if i in sl['fed']), None)}))
@@ -1367,6 +1443,15 @@ def features(args=None):
                        'width_mm': sl['width_mm'], 'fed': sl['fed'], 'end': 'slot_end:%d' % k}
                       for k, sl in enumerate(L['slots'])]},
         'floors': floors, 'holes': holes, 'windows': windows,
+        # depth_mm: the chamfer's far edge below its side's face
+        'chamfers': [{'chamfer': k, 'side': c['side'], 'width_mm': c['width'],
+                      'depth_mm': round(a['ztop'] - c['z0'] if c['side'] == 'top'
+                                        else c['z1'] - a['zbot'], 4)}
+                     for k, c in enumerate(a['chamfers'])],
+        # the face's edges a face_deburr takes, but the chamfers' (0: nothing to deburr)
+        'face_deburr_edges': {sd: None if a[sd + '_face'] is None else sum(
+            1 for lp in a[sd + '_face'].loops for ce in lp.coEdges
+            if ce.edge.tempId not in _chamfer_edges(a)) for sd in ('top', 'bottom')},
         'library': {
             'drills': [{'tool': d, 'dia_mm': round(dia, 4), 'flute_mm': round(fl, 3),
                         'point_mm': round(lib.tip_length(d), 4),
@@ -1456,7 +1541,10 @@ def _sel_items(design, a, L, param, items, top):
                          where the stock fits the part and the face is not faced,
                          not the edges on the stock's own sides, which no tool cuts
       floor_deburr:<i>   the edges where walls fall away from floor i (or another
-                         face level with the part's face), which a deburr takes
+                         face level with the part's face), which a deburr takes;
+                         both deburr items leave out the edges of modelled chamfers
+      chamfer:<k>        modelled chamfer k's face (see features' chamfers), for a
+                         2D chamfer of width and clearance 0
       patch:<name>       a face patch (pockets)
       patch_outline:<n>  a patch's outer loop, as a closed boundary (pockets)
       region:<k>         a shelf region's closed chain
@@ -1507,9 +1595,12 @@ def _sel_items(design, a, L, param, items, top):
                 faced = L['face'] and L['margin_%s_mm' % rest] > 1e-6
                 axes = [] if st['outline'] or faced else ['y'] if st['ends'] else ['x', 'y']
                 face = _ref(design, a, L, 'face:' + rest)
-                _add_deburr(sels, face, _raw_edges(face, a['body'], axes) if axes else set())
+                _add_deburr(sels, face, (_raw_edges(face, a['body'], axes) if axes else set())
+                            | _chamfer_edges(a))
             elif kind == 'floor_deburr':
-                _add_falling_edges(sels, a['floors'][int(rest)]['face'])
+                _add_falling_edges(sels, a['floors'][int(rest)]['face'], _chamfer_edges(a))
+            elif kind == 'chamfer':
+                face_contour(a['chamfers'][int(rest)]['face'])
             elif kind == 'patch':
                 sels.createNewPocketSelection().inputGeometry = [_ref(design, a, L, it)]
             elif kind == 'patch_outline':
@@ -2098,34 +2189,13 @@ def _raw_edges(face, body, axes):
 
 def _add_deburr(sels, face, raw):
     """Add to `sels` the face's edges but those in `raw` (tempIds): the whole face
-    when none are raw, else its inner loops and the runs of its outer loop between
-    the raw edges, as open chains with the bit outside the part. The chain's side
-    follows its first edge's direction seen along the tool axis: the outer loop's
-    co-edges run counter-clockwise seen from the face's normal, which faces the
-    tool, so the chain runs against them."""
-    s = sels.createNewFaceContourSelection()
-    s.inputGeometry = [face]
+    when none are raw, else the loops and runs of loops between raw edges (see
+    _add_edge_runs)."""
     if not raw:
+        s = sels.createNewFaceContourSelection()
+        s.inputGeometry = [face]
         return
-    s.loopType = adsk.cam.LoopTypes.OnlyInsideLoops
-    outer = [lp for lp in face.loops if lp.isOuter][0]
-    ces = list(outer.coEdges)
-    k0 = next(k for k, ce in enumerate(ces) if ce.edge.tempId in raw)
-    runs, run = [], []
-    for ce in ces[k0:] + ces[:k0]:
-        if ce.edge.tempId in raw:
-            if run:
-                runs.append(run)
-            run = []
-        else:
-            run.append(ce)
-    if run:
-        runs.append(run)
-    for run in runs:
-        s = sels.createNewChainSelection()
-        s.inputGeometry = [ce.edge for ce in run]
-        s.isOpen = True
-        s.isReverted = not run[0].isOpposedToEdge
+    _add_edge_runs(sels, face, lambda ce: ce.edge.tempId not in raw)
 
 
 def _falls_away(face, ce):
@@ -2150,13 +2220,21 @@ def _falls_away(face, ce):
     return nw.dotProduct(into) < -1e-6
 
 
-def _add_falling_edges(sels, face):
+def _add_falling_edges(sels, face, skip=frozenset()):
     """Add to `sels` the edges where walls fall away from `face` (see
-    _falls_away): a loop whose edges all do, as the face's contour (Fusion
-    selects a face's outer loop, its inner loops or all of them), and each run
-    of such edges in a loop where walls also rise, as an open chain with the
-    bit outside the part, as _add_deburr runs it."""
-    loops = [(lp, [_falls_away(face, ce) for ce in lp.coEdges]) for lp in face.loops]
+    _falls_away), but those in `skip` (tempIds), as _add_edge_runs adds them."""
+    _add_edge_runs(sels, face, lambda ce: ce.edge.tempId not in skip and _falls_away(face, ce))
+
+
+def _add_edge_runs(sels, face, keep):
+    """Add to `sels` the co-edges of `face` that `keep` passes: a loop whose edges
+    all pass, as the face's contour (Fusion selects a face's outer loop, its inner
+    loops or all of them), and each run of passing edges in a loop where others
+    fail, as an open chain with the bit outside the part. The chain's side follows
+    its first edge's direction seen along the tool axis: the outer loop's co-edges
+    run counter-clockwise seen from the face's normal, which faces the tool, so the
+    chain runs against them."""
+    loops = [(lp, [bool(keep(ce)) for ce in lp.coEdges]) for lp in face.loops]
     outer = [fl for lp, fl in loops if lp.isOuter][0]
     inner = [fl for lp, fl in loops if not lp.isOuter]
     whole_outer = all(outer)
@@ -2194,22 +2272,29 @@ def _add_falling_edges(sels, face):
             s.isReverted = not run[0].isOpposedToEdge
 
 
-def _has_falling_edges(face):
-    return any(_falls_away(face, ce) for lp in face.loops for ce in lp.coEdges)
+def _has_falling_edges(face, skip=frozenset()):
+    return any(ce.edge.tempId not in skip and _falls_away(face, ce)
+               for lp in face.loops for ce in lp.coEdges)
 
 
-def _sel_deburr_faces(faces, main=None, raw=()):
+def _sel_deburr_faces(faces, main=None, raw=(), skip=frozenset()):
     """The deburr's contours: the main face's edges but the raw ones (see
-    _add_deburr), and the falling edges of each of `faces`."""
+    _add_deburr) and those in `skip`, the edges of modelled chamfers, which have
+    no burr, and the falling edges of each of `faces` but those in `skip`."""
     def f(params):
         v = params.itemByName('contours').value
         sels = v.getCurveSelections()
         if main is not None:
-            _add_deburr(sels, main, raw)
+            _add_deburr(sels, main, set(raw) | set(skip))
         for face in faces:
-            _add_falling_edges(sels, face)
+            _add_falling_edges(sels, face, skip)
         v.applyCurveSelections(sels)
     return f
+
+
+def _chamfer_edges(a, side=None):
+    """The tempIds of the edges of the part's modelled chamfers (on `side`, or all)."""
+    return set().union(*[c['edges'] for c in a['chamfers'] if side in (None, c['side'])])
 
 
 def _sel_inner_contours(faces):
@@ -2994,6 +3079,12 @@ def _thread_params(name, through, allow=0.0):
 CHAMFER_TIP_MAX = 0.5   # the chamfering bit's point below the chamfer, in mm, where there is room
 CHAMFER_TIP_MIN = 0.1   # and at least this, so the point doesn't cut the edge
 CHAMFER_CLEAR = 0.1     # the point kept this far above floors and the tabs
+# A modelled chamfer: the chamfering bit's 45-degree cone (3.175 mm across, its
+# point 0.1 mm across) reaches 1.5375 mm out from its point's edge, which must go
+# at least CHAMFER_TIP_MIN below the chamfer, so the widest chamfer it cuts is
+# 1.4375 mm; a slope within CHAMFER_ANGLE_TOL degrees of 45 counts.
+CHAMFER_REACH = (3.175 - 0.1) / 2
+CHAMFER_ANGLE_TOL = 0.5
 CHAMFER_OP = {
     'tolerance': '0.01mm',
     'chamferWidth': '0.1mm',
@@ -4532,8 +4623,12 @@ def _side_ops(b, setup, a, side, plan, warnings):
                 thickness + 0.5, m)
         return at(which, far_face, -0.5)
 
-    def from_hole_top():
-        return {'topHeight_offset': '%gmm' % max(0.0, high[0])}
+    def rise(hs):
+        # mm from Fusion's hole top, the cylinder's end, up to a countersink's top
+        return max([h['rise'][side] for h in hs] + [0.0])
+
+    def from_hole_top(hs=()):
+        return {'topHeight_offset': '%gmm' % (max(0.0, high[0]) + rise(hs))}
 
     def depth_of(z):
         return (a['ztop'] - z) if top else (z - a['zbot'])
@@ -4800,16 +4895,17 @@ def _side_ops(b, setup, a, side, plan, warnings):
         groups = {}
         for h, d in pre:
             ends = pre_drill_ends(h)
-            groups.setdefault((d, h['through'], tuple(sorted(ends.items()))), (ends, []))[1].append(h)
+            groups.setdefault((d, h['through'], tuple(sorted(ends.items())), h['rise'][side]),
+                              (ends, []))[1].append(h)
         out = []
-        for (d, through, _), (ends, hs) in sorted(groups.items(),
+        for (d, through, _, _), (ends, hs) in sorted(groups.items(),
                                                   key=lambda kv: (kv[0][0] != DRILL_3175,
                                                                   kv[0][0], not kv[0][1])):
             name = 'Pre-drill bores' if d == DRILL_3175 else 'Pre-drill bores %s' % d.split('*')[0]
             out.append(b.op(setup, 'drill',
                             drill_for(max(h['depth'] for h in hs)) if d == DRILL_3175 else d,
                             name + suffix + ('' if through else ' (blind)'),
-                            dict(DRILL, **ends, **from_hole_top()),
+                            dict(DRILL, **ends, **from_hole_top(hs)),
                             _sel_faces('holeFaces', [h['face'] for h in hs])))
         return out
 
@@ -5009,7 +5105,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
                 sub = [h for h in hs if h['through'] == through]
                 if not sub:
                     continue
-                params = dict(DRILL, **_drill_ends(through), **from_hole_top())
+                params = dict(DRILL, **_drill_ends(through), **from_hole_top(sub))
                 if floor:
                     # the floor still carries the rough pocket's allowance
                     params['topHeight_offset'] = '%gmm' % POCKET_FLOOR_ALLOWANCE
@@ -5339,7 +5435,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
             small.setdefault(rough[0], []).append(h)
     for em, group in small.items():
         for hs in _group(group):
-            params = dict(BORE, stepover='0.2mm', numberOfStepovers='2', **from_hole_top())
+            params = dict(BORE, stepover='0.2mm', numberOfStepovers='2', **from_hole_top(hs))
             params.update({'bottomHeight_offset': '-0.5mm' if hs[0]['through'] else '0mm'})
             ops['main'].append(b.op(setup, 'bore', em, 'Bore %.2f' % hs[0]['dia'], params,
                                     _sel_faces('circularFaces', [x['face'] for x in hs])))
@@ -5357,7 +5453,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
             if hs:
                 ops['main'].append(b.op(
                     setup, 'thread', THREADS[t][2], 'Thread ' + t + ('' if through else ' (blind)'),
-                    _thread_params(t, through, max(0.0, high[0])),
+                    _thread_params(t, through, max(0.0, high[0]) + rise(hs)),
                     _sel_faces('circularFaces', [h['face'] for h in hs])))
 
     # the finishing bores after the drills and thread mills, to clean up the
@@ -5368,6 +5464,41 @@ def _side_ops(b, setup, a, side, plan, warnings):
     # the finishing face, after every cut that leaves burrs on the face
     if facing:
         ops['main'].append(face_op('finish', 'false', ' (finish)', 0))
+
+    # the modelled 45-degree chamfers facing this setup (see _slopes), by the
+    # chamfering bit with its cone on the chamfer (Fusion's 2D chamfer of the
+    # chamfer faces, its width and clearance 0), the point below the chamfer's
+    # lower edge by as much as the floors and tabs below and the bit's reach allow
+    def chamfer_room(depth):
+        # mm from `depth` below the face down to the next floor, hole bottom or tab
+        room = [f['depth'] - depth for f in floors
+                if f['role'] == 'pocket' and f['depth'] > depth + 1e-6]
+        room += [h['depth'] - depth for h in holes
+                 if not h['through'] and h['depth'] > depth + 1e-6]
+        if plan['outline']:
+            room.append((a['ztop'] - band_top if top else band_bot - a['zbot']) - depth)
+        return min(room + [CHAMFER_TIP_MAX + CHAMFER_CLEAR])
+
+    # every chamfer's edges, cut or not, are left out of the deburr: a cut one
+    # has no burr, and one too close above a floor is left square anyway
+    by_tip, chamfered = {}, _chamfer_edges(a, side)
+    for c in a['chamfers']:
+        if c['side'] != side:
+            continue
+        depth = a['ztop'] - c['z0'] if top else c['z1'] - a['zbot']
+        tip = min(CHAMFER_TIP_MAX, chamfer_room(depth) - CHAMFER_CLEAR,
+                  CHAMFER_REACH - c['width'])
+        if tip < CHAMFER_TIP_MIN - 1e-6:
+            warnings.append('a %g mm chamfer on the %s with its lower edge %g mm deep has '
+                            "a floor or the tabs too close below for the chamfering bit's "
+                            'point: nothing cuts it' % (c['width'], side, round(depth, 3)))
+            continue
+        by_tip.setdefault(round(tip, 3), []).append(c['face'])
+    for k, (tip, fs) in enumerate(sorted(by_tip.items())):
+        ops['main'].append(b.op(
+            setup, 'chamfer2d', CHAMFER, 'Chamfers' + (' %d' % (k + 1) if len(by_tip) > 1 else ''),
+            dict(CHAMFER_OP, chamferWidth='0mm', chamferClearance='0mm',
+                 chamferTipOffset='%gmm' % tip), _sel_face_contours(fs)))
 
     # deburr the outer face's edges, the bit's point kept off the shallowest floor
     # and blind hole bottom below the face, and off the tabs, which still stand in
@@ -5400,20 +5531,24 @@ def _side_ops(b, setup, a, side, plan, warnings):
         axes = [] if plan['outline'] or facing else ['y'] if plan['ends'] else ['x', 'y']
         raw = _raw_edges(face, body, axes) if axes else set()
         level = [f['face'] for f in floors if f['role'] == 'face' and f['face'] != face
-                 and _has_falling_edges(f['face'])]
-        ops['main'].append(b.op(setup, 'chamfer2d', CHAMFER, 'Deburr', dict(
-            CHAMFER_OP, chamferTipOffset='%gmm' % round(tip, 3)),
-            _sel_deburr_faces(level, face, raw)))
+                 and _has_falling_edges(f['face'], chamfered)]
+        # the edges along modelled chamfers have no burr: the chamfer took it off
+        if level or any(ce.edge.tempId not in raw and ce.edge.tempId not in chamfered
+                        for lp in face.loops for ce in lp.coEdges):
+            ops['main'].append(b.op(setup, 'chamfer2d', CHAMFER, 'Deburr', dict(
+                CHAMFER_OP, chamferTipOffset='%gmm' % round(tip, 3)),
+                _sel_deburr_faces(level, face, raw, chamfered)))
         by_depth = {}
         for f in floors:
-            if f['role'] == 'pocket' and _has_falling_edges(f['face']):
+            if f['role'] == 'pocket' and _has_falling_edges(f['face'], chamfered):
                 by_depth.setdefault(round(f['depth'], 3), []).append(f['face'])
         for dep, fs in sorted(by_depth.items()):
             t = chamfer_tip(dep, 'the pocket floor %g mm deep' % dep)
             ops['main'].append(b.op(
                 setup, 'chamfer2d', CHAMFER,
                 'Deburr pocket floors' + (' %g mm' % dep if len(by_depth) > 1 else ''),
-                dict(CHAMFER_OP, chamferTipOffset='%gmm' % round(t, 3)), _sel_deburr_faces(fs)))
+                dict(CHAMFER_OP, chamferTipOffset='%gmm' % round(t, 3)),
+                _sel_deburr_faces(fs, skip=chamfered)))
 
     # the edges of the holes under counterbores, at the counterbore's floor, which
     # the face's deburr does not reach; the point goes down the hole below
@@ -5638,7 +5773,6 @@ def build(args):
                  "-X", "+Y" or "-Y" (default: "-Z" when the bottom face has more
                  features than the top face, else "+Z"; see _machined_body). The
                  bottom setup machines the opposite face
-      flip:      true is "top": "-Z", false is "+Z"
       stock:     {"x": mm, "y": mm, "z": mm, "y_mode": "back", "y_offset": 10,
                   "bottom": mm of stock below the part (default: centred with two
                   sides, 0 with one)}; x, y and z in the design's axes, so that
@@ -5775,14 +5909,22 @@ def build(args):
     if a['sloped_faces']:
         sl = a['sloped_faces']
         warnings.append('%d sloped face%s (%s mm2 in all, at %s degrees from level), such as '
-                        'modelled chamfers: the end mills cut only level floors and upright '
-                        'walls, so nothing cuts %s and the copper there is left square; '
-                        'chamfer %s by hand, or take the chamfers out of the design and leave '
-                        'the edges to the deburr'
+                        'chamfers at another angle than 45 degrees or wider than %g mm: the '
+                        'end mills cut only level floors and upright walls, and the chamfering '
+                        'bit only 45-degree chamfers up to that width, so nothing cuts %s and '
+                        'the copper there is left square; chamfer %s by hand, or change the '
+                        'design'
                         % (len(sl), '' if len(sl) == 1 else 's',
                            '%g' % round(sum(f['area_mm2'] for f in sl), 1),
                            ', '.join(sorted({'%g' % f['slope_deg'] for f in sl})),
+                           round(CHAMFER_REACH - CHAMFER_TIP_MIN, 2),
                            'it' if len(sl) == 1 else 'them', 'it' if len(sl) == 1 else 'them'))
+    under = [c for c in a['chamfers'] if c['side'] == 'bottom']
+    if under and sides == 1:
+        warnings.append('%d chamfer%s on the bottom face, which one setup does not machine: '
+                        'nothing cuts %s; pass "sides": 2'
+                        % (len(under), '' if len(under) == 1 else 's',
+                           'it' if len(under) == 1 else 'them'))
     if outline:
         warnings.append('before running the _tabs program, hot-glue the part to the stock '
                         'round it, so that the part stays put when the tab cut frees it')
