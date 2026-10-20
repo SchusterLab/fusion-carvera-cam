@@ -43,10 +43,13 @@ The skill lists every finding with its rule, from out-of-date toolpaths and cuts
 | `.../references/threads.toml` | how the lab pre-drills and thread-mills M2 to M4 tapped holes |
 | `.../references/recipes/` | the written method for programming the whole part (`part.md`), with its recipes for pockets open to the side and inside corners |
 | `.../references/review.md` | how to judge toolpaths by reading their G-code and screenshots, the written counterpart of the check |
+| `.../references/simulation.md` | how to check toolpaths by Fusion's simulation: the issues it flags, and the stock it leaves against the part |
 | `.../assets/carvera-tools.json` | the tool library: Makera's end mills, thread mills and chamfering bit, and McMaster-Carr's drills |
 | `.../assets/mcmaster-expanded-shank-carbide-drills.csv` | McMaster-Carr's table of expanded-shank carbide drills, which the library's drills are made from |
 | `.../scripts/carvera_cam.py` | the generator, run inside Fusion's Python: `analyze`, `build`, `generate`, and the primitives the recipes use |
 | `.../scripts/check_cam.py` | the toolpath check, run inside Fusion's Python: `check`, and `summary`, for comparing two builds |
+| `.../scripts/sim_check.py` | starts and stops Fusion's simulation of a setup, writes the part as an STL, and compares the simulated stock with it (the comparison runs with plain Python too) |
+| `.../scripts/sim_ui.ps1` | drives the open simulation on Windows: reads its Issues panel and saves its stock as an STL |
 | `.../scripts/tool_library.py` | builds the tool library from Makera's tool files and McMaster-Carr's table, with the presets; run with plain Python |
 | `.../scripts/dump_cam.py` | dumps a project's existing CAM setups to JSON, for re-learning the conventions |
 | `.../scripts/make_test_part.py` | builds test parts, one with one of each feature, one with pockets open to the side and one with a floor open on every side round islands, for testing changes |

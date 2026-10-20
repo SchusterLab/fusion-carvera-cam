@@ -70,11 +70,13 @@ The check's rule X1 then tests the G-code itself, every 0.5 mm along each move.
 
 `scripts/check_cam.py` has `check(args)`, the toolpath check, and `summary(args)`, which lists each operation's tool, time, cut length, depth, extent and plunge points from the G-code, for comparing two builds.
 
+`scripts/sim_check.py` and `scripts/sim_ui.ps1` check the toolpaths by Fusion's own simulation: they run it on each setup, read the collisions and other issues Fusion flags, save the stock it leaves, and compare that stock with the part (see [references/simulation.md](references/simulation.md)).
+
 The whole part can be programmed two ways: by `build` itself, the script's way, or by the recipes, written methods in [references/recipes/](references/recipes/) that you carry out with smaller functions in the same script, the primitives, such as `features`, `add_operation` and `pass_path`.
 [part.md](references/recipes/part.md) makes every operation, in run order, from the lab's conventions; it hands pockets open to the side to [open-pocket.md](references/recipes/open-pocket.md) and tight inside corners to [corners.md](references/recipes/corners.md), features whose shapes vary too much for one fixed method.
 Each recipe says when it applies, how to cut the feature, and which shapes it does not cover.
-The toolpaths are likewise checked two ways: by `scripts/check_cam.py`, and by reading them as [references/review.md](references/review.md) describes.
-By default the skill does both, compares the results, and improves whichever falls short (see "Improving the skill").
+The toolpaths are likewise checked two ways, by `scripts/check_cam.py` and by reading them as [references/review.md](references/review.md) describes, and then by Fusion's simulation, which shows whether the stock it leaves is the part.
+By default the skill does all of these, compares the results, and improves whichever falls short (see "Improving the skill").
 
 The lab's conventions it applies are in [references/conventions.md](references/conventions.md); read that file before changing any parameter.
 
@@ -232,9 +234,14 @@ When the evidence does not settle it, for example a faster toolpath against a be
 Then improve whichever way fell short (see "Improving the skill"), and leave the better toolpaths in the user's document: if the recipes' way won, build the user's document again with `"mode": "recipe"` and follow the recipes there too.
 
 In window machining, take a screenshot with the outline operation selected and check the tabs and the stock position; with stock that fits along one side, select the `Ends` operation instead and check that the end cuts run outside the jaws; to check the vise as well, show `carvera-cam vise top` for the screenshot and hide it again after.
-Ask the user to run Fusion's simulation with collision checking on each setup before machining; the API cannot run it.
 
-### 8. Report
+### 8. Simulate in Fusion
+
+In the user's document, once its toolpaths are the ones that stand, follow [references/simulation.md](references/simulation.md): simulate each setup on its own with the machine, read the issues Fusion flags, save the stock each setup leaves, and compare the stock with the part.
+Every issue, and every difference between the stock and the part that is not by design (that table lists those), needs attention before the program is used: compare it with the two checks' findings, and fix the toolpath or the skill.
+This step needs Windows, where `sim_ui.ps1` runs; elsewhere, ask the user to run Fusion's simulation with collision checking on each setup.
+
+### 9. Report
 
 Report to the user, plainly:
 
@@ -242,6 +249,7 @@ Report to the user, plainly:
 - the NC programs and their order on the machine: run `_top`; with two setups, flip the part and run `_bottom`; in window machining, hot-glue the part to the stock round it, then run `_tabs` last, which cuts the four tabs and frees the part (in Fusion they are named `<part>_top (carvera-cam)` and so on; the files they write are `<part>_top.nc` and so on);
 - the total machining time, and that aluminum runs the same programs at 200% feed and spindle override;
 - every warning from `build`, `generate` and the check, and every feature the generator did not machine;
+- what the simulation flagged in each setup, and where the simulated stock differs from the part beyond the differences by design;
 - how the two ways compared, and any change you made to the skill.
 
 Post-process (write the G-code) only when the user asks.
@@ -254,6 +262,7 @@ When the comparison shows one way falling short, fix the skill, not just this pa
 - **The recipes' way was worse:** fix the recipe's text, or the primitive it calls.
 - **The checker missed something, or flagged something wrong:** fix the rule in `scripts/check_cam.py` and its row in [references/rules.md](references/rules.md).
 - **The written review missed something:** add it to [references/review.md](references/review.md).
+- **The simulation found something both checks missed:** add the rule or the review item that catches it, as [references/simulation.md](references/simulation.md) says.
 
 Then build, generate and check this part both ways again, to show that the fix works and changes nothing else.
 Keep each fix small and about one thing, and never weaken a rule to make a finding go away.
@@ -283,7 +292,7 @@ To read each setup's moves, it adds a temporary NC program to the document and d
 
 Report the errors first, grouped by rule, then the warnings, with the operations each applies to and what rules.md says each guards against.
 Errors P1, P2 and P3 mean the toolpaths need regenerating before any other finding can be trusted.
-The check does not replace Fusion's simulation with collision checking, which the user still runs on each setup.
+Then check the toolpaths by Fusion's simulation as well ([references/simulation.md](references/simulation.md)), which also works on any milling setups.
 
 ## Working with Fusion
 
