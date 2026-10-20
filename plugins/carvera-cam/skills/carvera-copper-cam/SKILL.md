@@ -113,6 +113,7 @@ The JSON lists, among other things:
 - `floors`: pocket floors and the faces level with the part's top or bottom (the two outer faces, and any other face at that height, such as a boss's top), each with its smallest inside-corner radius (0 for a sharp corner, null when the walls have no inside corners), `side_open` for a pocket open to the side of the part, and `shelf` for a floor that steps down into a deeper pocket;
 - `windows`: through openings that are not round holes;
 - `side_holes`: holes whose axis does not run along Z, which nothing cuts, each with its diameter, the middle of its axis and the axis's direction;
+- `sloped_faces`: flat faces neither level nor upright, such as modelled chamfers, which nothing cuts, each with a point on it, its area and its slope from level;
 - `tab_z`: the height of the tab band's centre that `build` will use with two setups: halfway between the part's top and bottom, unless a pocket open to the side is at that height and within an end mill's width of a tab. `tab_z_one_sided` is the same with one setup: the band on the part's bottom face, or the lowest height above it clear of such pockets.
 - `turned_over` and `features_per_face`: the face with more features (pocket floors and blind holes; through holes and windows count for neither face) is machined first, as the top. When the design's bottom face has more, `turned_over` is true and the rest of the JSON describes the part turned over about its X axis: `top` is the design's bottom face, and y and z are mirrored about the part's centre.
 
@@ -344,6 +345,9 @@ Then, unless the user asks to skip it, check the toolpaths by Fusion's simulatio
 - A through window's inside corners below R1.59 finish the same way, with a small end mill from the face through the part.
 - A hole closed at both ends, or one no tool in the library fits, is skipped with a warning.
 - A hole whose axis does not run along Z, such as a hole into the part's side, is not cut; `build` warns about each one.
+- A sloped flat face, such as a modelled chamfer, is not cut: the end mills cut only level floors and upright walls, so the copper there is left square.
+  `build` warns about these faces; the only chamfer the skill cuts is the deburr's 0.1 mm one.
+- Nothing checks that a toolpath stays within the machine's travel: the machine model sets no limits on its axes, so the simulation reports none, and `check_cam.py` has no rule for travel.
 
 ## Re-learning the conventions
 

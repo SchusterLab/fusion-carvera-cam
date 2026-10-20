@@ -7,6 +7,7 @@ Where the stock differs from the part by more than the simulation's accuracy, a 
 The Fusion API can neither run a simulation nor read its stock, so `scripts/sim_ui.ps1` drives the simulation's window, on Windows, through window messages and UI Automation (Windows' interface for reading and pressing controls).
 It does not use the real mouse or keyboard, so it does not disturb whoever is using the computer.
 Saving the stock needs Windows unlocked, though, since the canvas's right-click menu does not open on a locked screen; the issues can be read either way.
+Only the lock screen of the session Fusion runs in counts: under Remote Desktop, the computer's own console has a lock screen of its own, which does not stop the menu.
 
 ## Running it
 
@@ -31,6 +32,8 @@ For each setup:
    ```
 
    It waits until the simulation has verified the whole setup, prints the Issues panel's counts and every issue under its operation, moves the simulation to its end, and saves the stock there to the STL ("Save Stock…" in the canvas's right-click menu, which saves the stock at the playhead), to this computer only.
+   After the move to the end, Fusion builds the stock a little at a time, and Save Stock saves it as far as it has got: on a 120 × 250 mm part, a save 3 s after the move left out every operation from the deburr on.
+   So the script saves the stock again every few seconds until two saves in a row have the same number of triangles, and lists each save's count under `saves`.
    It prints JSON: `errors`, `warnings`, `issues` (each with the `operation`, the `count`, and the `events`, each a list of what collided, such as `Fixture+Holder`) and any `notices` Fusion showed.
    When it cannot save the stock, such as on a locked screen, it still prints the issues, gives the reason under `stock_error`, and exits with 1: ask the user to unlock the screen, then run it again on the same simulation.
 
@@ -77,6 +80,8 @@ Some differences are by design; match each region against `build`'s warnings and
 | overcut, 0.1–0.2 mm deep along an edge | the deburr chamfer |
 | left, in an inside corner, out to the corner radius of the smallest end mill that fits | a sharp or tight inside corner |
 | left, a hole's width across, part of the way up the part, under a hole not along Z | a hole into the part's side, which `build` warns that nothing cuts |
+| left, a wedge along an edge, as wide as the face is across | a sloped face, such as a modelled chamfer, which `build` warns that nothing cuts |
+| left, a cone at the bottom of a blind threaded hole | a drill point modelled in a hole that is bored with a flat bottom for the thread mill |
 
 Anything else is a finding: a floor left high or cut low, a wall left thick or cut back, a feature not cut, or stock left beside the part, such as a tab.
 The comparison cannot see a missing deburr, since the model's edges are sharp and an edge left sharp matches them; rule DB1 checks the deburr.
@@ -85,9 +90,15 @@ Report it with its place and size, find the operation that cut or should have cu
 ## Reading the issues
 
 Every error or warning in the Issues panel needs attention, except those of a simulation run on several setups at once, which is why each setup runs alone.
-An event names what met: the tool's `Cutter`, `Shaft`, `Shoulder` or `Holder`, the `Fixture` (the modelled vise and fixture plate), the stock, or a machine axis such as `Z`.
-A `Fixture` event in a setup's own simulation means a tool or the spindle reaches the vise: look at the operation's moves near the jaws (rule X1) and at where `build` placed that setup's vise.
+An event names the two things that met: the tool's `Cutter`, `Shaft`, `Shoulder` or `Holder`; the `Stock`; the `Fixture`, which is the modelled vise and fixture plate together; or a part of the machine, named by the axis that carries it: `Z` for the spindle head, `Y` for the bed, which rides on the Y axis, and `Base` for the frame that stays put.
+A `Fixture` event in a setup's own simulation means the tool, its holder or the spindle head reaches the vise or the plate: look at the operation's moves near the jaws (rule X1) and at where `build` placed that setup's vise.
 `Rapid move into stock` means a rapid, sideways or straight down, meets copper, or grazes it: a drill as wide as the slot it rapids into counts too.
+
+Toolpaths made to collide on purpose, on the 30 × 20 × 4 mm test part, show what the simulation catches.
+It reports the cutter in the insert on a jaw's face or in the fixture plate beside the vise (`Fixture+Cutter`), the holder and the spindle head beside a jaw on a deep plunge (`Fixture+Holder`, `Fixture+Z`), and the cutter in the raised end of the bed, past the plate (`Y+Cutter`).
+With the tool past the bed's edge along the machine's Y axis, where the tool itself meets nothing, it reports `Fixture+Base`, most likely the fixture plate, which the bed carries, running into the frame.
+It does not check the machine's travel: the machine model sets no limits on its axes, and a toolpath 600 mm from the part, far beyond the Carvera's travel, raised no issue.
+Nor does it check the stock against the vise: stock 250 mm across a vise that opens to about 185 mm simulated without an issue, so only `build`'s warning catches that stock.
 
 ## Comparing with the other checks
 

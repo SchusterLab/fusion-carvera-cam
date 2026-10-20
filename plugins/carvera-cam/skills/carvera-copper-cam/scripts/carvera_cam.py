@@ -648,7 +648,7 @@ def analyze_body(body, design=None, threads=None):
                  mm(ztop - zbot)],
         'ztop': mm(ztop), 'zbot': mm(zbot),
         'holes': holes, 'floors': floors, 'windows': windows,
-        'side_holes': _side_holes(body),
+        'side_holes': _side_holes(body), 'sloped_faces': _sloped_faces(body),
         'top_face': top_face, 'bottom_face': bot_face,
     }
 
@@ -679,6 +679,25 @@ def _side_holes(body):
             out[key] = {'dia': mm(2 * g.radius), 'at': [mm(v) for v in c],
                         'axis': [round(v, 3) for v in (a.x, a.y, a.z)]}
     return list(out.values())
+
+
+def _sloped_faces(body):
+    """Flat faces neither level nor upright, such as modelled chamfers: the end mills
+    cut level floors and upright walls only, so a sloped face is left square, as copper.
+    One entry per face, with its middle, its area and its slope from level."""
+    out = []
+    for f in body.faces:
+        g = f.geometry
+        if not isinstance(g, adsk.core.Plane):
+            continue
+        n = g.normal.copy()
+        n.normalize()
+        if abs(n.z) < 0.01 or abs(n.z) > 0.99:
+            continue
+        c = f.pointOnFace
+        out.append({'at': [mm(c.x), mm(c.y), mm(c.z)], 'area_mm2': round(f.area * 100, 2),
+                    'slope_deg': round(math.degrees(math.acos(min(1.0, abs(n.z)))), 1)})
+    return out
 
 
 def _tap_candidate(dia):
@@ -824,6 +843,7 @@ def analyze(args=None):
         'floors': [_strip(f) for f in a['floors']],
         'windows': [_strip(w) for w in a['windows']],
         'side_holes': a['side_holes'],
+        'sloped_faces': a['sloped_faces'],
         'tab_z': _tab_height(a, min(1.0, 0.4 * a['size'][2]), min(0.5, 0.2 * a['size'][2]),
                              tab_points=_tab_points(a, 0.5))[0],
         # with one side: the tab band on the part's bottom (see _strategy)
@@ -5632,6 +5652,17 @@ def build(args):
                            ', '.join(sorted({'%g' % h['dia'] for h in a['side_holes']})),
                            'it' if len(a['side_holes']) == 1 else 'them',
                            'it' if len(a['side_holes']) == 1 else 'them'))
+    if a['sloped_faces']:
+        sl = a['sloped_faces']
+        warnings.append('%d sloped face%s (%s mm2 in all, at %s degrees from level), such as '
+                        'modelled chamfers: the end mills cut only level floors and upright '
+                        'walls, so nothing cuts %s and the copper there is left square; '
+                        'chamfer %s by hand, or take the chamfers out of the design and leave '
+                        'the edges to the deburr'
+                        % (len(sl), '' if len(sl) == 1 else 's',
+                           '%g' % round(sum(f['area_mm2'] for f in sl), 1),
+                           ', '.join(sorted({'%g' % f['slope_deg'] for f in sl})),
+                           'it' if len(sl) == 1 else 'them', 'it' if len(sl) == 1 else 'them'))
     if outline:
         warnings.append('before running the _tabs program, hot-glue the part to the stock '
                         'round it, so that the part stays put when the tab cut frees it')

@@ -125,9 +125,11 @@ if (-not $done) {
 }
 
 # 4. Save the stock at the simulation's end: Save Stock saves the stock at the playhead.
-# The right-click menu does not open while Windows is locked (LogonUI runs then), so
-# report the issues without the stock.
-if ($Stl -and (Get-Process LogonUI -ErrorAction SilentlyContinue)) {
+# The right-click menu does not open while Windows is locked (LogonUI runs in this
+# session then; another session, such as the console's under remote desktop, may have its
+# own), so report the issues without the stock.
+$session = [System.Diagnostics.Process]::GetCurrentProcess().SessionId
+if ($Stl -and (Get-Process LogonUI -ErrorAction SilentlyContinue | Where-Object SessionId -eq $session)) {
   $result.stock_error = 'Windows is locked, so the right-click menu does not open: unlock it and run this again to save the stock'
   $Stl = ''
 }
@@ -143,39 +145,56 @@ if ($Stl) { try {
   # to End of Toolpath, and Down from there into the list below), then a list: OK, Cancel, Loop, Previous Event, Next Event, Previous Bookmark, Next Bookmark, Add Bookmark,
   # Remove Bookmark, Remove All Bookmarks, Stock; the bookmark items but Add are greyed out
   # and skipped. Stock's submenu: Load Stock..., Load Model as Stock, Save Stock...
-  $m = Menu
-  foreach ($k in 0x26, 0x0D) { Key $m.H $k }          # End of Toolpath
-  Start-Sleep 3
-  $m = Menu
-  foreach ($k in @(0x26) + @(0x28) * 7 + @(0x27, 0x28, 0x28, 0x0D)) { Key $m.H $k }   # Stock > Save Stock...
-  $dlg = $null
-  try { $dlg = WaitFor { TopWindows | Where-Object { $_.Title -eq 'Save Stock' } | Select-Object -First 1 } 10 'the Save Stock dialog' }
-  catch { $m = TopWindows | Where-Object { $_.Title -eq 'Marking Menu' }; if ($m) { Key $m[0].H 0x1B }; throw }
-  $el = $UIA::FromHandle($dlg.H)
-  function ById($id) { $x = $el.FindFirst($Scope::Descendants, (Cond $UIA::AutomationIdProperty $id)); if (-not $x) { throw "no $id" }; $x }
-  $name = 'carvera-cam-stock-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
-  (ById 'QTApplication.QTFrameWindow.MainWidget.editName').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($name)
-  foreach ($p in @(@('QTApplication.QTFrameWindow.MainWidget.checkSaveIn', 'Off'), @('QTApplication.QTFrameWindow.standardActions.checkLocalSave', 'On'))) {
-    $t = (ById $p[0]).GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
-    if ("$($t.Current.ToggleState)" -ne $p[1]) { $t.Toggle() }
-    if ("$($t.Current.ToggleState)" -ne $p[1]) { throw "could not set $($p[0]) $($p[1])" }
-  }
-  $folder = (ById 'QTApplication.QTFrameWindow.standardActions.labelLocalSavePath').Current.Name
-  $file = Join-Path $folder "$name.stl"
-  # Pressed straight after the toggles, Save sometimes does nothing; press it until the file comes.
-  $end = (Get-Date).AddSeconds(60)
-  while (-not ((Test-Path $file) -and (Get-Item $file).Length -gt 84)) {
-    if ((Get-Date) -gt $end) { throw "timed out waiting for the STL at $file" }
-    if (TopWindows | Where-Object { $_.H -eq $dlg.H }) {
-      Start-Sleep 1
-      try { (ById 'QTApplication.QTFrameWindow.standardActions.SaveButton').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() } catch {}
+  # Fusion builds the stock after the jump to End of Toolpath a little at a time, and
+  # Save Stock saves it as far as it has got: save until two saves in a row agree.
+  function SaveStock {
+    $m = Menu
+    foreach ($k in 0x26, 0x0D) { Key $m.H $k }          # End of Toolpath
+    Start-Sleep 3
+    $m = Menu
+    foreach ($k in @(0x26) + @(0x28) * 7 + @(0x27, 0x28, 0x28, 0x0D)) { Key $m.H $k }   # Stock > Save Stock...
+    $dlg = $null
+    try { $dlg = WaitFor { TopWindows | Where-Object { $_.Title -eq 'Save Stock' } | Select-Object -First 1 } 10 'the Save Stock dialog' }
+    catch { $m = TopWindows | Where-Object { $_.Title -eq 'Marking Menu' }; if ($m) { Key $m[0].H 0x1B }; throw }
+    $el = $UIA::FromHandle($dlg.H)
+    function ById($id) { $x = $el.FindFirst($Scope::Descendants, (Cond $UIA::AutomationIdProperty $id)); if (-not $x) { throw "no $id" }; $x }
+    $name = 'carvera-cam-stock-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
+    (ById 'QTApplication.QTFrameWindow.MainWidget.editName').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($name)
+    foreach ($p in @(@('QTApplication.QTFrameWindow.MainWidget.checkSaveIn', 'Off'), @('QTApplication.QTFrameWindow.standardActions.checkLocalSave', 'On'))) {
+      $t = (ById $p[0]).GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+      if ("$($t.Current.ToggleState)" -ne $p[1]) { $t.Toggle() }
+      if ("$($t.Current.ToggleState)" -ne $p[1]) { throw "could not set $($p[0]) $($p[1])" }
     }
-    Start-Sleep 2
+    $folder = (ById 'QTApplication.QTFrameWindow.standardActions.labelLocalSavePath').Current.Name
+    $file = Join-Path $folder "$name.stl"
+    # Pressed straight after the toggles, Save sometimes does nothing; press it until the file comes.
+    $end = (Get-Date).AddSeconds(60)
+    while (-not ((Test-Path $file) -and (Get-Item $file).Length -gt 84)) {
+      if ((Get-Date) -gt $end) { throw "timed out waiting for the STL at $file" }
+      if (TopWindows | Where-Object { $_.H -eq $dlg.H }) {
+        Start-Sleep 1
+        try { (ById 'QTApplication.QTFrameWindow.standardActions.SaveButton').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() } catch {}
+      }
+      Start-Sleep 2
+    }
+    Start-Sleep 1
+    # A binary STL's triangle count is at byte 80; the uncut stock box has 12.
+    $bytes = [System.IO.File]::ReadAllBytes($file)
+    @{ file = $file; triangles = [BitConverter]::ToUInt32($bytes, 80); length = $bytes.Length }
   }
-  Start-Sleep 1
-  # A binary STL's triangle count is at byte 80; the uncut stock box has 12.
-  $bytes = [System.IO.File]::ReadAllBytes($file)
-  $result.triangles = [BitConverter]::ToUInt32($bytes, 80)
+  $prev = $null
+  $result.saves = @()
+  for ($try = 1; $try -le 6; $try++) {
+    $s = SaveStock
+    $result.saves += $s.triangles
+    if ($prev) { Remove-Item -Force $prev.file }
+    if ($prev -and $prev.length -eq $s.length -and $prev.triangles -eq $s.triangles) { break }
+    $prev = $s
+    Start-Sleep 5
+  }
+  if ($try -gt 6) { Remove-Item -Force $s.file; throw 'the saved stock kept changing over six saves: the simulation did not settle at its end' }
+  $file = $s.file
+  $result.triangles = $s.triangles
   Move-Item -Force $file $Stl
   if ($result.triangles -le 12) { throw "the saved stock is the uncut stock box ($Stl): the simulation did not reach its end" }
   $result.stl = $Stl
