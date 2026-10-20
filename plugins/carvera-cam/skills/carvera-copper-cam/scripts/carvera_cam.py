@@ -724,15 +724,34 @@ def _feature_counts(a):
     return n
 
 
-def _flip_matrix(body):
-    """Half a turn about the X axis through the body's centre: the part turned
-    over in its own bounding box, so the bottom face becomes the top."""
+# The part's face to machine first, as the top: the design's axis whose positive or
+# negative direction the part is turned to face up, as (rotation axis, angle) about
+# the body's centre. '-Z' turns the part over about X; '+X' and '-X' turn it a
+# quarter about Y, '+Y' and '-Y' a quarter about X.
+TOPS = {'+Z': None, '-Z': ((1, 0, 0), math.pi),
+        '+X': ((0, 1, 0), -math.pi / 2), '-X': ((0, 1, 0), math.pi / 2),
+        '+Y': ((1, 0, 0), math.pi / 2), '-Y': ((1, 0, 0), -math.pi / 2)}
+
+
+def _top_matrix(body, top):
+    """The turn about the body's centre that brings the design's face `top` (a key
+    of TOPS) up: for '-Z', half a turn about X, so the bottom face becomes the top."""
+    m = adsk.core.Matrix3D.create()
+    if TOPS[top] is None:
+        return m
+    axis, angle = TOPS[top]
     bb = body.boundingBox
     c = adsk.core.Point3D.create(*[(p + q) / 2 for p, q in
                                    zip(bb.minPoint.asArray(), bb.maxPoint.asArray())])
-    m = adsk.core.Matrix3D.create()
-    m.setToRotation(math.pi, adsk.core.Vector3D.create(1, 0, 0), c)
+    m.setToRotation(angle, adsk.core.Vector3D.create(*axis), c)
     return m
+
+
+def _turned_axes(top):
+    """For each axis of the part turned so that `top` faces up, the design's axis it
+    runs along: 'x', 'y' or 'z' (the sign is dropped)."""
+    return {'+Z': 'xyz', '-Z': 'xyz', '+X': 'zyx', '-X': 'zyx',
+            '+Y': 'xzy', '-Y': 'xzy'}[top]
 
 
 def _quarter_matrix(body):
@@ -756,65 +775,102 @@ def _turned_threads(body, turned, m, threads):
         if name is None or not isinstance(f.geometry, adsk.core.Cylinder):
             continue
         g = f.geometry
-        o = g.origin.copy()
-        o.transformBy(m)
+        a = g.axis.copy()
+        a.normalize()
+        # the face's ends along its axis, from points on its edges, moved by m
+        ts = [g.origin.vectorTo(q.geometry).dotProduct(a)
+              for e in f.edges for q in (e.startVertex, e.endVertex) if q is not None]
+        if not ts:
+            continue
         ends = []
-        for z in _zrange(f):
-            p = adsk.core.Point3D.create(g.origin.x, g.origin.y, z)
+        for t in (min(ts), max(ts)):
+            p = adsk.core.Point3D.create(g.origin.x + a.x * t, g.origin.y + a.y * t,
+                                         g.origin.z + a.z * t)
             p.transformBy(m)
-            ends.append(p.z)
-        z0, z1 = min(ends), max(ends)
+            ends.append(p)
+        (x0, y0, z0), (x1, y1, z1) = [q.asArray() for q in ends]
+        if math.hypot(x1 - x0, y1 - y0) > EPS:
+            continue  # turned off Z: a hole into the side, which nothing cuts
+        z0, z1 = min(z0, z1), max(z0, z1)
         for t in cyls:
             tz0, tz1 = _zrange(t)
-            if abs(t.geometry.radius - g.radius) < EPS and                     math.hypot(t.geometry.origin.x - o.x, t.geometry.origin.y - o.y) < EPS and                     abs(tz0 - z0) < EPS and abs(tz1 - z1) < EPS:
+            if abs(t.geometry.radius - g.radius) < EPS and                     math.hypot(t.geometry.origin.x - x0, t.geometry.origin.y - y0) < EPS and                     abs(tz0 - z0) < EPS and abs(tz1 - z1) < EPS:
                 out[t.tempId] = name
     return out
 
 
-def _machined_body(args, design, make, quarter=False):
-    """The body the setups machine, its analysis, whether it is the design's body
-    turned over, and the feature counts per face.
+def _top_arg(args):
+    """args['top'] checked against args['flip']: a key of TOPS, or None to choose."""
+    top, flip = args.get('top'), args.get('flip')
+    if top is not None:
+        top = str(top).upper()
+        if top in ('X', 'Y', 'Z'):
+            top = '+' + top
+        if top not in TOPS:
+            raise RuntimeError('"top" must be one of %s' % ', '.join(TOPS))
+        if flip is not None and bool(flip) != (top == '-Z'):
+            raise RuntimeError('"flip" and "top" disagree: pass only "top"')
+    elif flip is not None:
+        top = '-Z' if flip else '+Z'
+    return top
 
-    The face with more features is machined first, as the top: when the design's
-    bottom face has more (see _feature_counts), or args['flip'] is true, the part
-    is turned over. With quarter, it is also given a quarter turn about Z (see
-    _quarter_matrix). With make, the moved copy is added to the design in
-    PART_COMPONENT and the design's body hidden behind it (the next build shows it
-    again); otherwise the copy is a temporary body, for analyze.
+
+def _machined_body(args, design, make, quarter=False):
+    """The body the setups machine, its analysis, the design's face machined first
+    as the top (a key of TOPS), and the feature counts per face.
+
+    args['top'] names that face. Without it, the face with more features is
+    machined first: when the design's bottom face has more (see _feature_counts),
+    or args['flip'] is true, the part is turned over. With quarter, it is also
+    given a quarter turn about Z (see _quarter_matrix). With make, the moved copy
+    is added to the design in PART_COMPONENT and the design's body hidden behind it
+    (the next build shows it again); otherwise the copy is a temporary body, for
+    analyze. The counts are those of the turned part's top and bottom faces.
     """
     body = _find_body(args)
-    a = analyze_body(body, design)
-    n = _feature_counts(a)
-    flip = args.get('flip')
-    if flip is None:
-        flip = n['bottom'] > n['top']
-    if not flip and not quarter:
-        return body, a, False, n
-    m = _flip_matrix(body) if flip else adsk.core.Matrix3D.create()
+    top = _top_arg(args)
+    if top is None:
+        a = analyze_body(body, design)
+        n = _feature_counts(a)
+        top = '-Z' if n['bottom'] > n['top'] else '+Z'
+        if top == '-Z':
+            n = {'top': n['bottom'], 'bottom': n['top']}
+    else:
+        a = n = None
+    if top == '+Z' and not quarter:
+        if a is None:
+            a = analyze_body(body, design)
+            n = _feature_counts(a)
+        return body, a, top, n
+    m = _top_matrix(body, top)
     if quarter:
         m.transformBy(_quarter_matrix(body))
     tb = adsk.fusion.TemporaryBRepManager.get()
     temp = tb.copy(body)
     tb.transform(temp, m)
     threads = _thread_faces(design)
-    if not make:
-        return temp, analyze_body(temp, design, _turned_threads(body, temp, m, threads)), flip, n
-    occ = design.rootComponent.occurrences.addNewComponent(adsk.core.Matrix3D.create())
-    comp = occ.component
-    comp.name = PART_COMPONENT
-    if design.designType == adsk.fusion.DesignTypes.ParametricDesignType:
-        bf = comp.features.baseFeatures.add()
-        bf.startEdit()
-        comp.bRepBodies.add(temp, bf)
-        bf.finishEdit()
+    if make:
+        occ = design.rootComponent.occurrences.addNewComponent(adsk.core.Matrix3D.create())
+        comp = occ.component
+        comp.name = PART_COMPONENT
+        if design.designType == adsk.fusion.DesignTypes.ParametricDesignType:
+            bf = comp.features.baseFeatures.add()
+            bf.startEdit()
+            comp.bRepBodies.add(temp, bf)
+            bf.finishEdit()
+        else:
+            comp.bRepBodies.add(temp)
+        turned = occ.bRepBodies.item(0)  # in the root's context, as the setups need it
+        turned.name = body.name + ' (%s)' % ' and '.join(
+            w for w, on in (('turned over', top == '-Z'),
+                            ('%s face up' % top, top not in ('+Z', '-Z')),
+                            ('quarter-turned', quarter)) if on)
+        body.attributes.add(HIDDEN_ATTR[0], HIDDEN_ATTR[1], '1')
+        body.isLightBulbOn = False
     else:
-        comp.bRepBodies.add(temp)
-    turned = occ.bRepBodies.item(0)  # in the root's context, as the setups need it
-    turned.name = body.name + ' (%s)' % ' and '.join(
-        w for w, on in (('turned over', flip), ('quarter-turned', quarter)) if on)
-    body.attributes.add(HIDDEN_ATTR[0], HIDDEN_ATTR[1], '1')
-    body.isLightBulbOn = False
-    return turned, analyze_body(turned, design, _turned_threads(body, turned, m, threads)), flip, n
+        turned = temp
+    ta = analyze_body(turned, design, _turned_threads(body, turned, m, threads))
+    return turned, ta, top, _feature_counts(ta)
 
 
 def analyze(args=None):
@@ -825,7 +881,7 @@ def analyze(args=None):
     are mirrored about the part's centre.
     """
     args = args or {}
-    body, a, flipped, counts = _machined_body(args, _design(), False)
+    body, a, top, counts = _machined_body(args, _design(), False)
     groups = {}
     for h in a['holes']:
         key = (h['dia'], h['side'], h['through'], round(h['depth'], 2), h['thread'])
@@ -835,7 +891,8 @@ def analyze(args=None):
         g['tap_candidate'] = h['thread'] or _tap_candidate(h['dia'])
     out = {
         'body': _find_body(args).name,
-        'turned_over': flipped,
+        'top': top,
+        'turned_over': top == '-Z',
         'features_per_face': counts,
         'size_mm': a['size'],
         'ztop': a['ztop'], 'zbot': a['zbot'],
@@ -5523,13 +5580,51 @@ def _strategy(a, stock, sides):
     return {'sides': sides, 'outline': outline, 'ends': ends}
 
 
-def _quarter_turn(body, stock):
-    """Must the part be turned a quarter about Z? When the stock fits the part
-    along the design's X only, the vise must grip that side, and the jaws close
-    along the setups' X axis, the design's Y (see _setup)."""
+def _turned_size(body, top):
+    """The part's size (mm) along X, Y and Z once turned so that `top` faces up."""
     bb = body.boundingBox
-    fx = abs(stock['x'] - mm(bb.maxPoint.x - bb.minPoint.x)) <= STOCK_FIT
-    fy = abs(stock['y'] - mm(bb.maxPoint.y - bb.minPoint.y)) <= STOCK_FIT
+    size = dict(zip('xyz', (mm(q - p) for p, q in
+                            zip(bb.minPoint.asArray(), bb.maxPoint.asArray()))))
+    return [size[k] for k in _turned_axes(top)]
+
+
+def _turned_stock(stock, top):
+    """args['stock'], given in the design's axes, in the axes of the part turned so
+    that `top` faces up; its other keys (y_mode, y_offset, bottom) are already in
+    the turned part's axes."""
+    out = dict(stock)
+    for k, d in zip('xyz', _turned_axes(top)):
+        out[k] = stock[d]
+    return out
+
+
+def _turned_tab_z(body, top, value, back=False):
+    """args['tab_z'], given along the design's axis that `top` names, as the turned
+    part's Z (mm); with back, the other way."""
+    if top == '+Z':
+        return value
+    axis = 'xyz'.index(top[1].lower())
+    bb = body.boundingBox
+    p = [(u + v) / 2 for u, v in zip(bb.minPoint.asArray(), bb.maxPoint.asArray())]
+    m = _top_matrix(body, top)
+    if back:
+        m.invert()
+        p[2] = value / 10
+    else:
+        p[axis] = value / 10
+    q = adsk.core.Point3D.create(*p)
+    q.transformBy(m)
+    return mm(q.z) if not back else mm(q.asArray()[axis])
+
+
+def _quarter_turn(body, stock, top='+Z'):
+    """Must the part be turned a quarter about Z? When the stock fits the part
+    along the turned part's X only, the vise must grip that side, and the jaws
+    close along the setups' X axis, the turned part's Y (see _setup). `stock` is
+    in the turned part's axes."""
+    sx, sy, _ = _turned_size(body, top)
+    fx = abs(stock['x'] - sx) <= STOCK_FIT
+    fy = abs(stock['y'] - sy) <= STOCK_FIT
     return fx and not fy
 
 
@@ -5539,11 +5634,16 @@ def build(args):
     args:
       body:      the body's name in the root component, or its path
                  '<occurrence>/<body>' (optional when the design has one visible body)
-      flip:      machine the design's bottom face first, as the top (default: when
-                 it has more features than the top face; see _machined_body)
+      top:       the design's face to machine first, as the top: "+Z", "-Z", "+X",
+                 "-X", "+Y" or "-Y" (default: "-Z" when the bottom face has more
+                 features than the top face, else "+Z"; see _machined_body). The
+                 bottom setup machines the opposite face
+      flip:      true is "top": "-Z", false is "+Z"
       stock:     {"x": mm, "y": mm, "z": mm, "y_mode": "back", "y_offset": 10,
                   "bottom": mm of stock below the part (default: centred with two
-                  sides, 0 with one)}, in the design's axes. Stock of the part's
+                  sides, 0 with one)}; x, y and z in the design's axes, so that
+                  with "top" along X the stock's x is its thickness, while y_mode,
+                  y_offset and bottom are as the part is machined. Stock of the part's
                   X and Y size, or of its size along one side for a part longer
                   than the jaws are wide, needs no outline cut or tabs (see
                   _strategy); build turns the part a quarter about Z when the
@@ -5561,7 +5661,8 @@ def build(args):
                  vise, and no operations or NC programs, which the recipes in
                  references/recipes/ add (see features and add_operation)
       tab_width: tab width along the outline in mm (default 5)
-      tab_z:     model Z of the tab band's centre in mm (default: the mid-plane,
+      tab_z:     the tab band's centre in mm, along the design's axis that "top"
+                 names, Z by default (default: the mid-plane,
                  or the nearest height clear of pockets that open to the side)
       fixture:   model the vise and attach the setups to the machine table, for
                  collision checks (default true)
@@ -5578,15 +5679,32 @@ def build(args):
     # before reading the body: deleting an earlier build's sketches and vises
     # recomputes any feature added after them, which would leave stale faces
     _delete_previous(_cam(create=False), design)
+    # with the top chosen, the stock goes into the turned part's axes; without,
+    # the part stays upright or is turned over, which keeps every axis
+    top_face = _top_arg(args)
+    if top_face is not None:
+        args = dict(args, top=top_face, stock=_turned_stock(args['stock'], top_face))
     # check the stock against the part before making the CAM product: a script
     # that fails after activating the Manufacture workspace leaves the document
     # without a working workspace, so that every later build in it fails
     if not _cam(create=False):
         body0 = _find_body(args)
         stock0 = args['stock']
-        if _quarter_turn(body0, stock0):
+        q0 = _quarter_turn(body0, stock0, top_face or '+Z')
+        if q0:
             stock0 = dict(stock0, x=stock0['y'], y=stock0['x'])
-        a0 = _machined_body(args, design, False, _quarter_turn(body0, args['stock']))[1]
+        a0, top0 = _machined_body(args, design, False, q0)[1:3]
+        if args.get('tab_z') is not None:
+            # the band must lie in the part, as _tab_height takes it
+            band0 = min(1.0, 0.4 * (a0['ztop'] - a0['zbot']))
+            tz = _turned_tab_z(body0, top0, args['tab_z'])
+            if not a0['zbot'] + band0 / 2 - 1e-6 <= tz <= a0['ztop'] - band0 / 2 + 1e-6:
+                lo, hi = sorted(_turned_tab_z(body0, top0, z, back=True) for z in
+                                (a0['zbot'] + band0 / 2, a0['ztop'] - band0 / 2))
+                raise RuntimeError('tab_z %g mm puts the %g mm tab band outside the part: '
+                                   "give it between %g and %g mm, along the design's %s axis"
+                                   % (args['tab_z'], band0, round(lo, 3), round(hi, 3),
+                                      top0[1]))
         if stock0['z'] < a0['ztop'] - a0['zbot'] - 1e-3:
             raise RuntimeError('stock is %g mm thick but the part is %g mm'
                                % (stock0['z'], a0['ztop'] - a0['zbot']))
@@ -5602,14 +5720,16 @@ def build(args):
             was_part = True
     except AttributeError:  # Fusion before design intents
         pass
-    if _quarter_turn(_find_body(args), args['stock']):
+    if _quarter_turn(_find_body(args), args['stock'], top_face or '+Z'):
         quarter = True
         args = dict(args, stock=dict(args['stock'], x=args['stock']['y'], y=args['stock']['x']))
     else:
         quarter = False
-    body, a, flipped, counts = _machined_body(args, design, True, quarter)
-    if flipped and args.get('tab_z') is not None:  # given in the design's Z
-        args = dict(args, tab_z=a['ztop'] + a['zbot'] - args['tab_z'])
+    body0 = _find_body(args)
+    body, a, top_face, counts = _machined_body(args, design, True, quarter)
+    flipped = top_face == '-Z'
+    if args.get('tab_z') is not None:
+        args = dict(args, tab_z=_turned_tab_z(body0, top_face, args['tab_z']))
     stock = args['stock']
     thickness = a['ztop'] - a['zbot']
     if stock['z'] < thickness - 1e-3:
@@ -5745,7 +5865,7 @@ def build(args):
         _save_layout(design, a, plan, name, setups,
                      {i: h['thread'] for i, h in enumerate(a['holes']) if h['thread']})
         print(json.dumps({
-            'turned_over': flipped, 'quarter_turned': quarter, 'strategy': strategy,
+            'top': top_face, 'turned_over': flipped, 'quarter_turned': quarter, 'strategy': strategy,
             'setups': setups, 'operations': log, 'next': 'features({}), then references/recipes/part.md',
             'warnings': warnings, 'seconds': round(time.time() - t0, 1)}, indent=1))
         return
@@ -5787,10 +5907,17 @@ def build(args):
                       'is hidden behind the turned copy in "%s"' % PART_COMPONENT)
     if flipped:
         log.insert(0, 'the part is turned over: the design\'s bottom face (%d features) is '
-                      'machined first, as the top (%d features); the design\'s body is hidden '
-                      'behind the turned copy in "%s"' % (counts['bottom'], counts['top'],
-                                                          PART_COMPONENT))
+                      'machined first, as the top, and its top face (%d features) last; the '
+                      'design\'s body is hidden behind the turned copy in "%s"'
+                      % (counts['top'], counts['bottom'], PART_COMPONENT))
+    elif top_face != '+Z':
+        log.insert(0, 'the part is turned so that the design\'s %s face is machined first, '
+                      'as the top (%d features), and its %s face last (%d features); the '
+                      'design\'s body is hidden behind the turned copy in "%s"'
+                      % (top_face, counts['top'], {'+': '-', '-': '+'}[top_face[0]] + top_face[1],
+                         counts['bottom'], PART_COMPONENT))
     print(json.dumps({
+        'top': top_face,
         'turned_over': flipped,
         'quarter_turned': quarter,
         'strategy': strategy,
