@@ -1,6 +1,6 @@
 ---
 name: carvera-copper-cam
-description: Generate CAM toolpaths in Autodesk Fusion for machining a copper part on SchusterLab's Makera Carvera, following the lab's conventions (Makera and McMaster-Carr tools with the "Copper" preset, the Carvera Community machine and post, a top setup and, when the part needs it, a flipped bottom setup, pre-drilled entry holes, and, when the stock is larger than the part, four holding tabs cut by a separate program), and check existing Carvera toolpaths for crash, spindle-stall and tool-wear risks against the lab's rules. Use when the user asks to program, CAM, toolpath or machine a part on the Carvera or Makera, in copper or aluminum, or to check, review or verify Carvera toolpaths. Needs the Fusion MCP server.
+description: Generate CAM toolpaths in Autodesk Fusion for machining a copper part on SchusterLab's Makera Carvera, following the lab's conventions (Makera and McMaster-Carr tools with the "Copper" preset, the Carvera Community machine and post, a top setup and, when the part needs it, a flipped bottom setup, pre-drilled entry holes, and, when the stock is larger than the part, four holding tabs cut by a separate program), and check existing Carvera toolpaths for crash, spindle-stall and tool-wear risks against the lab's rules and by Fusion's simulation, comparing the simulated stock with the part. Use when the user asks to program, CAM, toolpath or machine a part on the Carvera or Makera, in copper or aluminum, or to check, review or verify Carvera toolpaths. Needs the Fusion MCP server.
 ---
 
 # Carvera copper toolpaths
@@ -10,6 +10,7 @@ It makes one setup or two (the top, then the part flipped), every operation with
 How it machines the part depends on the stock (see "Machining strategy").
 The same programs machine aluminum: run them with the Carvera's feed and spindle overrides at 200%.
 It also checks existing toolpaths, the lab's own as well as those it generates, against the lab's rules for avoiding crashes, spindle stalls and tool wear (see "Checking existing toolpaths").
+By default it then runs Fusion's simulation of each setup, reads the collisions Fusion flags, and compares the stock the simulation leaves with the part (see [references/simulation.md](references/simulation.md)).
 
 A 2.5-axis part is one whose features are all reached straight down the Z axis from the top or from the bottom: pockets, holes, outlines and through windows.
 The skill does not cut side features, undercuts or 3D surfaces.
@@ -237,6 +238,7 @@ In window machining, take a screenshot with the outline operation selected and c
 
 ### 8. Simulate in Fusion
 
+Always do this step, without asking, unless the user asks to skip it.
 In the user's document, once its toolpaths are the ones that stand, follow [references/simulation.md](references/simulation.md): simulate each setup on its own with the machine, read the issues Fusion flags, save the stock each setup leaves, and compare the stock with the part.
 Every issue, and every difference between the stock and the part that is not by design (that table lists those), needs attention before the program is used: compare it with the two checks' findings, and fix the toolpath or the skill.
 This step needs Windows, where `sim_ui.ps1` runs; elsewhere, ask the user to run Fusion's simulation with collision checking on each setup.
@@ -292,7 +294,7 @@ To read each setup's moves, it adds a temporary NC program to the document and d
 
 Report the errors first, grouped by rule, then the warnings, with the operations each applies to and what rules.md says each guards against.
 Errors P1, P2 and P3 mean the toolpaths need regenerating before any other finding can be trusted.
-Then check the toolpaths by Fusion's simulation as well ([references/simulation.md](references/simulation.md)), which also works on any milling setups.
+Then, unless the user asks to skip it, check the toolpaths by Fusion's simulation as well ([references/simulation.md](references/simulation.md)), which also works on any milling setups.
 
 ## Working with Fusion
 
