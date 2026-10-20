@@ -13,7 +13,10 @@ and prints the result as JSON. It leaves the simulation open: exit it with
 sim_check.py's stop().
 
 It works through window messages and UI Automation, not the real mouse or keyboard,
-so it neither needs the screen nor disturbs whoever is using it.
+so it does not disturb whoever is using the computer; but saving the stock needs Windows
+unlocked, since the right-click menu does not open on a locked screen. When the stock
+cannot be saved, it still prints the issues, with the reason under stock_error, and
+exits with 1.
 
   powershell -ExecutionPolicy Bypass -File sim_ui.ps1 [-Stl <path.stl>] [-TimeoutS 600]
 #>
@@ -94,22 +97,41 @@ $result.verification = $status
 if ($status -match 'Errors:\s*(\d+)') { $result.errors = [int]$Matches[1] }
 if ($status -match 'Warnings:\s*(\d+)') { $result.warnings = [int]$Matches[1] }
 
-# 3. Every issue, by operation: the tree's grid gives all rows, scrolled out of view or not.
+# 3. Every issue, by operation: the tree's grid gives all rows, scrolled out of view or
+# not. The panel's counts can run ahead of its rows, so read the rows until their
+# operations' counts add up to the panel's, for up to 30 s.
 $tree = $panel.win.FindFirst($Scope::Descendants, (Cond $UIA::ControlTypeProperty ([System.Windows.Automation.ControlType]::Tree)))
 $grid = $tree.GetCurrentPattern([System.Windows.Automation.GridPattern]::Pattern)
-$op = $null
-for ($r = 0; $r -lt $grid.Current.RowCount; $r++) {
-  $cells = @(for ($c = 0; $c -lt $grid.Current.ColumnCount; $c++) { $grid.GetItem($r, $c).Current.Name })
-  if ($cells[0] -match '^(.*) - (Errors|Warnings): (\d+)$') {
-    $op = [ordered]@{ operation = $Matches[1]; kind = $Matches[2]; count = [int]$Matches[3]; events = @() }
-    $result.issues += $op
-  } elseif ($op) {
-    $op.events += ,@($cells | Where-Object { $_ })
+$end = (Get-Date).AddSeconds(30)
+do {
+  $issues = @()
+  $op = $null
+  for ($r = 0; $r -lt $grid.Current.RowCount; $r++) {
+    $cells = @(for ($c = 0; $c -lt $grid.Current.ColumnCount; $c++) { $grid.GetItem($r, $c).Current.Name })
+    if ($cells[0] -match '^(.*) - (Errors|Warnings): (\d+)$') {
+      $op = [ordered]@{ operation = $Matches[1]; kind = $Matches[2]; count = [int]$Matches[3]; events = @() }
+      $issues += $op
+    } elseif ($op) {
+      $op.events += ,@($cells | Where-Object { $_ })
+    }
   }
+  $listed = 0; foreach ($i in $issues) { $listed += $i['count'] }
+  $done = $null -eq $result.errors -or $listed -eq ($result.errors + $result.warnings)
+  if (-not $done) { Start-Sleep 1 }
+} until ($done -or (Get-Date) -gt $end)
+$result.issues = $issues
+if (-not $done) {
+  $result.notices += "the Issues panel counts $($result.errors) errors and $($result.warnings) warnings, but lists $listed by operation"
 }
 
 # 4. Save the stock at the simulation's end: Save Stock saves the stock at the playhead.
-if ($Stl) {
+# The right-click menu does not open while Windows is locked (LogonUI runs then), so
+# report the issues without the stock.
+if ($Stl -and (Get-Process LogonUI -ErrorAction SilentlyContinue)) {
+  $result.stock_error = 'Windows is locked, so the right-click menu does not open: unlock it and run this again to save the stock'
+  $Stl = ''
+}
+if ($Stl) { try {
   $main = (Fusion).MainWindowHandle
   # The canvas: the largest child of the main window below the toolbar.
   $canvas = [CcWin]::Kids($main) | Where-Object { $_.R.T -gt 100 } | Sort-Object { ($_.R.R - $_.R.L) * ($_.R.B - $_.R.T) } | Select-Object -Last 1
@@ -157,5 +179,6 @@ if ($Stl) {
   Move-Item -Force $file $Stl
   if ($result.triangles -le 12) { throw "the saved stock is the uncut stock box ($Stl): the simulation did not reach its end" }
   $result.stl = $Stl
-}
+} catch { $result.stock_error = "$_" } }
 $result | ConvertTo-Json -Depth 6
+if ($result.stock_error) { exit 1 }

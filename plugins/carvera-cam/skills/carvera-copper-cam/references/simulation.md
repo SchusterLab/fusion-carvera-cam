@@ -5,7 +5,8 @@ It reports what Fusion itself flags, such as the tool, its holder or the machine
 Where the stock differs from the part by more than the simulation's accuracy, a toolpath leaves copper or cuts into the part.
 
 The Fusion API can neither run a simulation nor read its stock, so `scripts/sim_ui.ps1` drives the simulation's window, on Windows, through window messages and UI Automation (Windows' interface for reading and pressing controls).
-It does not use the real mouse or keyboard, so it neither needs the screen nor disturbs whoever is using it.
+It does not use the real mouse or keyboard, so it does not disturb whoever is using the computer.
+Saving the stock needs Windows unlocked, though, since the canvas's right-click menu does not open on a locked screen; the issues can be read either way.
 
 ## Running it
 
@@ -31,9 +32,10 @@ For each setup:
 
    It waits until the simulation has verified the whole setup, prints the Issues panel's counts and every issue under its operation, moves the simulation to its end, and saves the stock there to the STL ("Save Stock…" in the canvas's right-click menu, which saves the stock at the playhead), to this computer only.
    It prints JSON: `errors`, `warnings`, `issues` (each with the `operation`, the `count`, and the `events`, each a list of what collided, such as `Fixture+Holder`) and any `notices` Fusion showed.
+   When it cannot save the stock, such as on a locked screen, it still prints the issues, gives the reason under `stock_error`, and exits with 1: ask the user to unlock the screen, then run it again on the same simulation.
 
 3. Exit the simulation (read-only): `runpy.run_path(SCRIPTS + r'\sim_check.py')['stop']({})`.
-   Exiting takes effect after the call returns, so start the next setup's simulation in a separate call.
+   Exiting takes effect after the call returns, so start the next setup's simulation in a separate call; if Fusion refuses that call because a command dialog is open, make it again.
 
 Then write the part's body to an STL (read-only): `runpy.run_path(SCRIPTS + r'\sim_check.py')['export_part']({'path': r'<scratch>\part.stl'})`.
 It picks the machined body, the copy in `carvera-cam part` when `build` turned the part over; pass `body` for a design with several visible bodies.
@@ -46,11 +48,15 @@ python <SCRIPTS>\sim_check.py <scratch>\part.stl <scratch>\top.stl <scratch>\bot
 
 It takes a few seconds for a 30 × 20 mm part at the default 0.05 mm grid; pass `pitch` (in `compare(args)`) to coarsen it for a large part.
 
+To find where an issue starts, simulate some of a setup's operations alone, from the uncut stock, with `operations`: `simulate({'setup': 'Top (carvera-cam)', 'operations': ['Outline', 'Tab entry holes']})`.
+An issue that goes away when an earlier operation is left out comes from the stock that operation leaves.
+
 If a call times out while the simulation starts, Fusion has opened a notice that blocks every MCP call; `sim_ui.ps1` closes notices titled "Info" and reports their text, so run it, then go on.
 
 ## Reading the comparison
 
-`compare` casts a vertical ray through each column of a grid over the part's footprint, plus 1 mm round it, and compares where each mesh is solid along Z.
+`compare` casts a vertical ray through each column of a grid over the part's footprint and up to 1 mm round it, and compares where each mesh is solid along Z.
+The stock further out, such as the frame round a part cut out of larger stock, is left out.
 It reports two kinds of region, each with its volume, area, deepest difference along Z (`depth_mm`), width across, Z range and centre, in the design's frame, in mm:
 
 - `left`: copper the part does not have, which a toolpath did not remove;
@@ -70,6 +76,7 @@ Some differences are by design; match each region against `build`'s warnings and
 | overcut, a cone 1.59 mm across and 0.37 mm deep in a pocket floor | a pocket entry hole's dimple |
 | overcut, 0.1–0.2 mm deep along an edge | the deburr chamfer |
 | left, in an inside corner, out to the corner radius of the smallest end mill that fits | a sharp or tight inside corner |
+| left, a hole's width across, part of the way up the part, under a hole not along Z | a hole into the part's side, which `build` warns that nothing cuts |
 
 Anything else is a finding: a floor left high or cut low, a wall left thick or cut back, a feature not cut, or stock left beside the part, such as a tab.
 The comparison cannot see a missing deburr, since the model's edges are sharp and an edge left sharp matches them; rule DB1 checks the deburr.
@@ -80,7 +87,7 @@ Report it with its place and size, find the operation that cut or should have cu
 Every error or warning in the Issues panel needs attention, except those of a simulation run on several setups at once, which is why each setup runs alone.
 An event names what met: the tool's `Cutter`, `Shaft`, `Shoulder` or `Holder`, the `Fixture` (the modelled vise and fixture plate), the stock, or a machine axis such as `Z`.
 A `Fixture` event in a setup's own simulation means a tool or the spindle reaches the vise: look at the operation's moves near the jaws (rule X1) and at where `build` placed that setup's vise.
-`Rapid move into stock` means a rapid, sideways or straight down, meets copper; rule H2 checks only sideways rapids.
+`Rapid move into stock` means a rapid, sideways or straight down, meets copper, or grazes it: a drill as wide as the slot it rapids into counts too.
 
 ## Comparing with the other checks
 

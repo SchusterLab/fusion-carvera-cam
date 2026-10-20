@@ -184,6 +184,23 @@ def regions(cells, h, tol):
     return out
 
 
+def _near(cols, n):
+    """The columns within n steps (sideways or diagonally) of a column in cols."""
+    seen = set(cols)
+    edge = list(seen)
+    for _ in range(n):
+        nxt = []
+        for i, j in edge:
+            for di in (-1, 0, 1):
+                for dj in (-1, 0, 1):
+                    k = (i + di, j + dj)
+                    if k not in seen:
+                        seen.add(k)
+                        nxt.append(k)
+        edge = nxt
+    return seen
+
+
 def compare(args):
     """Compare simulated-stock STLs with a part STL; prints and returns a JSON report.
 
@@ -206,8 +223,12 @@ def compare(args):
     g = Grid(x0, y0, int(math.ceil((px1 - px0 + 2 * margin) / h)),
              int(math.ceil((py1 - py0 + 2 * margin) / h)), h)
     ph, shs = column_hits(part, g), [column_hits(st, g) for st in stocks]
+    # Only columns within the margin of the part's footprint, not its whole bounding
+    # box: past the outline cut, the stock round a part that is not a rectangle is left
+    # by design.
+    near = _near(ph, int(round(margin / h)))
     left, over, odd = {}, {}, 0
-    for key in set(ph).union(*shs):
+    for key in near:
         a = intervals(ph.get(key, []))
         bs = [intervals(sh.get(key, [])) for sh in shs]
         if a is None or None in bs:
@@ -313,7 +334,9 @@ def _cam():
 def simulate(args):
     """In Fusion: start Simulate with Machine on one setup, with its Issues panel open.
 
-    args: setup (its name). Simulate one setup at a time: with several selected, Fusion
+    args: setup (its name); operations (optional), names of some of its operations to
+    simulate alone, from the uncut stock, to find where an issue starts or what the stock
+    is like before an operation. Simulate one setup at a time: with several selected, Fusion
     warns that their work offsets differ and reports collisions with the fixture that the
     setups' own simulations do not have. With a simulation open, Fusion refuses this script
     (it is not read-only): stop() that one first, in a call of its own. The simulation
@@ -324,11 +347,18 @@ def simulate(args):
     if setup is None:
         raise ValueError('no setup %r; setups: %s' % (args['setup'], [s.name for s in cam.setups]))
     ops = [o for o in setup.allOperations if not o.isSuppressed]
+    names = args.get('operations')
+    if names:
+        missing = [n for n in names if n not in [o.name for o in ops]]
+        if missing:
+            raise ValueError('no operations %s in %s' % (missing, setup.name))
+        ops = [o for o in ops if o.name in names]
     bad = [o.name for o in ops if not o.isToolpathValid]
     if bad:
         raise RuntimeError('generate these toolpaths first: %s' % bad)
     ui.activeSelections.clear()
-    ui.activeSelections.add(setup)
+    for x in ops if names else [setup]:
+        ui.activeSelections.add(x)
     ui.commandDefinitions.itemById(SIM_COMMANDS[0]).execute()
     ui.commandDefinitions.itemById('SimulationIssues').execute()
     # An operation Fusion generated but found nothing to cut has no toolpath; the
