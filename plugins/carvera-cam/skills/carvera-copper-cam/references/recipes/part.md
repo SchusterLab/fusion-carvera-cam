@@ -34,7 +34,7 @@ Call `build` with the same arguments as the script's build, and with `"mode": "r
 - `part`: `ztop`, `zbot` and `thickness_mm`, in the design's Z, in mm.
 - `tab`: in window machining, the tab band: `top_z`, `bottom_z`, `overlap` (how far the cuts round the tabs go past the band) and the modelled tab faces, `tab:top` and `tab:bottom`.
 - `layout`: the main entry point (`entry`), the corner entries (`corner:<k>`; `corner:0` is the main entry's chain), the number of corner, tab and end chains, the shelf `regions` and the `slots`.
-- `floors`: every pocket floor and both outer faces, with `side`, `role` (`pocket` or `face`), `depth` below that side's face, `corner_radius`, `side_open`, `shelf`, `falls_away` (a wall falls away from the floor somewhere: at the part's sides, into a deeper pocket, or round a hole or window through it), and what build made for it: `entry` (its entry point, whether it is `drilled`, and the hole's depth), `narrow` (too little room round the end mill for a pocket to enter), `region` (the shelf region it is pocketed in), `inside_region` (the deepest other shelf region it lies inside, whose pocket clears it down to that region's floor), `slot` and `fed_by_slot`.
+- `floors`: every pocket floor and both outer faces, with `side`, `role` (`pocket` or `face`), `depth` below that side's face, `corner_radius`, `side_open`, `shelf`, `falls_away` (a wall falls away from the floor somewhere: at the part's sides, into a deeper pocket, or round a hole or window through it), and what build made for it: `entry` (its entry point, whether it is `drilled`, and the hole's depth), `narrow` (too little room round the end mill for a pocket to enter), `small_entry` (for a closed pocket with no room for the 3.175 mm end mill's entry hole: the entry point build sketched for a small end mill, `small_pocket:<i>`, and the `end_mills` with room there), `region` (the shelf region it is pocketed in), `inside_region` (the deepest other shelf region it lies inside, whose pocket clears it down to that region's floor), `slot` and `fed_by_slot`.
 - `holes`: each hole on its own, with `dia_mm`, `depth_mm`, `side` (`top`, `bottom`, or `none` when closed at both ends), `through`, `thread`, `point_angle` (a modelled drill point), `opens_in` (`face`, the index of the pocket floor its rim lies in, or `other`), `hole_below` (the narrower hole that goes on down from its floor, for a counterbore) and `centre` (its centre point).
 - `windows`: each through opening that is not a round hole, with `z` (where it opens), `corner_radius`, `entry` (its point, and `pocket_fits`: whether a pocket can enter there) and `starts_at_floor` (the shelf floor over it, which the pockets clear it down to).
 - `library`: the drills (`dia_mm`, `flute_mm`, `point_mm`, how far the point reaches below the full diameter), the 3.175 mm end mill, the small end mills, the chamfering bit and the thread mills (`tool`, `dia_mm`).
@@ -80,9 +80,16 @@ Sort each hole of the setup's side (`side` `top` in the top setup, `bottom` in t
 2. **Drilled**: a library drill within −0.03 to +0.05 mm of the hole's diameter whose flute is at least 0.5 mm longer than the hole's depth; the closest in diameter.
 3. **Bored by the 3.175 mm end mill**: wider than 3.275 mm.
    Its radial stock r = (diameter − 3.175) / 2.
-   When r is above 0.6 mm (two 0.3 mm passes), and the hole is no deeper than T1 reaches, it is roughed by a pocket instead of a bore ("hole pocket"), unless its rim has no flat face round it, or a blind hole no flat bottom, for the pocket to select (`opens_in` null, or `has_bottom_face` false): then it is bored.
-4. **Bored by a small end mill**: the largest small end mill whose radius is at most the hole's radius less 0.05 mm and whose flute is at least 0.5 mm longer than the hole.
+   When r is above 0.6 mm (two 0.3 mm passes), it is pocketed instead of bored ("hole pocket"), rough and finish, unless its rim has no flat face round it, or a blind hole no flat bottom, for the pocket to select (`opens_in` null, or `has_bottom_face` false): then it is bored.
+4. **Bored by a small end mill**: a small end mill whose radius is at most the hole's radius less 0.05 mm and whose flute is at least 0.5 mm longer than the hole, chosen as "Small end mills" says.
    With none, skip the hole and warn.
+
+### Small end mills
+
+The part uses as few small end mills as it can (user, 2026-10-21).
+List every cut a small end mill makes, with the end mills that would do for it: a slot, only the end mill as wide as it (`slots`' `tool`); a pocket with a `small_entry`, its `end_mills`; a corner, those [corners.md](corners.md) says fit; a small bore, those step 4 allows.
+Take the cut whose widest end mill is the narrowest, choose that end mill, and set aside every cut it would do for; repeat until every cut has a chosen end mill.
+Each cut then takes the widest chosen end mill that would do for it.
 
 T1, the 3.175 mm drill, reaches 6.9 mm (its 7.4 mm flute less 0.5 mm) into the material it starts in.
 
@@ -132,10 +139,14 @@ Each name below is the operation's name; the multi-depth ones (`doMultipleDepths
    Pockets open to the side are cut by [open-pocket.md](open-pocket.md), in their place here.
 9a. **Pre-drill bores in floors**: as Pre-drill bores, for the holes that open in a pocket floor (`Pre-drill bores in floors`, `Pre-drill bores in floors <drill diameter>`).
 10. **Bores**, for each group of holes the 3.175 mm end mill cuts (same diameter, same ends), in the order of the groups' first holes in `holes`:
-    - a hole pocket, `Hole pocket <diameter>`: T2, `pocket2d`, multi-depth, the default `'predrill'` ramp, `pockets` `[hole_rim:<i>, …]`, `predrill` `[hole:<i>, …]`; top at H for a hole that opens in the face, else at the floor it opens in plus 0.2 mm; bottom through the part, or for a blind hole at `hole_bottom:<i>` plus 0.2 mm;
+    - a hole pocket, `Hole pocket <diameter>`: T2, `pocket2d`, multi-depth, the default `'predrill'` ramp, `pockets` `[hole_rim:<i>, …]`, `predrill` `[hole:<i>, …]`; top at H for a hole that opens in the face, else at the floor it opens in plus 0.2 mm; bottom through the part, or for a blind hole at `hole_bottom:<i>` plus 0.2 mm; a hole deeper than T1 reaches goes down in stages ("Deep cuts"): `Pre-drill hole pocket <diameter> <from> to <to> mm` (T1, `drill`, `holes` the holes, the `[drill]` cycle, as the bores' pre-drills) and `Hole pocket <diameter> <from> to <to> mm`, each stage starting where the last one stopped;
     - otherwise `Bore <diameter>`: T2, `bore`, `stepover` `0.3mm`, `numberOfStepovers` ⌈r / 0.3⌉ (at least 1), `doMultiplePasses` `true`; top at H for a hole that opens in the face, else `'from hole top'` with offset 0.2 mm; `bottomHeight_offset` `-0.5mm` through, `0.2mm` blind.
 11. **Bore <thread> <diameter>** (M4 tap holes): the end mill and settings of threads.toml's `[M4.bore]`: `bore`, `stepover` and `numberOfStepovers` from it, `doMultiplePasses` `true`, top as for Bores, `bottomHeight_offset` its `through_bottom_offset` through, 0 blind.
 12. **Narrow pocket**: T2, `contour2d`, multi-depth, `contours` `[floor_outline:<i>]`, `entries` `[pocket:<i>]`, top at H, bottom at the floor (offset 0).
+12a. **Small pocket entry holes <drill diameter>** and **Small pockets <diameter>**, for the floors with a `small_entry`, one pair per end mill ("Small end mills"), widest first:
+    the drill a hole of the end mill's width would take: one the part already drills holes with, if one is up to 0.1 mm narrower than the end mill, else the library drill closest to the end mill's width, not wider; `drill`, `holeMode` `'selection-points'`, `points` the floors' `small_pocket:<i>`, `breakThroughDepth` `0mm`, `drillTipThroughBottom` `false`, top at H, bottom at the floor (`'from point'` at `floor:<i>`) with offset −(the drill's `point_mm` × the end mill's diameter / 2 / the drill's diameter), so that the drill's cone is half the end mill wide at the floor; one operation per drill and floor;
+    then the end mill, `pocket2d`, multi-depth, `pockets` the floors, `predrill` their `small_pocket:<i>`, top at H, `bottomHeight_mode` `'from contour'`, the 0.2 mm floor allowance as in Pockets.
+    Warn that each leaves a dimple half the end mill wide in its floor.
 13. **Window**, one per window: top at H when it opens in the face, at its `starts_at_floor` floor when it has one, else at `window_top:<j>`; bottom through the part.
     T2, multi-depth: a `pocket2d` (default `'predrill'` ramp) with `pockets` `[window:<j>]` and `predrill` `[window:<j>]` when `pocket_fits` (or it has no entry), else a `contour2d` with `contours` `[window:<j>]` and `entries` `[window:<j>]`.
 14. **Outline between tabs** (window machining, top setup): T2, `contour2d`, multi-depth, `contours` `[chains:corner]`, no entry points (each chain starts beside its corner entry, which Tab entry holes and the main entry drilled), top at `tab:top` (offset 0), bottom at `tab:bottom` with offset −`overlap`.
@@ -150,6 +161,7 @@ T3, each in one pass, in this order, with the drills of step 16a among them:
 17. **Pockets (finish)**: as Pockets, with top at H and no floor allowance; a shelf region that holds deeper ones is finished on its own (`Pockets (finish) at <depth> mm`) with `useStockContours` `true` and `stock_contours` that region less the deeper regions and floors inside it, so the tool runs over them only as far as its radius.
 18. **Bore M4 <diameter> (finish)**, for blind M4 holes only (threads.toml's `blind_finish_pass`).
 19. **Narrow pocket (finish)**, as Narrow pocket.
+19a. **Small pockets <diameter> (finish)**: as Small pockets, by the same end mill (one under 3.175 mm finishes what it roughed), in one pass, with no floor allowance.
 20. **Window (finish)**, one per window: a `contour2d`, `contours` `[window:<j>]`, with the entry and heights of its rough pass (the middle is cleared, so a contour along the walls finishes it).
 21. **Outline between tabs (finish)**, as Outline between tabs.
 
@@ -167,7 +179,7 @@ T3, each in one pass, in this order, with the drills of step 16a among them:
     `numberOfStepovers` ⌊h / 0.1⌋ + 1 with h = (modelled hole + pitch diameter offset − the thread mill's diameter) / 2 (the thread mill's `dia_mm` in features' `library`),
     `topHeight_offset` threads.toml's `top_offset` plus 0.2 mm while the face carries its allowance,
     `bottomHeight_offset` its `through_bottom_offset` or `blind_bottom_offset`.
-27. **Bore <diameter> (finish)**, for each group of Bores and hole pockets, in the same order: T3, `bore`, `doMultiplePasses` `false`, with `stepover` `0.3mm` and `numberOfStepovers` ⌈r / 0.3⌉ as for a rough bore (a hole pocket's finishing bore too); top at H for a hole that opens in the face, else `'from hole top'` with offset 0; `bottomHeight_offset` `-0.5mm` through, `0mm` blind.
+27. **Bore <diameter> (finish)** and **Hole pocket <diameter> (finish)**, for each group of Bores and hole pockets, in the same order: a bore's is T3, `bore`, `doMultiplePasses` `false`, with `stepover` `0.3mm` and `numberOfStepovers` ⌈r / 0.3⌉ as for a rough bore; top at H for a hole that opens in the face, else `'from hole top'` with offset 0; `bottomHeight_offset` `-0.5mm` through, `0mm` blind. A hole pocket's is a hole pocket by T3 in one pass, whatever its depth: top at H, or at the floor it opens in with offset 0; bottom through the part, or for a blind hole at `hole_bottom:<i>` with offset 0.
 28. **Face (finish)**: T3, `pocket2d` (default `'predrill'` ramp), one pass, `pockets` `[patch:<side> finish]`, `predrill` `[entry]`, top at H (0.2 mm above the face), `bottomHeight_mode` `'from contour'`, no allowance.
     H is now the face.
 

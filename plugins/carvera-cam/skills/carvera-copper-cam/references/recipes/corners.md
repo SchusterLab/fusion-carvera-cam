@@ -21,7 +21,8 @@ For each, the cut runs:
    `features({})` gives the small end mills under `library`, with their diameters and flutes.
 2. **Choose a tool for each feature.**
    A tool fits a feature when its radius is no larger than the corner radius and its flute is at least 0.5 mm longer than the cut's depth: a pocket floor's `depth`, or for a window the part's thickness plus 0.5 mm.
-   Of the tools that fit, take one already chosen for another corner, in either setup, if any, so the part needs fewer tools; otherwise take the largest.
+   Of the tools that fit, take the one [part.md](part.md)'s "Small end mills" chooses, so that the part needs as few tools as it can.
+   Leave out a pocket that a small end mill pockets whole (its floor has a `small_entry`) when that end mill fits its corners.
    A corner tighter than the smallest end mill's radius (0.5 mm for the 1 mm end mill) cannot be cut to size: take the smallest end mill, and tell the user the corner stays at that radius.
    When no tool's flute is long enough, leave the feature out and tell the user its corners keep the 3.175 mm end mill's radius.
 3. **Add one operation per tool and kind**, in the setup, in its NC program:

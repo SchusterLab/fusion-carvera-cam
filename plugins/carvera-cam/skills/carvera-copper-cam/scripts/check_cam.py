@@ -317,9 +317,10 @@ def _check_op(rep, s, o, t, earlier, lab, threaded=frozenset()):
                     'it cuts a chamfer the design does not have' % (width, CHAMFER_WIDTH_MAX),
                     width=width)
     # a finishing pass: a single-depth pass after a multi-depth roughing pass of
-    # the same kind by an end mill of the same size (as in D4)
+    # the same kind by an end mill of the same size (as in D4); an end mill
+    # under 3.175 mm finishes what it roughed (user, 2026-10-21)
     if strat in ('pocket2d', 'contour2d') and milling and t['type'] != 'chamfer mill' \
-            and multi is False and not rest:
+            and multi is False and not rest and d >= 3.175 - 1e-3:
         rough = [e for e in earlier if e['strategy'] == strat and e['multi']
                  and abs(e['d'] - d) < 1e-3]
         if any(e['number'] == t['number'] for e in rough):
