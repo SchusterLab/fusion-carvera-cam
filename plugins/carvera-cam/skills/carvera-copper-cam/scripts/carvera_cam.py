@@ -4861,7 +4861,7 @@ def _make_layout(design, a, plan, warnings):
                         c.deleteMe()
         elif islands:
             left_out = []
-            joined, entries = _island_chains(sk, f['face'], n, ring, left_out)
+            joined = _island_chains(sk, f['face'], n, ring, left_out)
             for d, why in left_out:
                 warnings.append('the pass %g mm round the islands of the pocket open to the '
                                 'side at z=%g mm is left out (%s), so check that pocket'
