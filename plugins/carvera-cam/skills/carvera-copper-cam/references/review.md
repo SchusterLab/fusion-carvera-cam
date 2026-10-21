@@ -30,7 +30,7 @@ Each item names the checker rule that covers the same ground, from [rules.md](ru
 4. **The tools are right** (N1, N3, N6).
    Each slot holds one tool throughout the job; finishing passes run on T3, not on T2, which roughs; a slot above 6 needs a manual tool change.
 5. **Every tool reaches its depth** (H5, H6).
-   An operation's deepest cut, below where it starts, fits within the tool's flute, or within its neck for a tool with a neck narrower than its cut, such as a thread mill; and the depth below the stock top stays under three quarters of how far the tool sticks out of its holder.
+   An operation's deepest cut, below the copper still round the tool's shank there (the part's top once the facing has run, or the floor of the pocket the hole is in), fits within the tool's flute, or within its neck for a tool with a neck narrower than its cut, such as a thread mill; and the depth below the stock top stays under three quarters of how far the tool sticks out of its holder.
 6. **Every edge is deburred, and the bit stays out of the tabs** (DB1, DB2).
    Every outer edge of a face facing up in the setup, and the rim of every hole and pocket in it, a counterbore's floor included, should have a chamfering pass along it; select the chamfer operations and look.
    That includes the edges where a pocket floor falls away (at the part's sides, into a deeper pocket, and round a hole or window through the floor) and the rim of an island's top.

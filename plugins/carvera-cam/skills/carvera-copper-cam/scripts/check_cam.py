@@ -123,6 +123,7 @@ def _tool(o):
         # as deep as its length without rubbing
         'shoulder_len': _mm(_v(p, 'tool_shoulderLength', 0)),
         'shoulder_d': _mm(_v(p, 'tool_shoulderDiameter', 0)),
+        'shaft_d': _mm(_v(p, 'tool_shaftDiameter', 0)),
         'body_len': _mm(_v(p, 'tool_bodyLength', 0)),
         'tip_angle': _v(p, 'tool_tipAngle'),
         'rpm': _v(p, 'tool_spindleSpeed', 0),
@@ -1066,6 +1067,7 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
         cuts = [m for m in moves if m[0] != 0 and None not in m[1:]]
         if not cuts:
             continue
+        milled_before = list(milled)
         _check_rapids(rep, sn, o, moves, t, milled, top, box, other, deadline, points)
         if t['type'] == 'chamfer mill':
             chamfers.append((o, dict(t, params=o.parameters), cuts))
@@ -1123,7 +1125,13 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
         else:  # no feed height from the top: the operation's top height, if set
             top_h = _mm(_v(o.parameters, 'topHeight_value'))
             op_top = min(top, top_h) if top_h is not None else top
-        depth = op_top - zmin
+        # the depth below the copper round the tool's shank at its deepest cut, as
+        # the passes before it left it: the facing has taken the stock above the
+        # part by then, and a pocket the stock above a hole in its floor
+        low = min(cuts, key=lambda m: min(m[3], m[6]))
+        lx, ly = (low[1], low[2]) if low[3] <= low[6] else (low[4], low[5])
+        body_r = max(t['d'], t['shaft_d'] or 0.0) / 2
+        depth = min(op_top, _cleared_to(lx, ly, body_r, op_top, milled_before, other)) - zmin
         tip = 0.0
         if t['type'] == 'drill' and t['tip_angle']:
             tip = t['d'] / 2 / math.tan(math.radians(t['tip_angle']) / 2)

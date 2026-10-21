@@ -322,6 +322,54 @@ def _hole_ends(h, top):
     return rim, bottom
 
 
+def _loop_clear(body, loop, z0, z1):
+    """Whether the space over a loop's inside, from z0 to z1 (cm), is empty of the
+    part: its walls can all run the whole height while something juts into the
+    opening from them partway up, such as a tongue over a pocket cut from the
+    other side. Samples a grid of points inside the loop at several heights."""
+    ring = _loop_ring(loop)
+    xs, ys = [q[0] for q in ring], [q[1] for q in ring]
+    x0, y0, x1, y1 = min(xs), min(ys), max(xs), max(ys)
+    step = max(0.02, math.sqrt((x1 - x0) * (y1 - y0) / 1500))
+    nz = max(2, min(8, int((z1 - z0) / 0.025)))
+    zs = [z0 + (z1 - z0) * (k + 0.5) / nz for k in range(nz)]
+    inside = adsk.fusion.PointContainment.PointInsidePointContainment  # on a wall is clear
+    y = y0 + step / 2
+    while y < y1:
+        x = x0 + step / 2
+        while x < x1:
+            if _inside(ring, x, y):
+                for z in zs:
+                    if body.pointContainment(adsk.core.Point3D.create(x, y, z)) == inside:
+                        return False
+            x += step
+        y += step
+    return True
+
+
+def _is_groove(face):
+    """Whether a concave full cylinder is the outer wall of a groove, not a hole:
+    the floor at its closed end, facing into it, has something standing up in it,
+    a wall rising from one of its inner loops (a counterbore's floor has the
+    smaller hole falling away from it instead). The floor is then a pocket's,
+    with that island in it."""
+    z0, z1 = _zrange(face)
+    zm = (z0 + z1) / 2
+    for e in face.edges:
+        if not isinstance(e.geometry, adsk.core.Circle3D):
+            continue
+        w = _other_face(e, face)
+        if w is None or not isinstance(w.geometry, adsk.core.Plane) or abs(_normal(w).z) < 0.99:
+            continue
+        zc = e.geometry.center.z
+        if (zm - zc) * _normal(w).z <= 0:
+            continue  # the face round the hole's open end
+        rising = {r.tempId for r in _rising_edges(w)}
+        if any(not lp.isOuter and any(x.tempId in rising for x in lp.edges) for lp in w.loops):
+            return True
+    return False
+
+
 def _classify_hole(face, ztop, zbot, threads):
     g = face.geometry
     z0, z1 = _zrange(face)
@@ -431,12 +479,20 @@ def _ring_area(ring):
 
 
 def _outline_loop(faces):
-    """The part's outline: the outer loop of the top or bottom face enclosing more area.
+    """The part's outline: the outer loop of the top or bottom face enclosing more area,
+    or of any other level face of the body that encloses more.
 
     A pocket that opens to the side notches one face's loop; the other face's
-    loop is then the outline at the tabs' height.
+    loop is then the outline at the tabs' height. A part whose top and bottom
+    faces are small pads standing proud of a plate has the plate's floor as
+    its outline.
     """
     best = None
+    faces = list(faces)
+    if faces:
+        ids = {f.tempId for f in faces}
+        faces += [f for f in faces[0].body.faces if f.tempId not in ids and
+                  isinstance(f.geometry, adsk.core.Plane) and abs(_normal(f).z) > 0.99]
     for f in faces:
         for lp in f.loops:
             if lp.isOuter:
@@ -569,10 +625,13 @@ def analyze_body(body, design=None, threads=None):
     bb = body.boundingBox
     ztop, zbot = bb.maxPoint.z, bb.minPoint.z
     holes, floors, windows = [], [], []
+    partial = []  # (x, y) mm of openings that go through the part only in part
     hole_ids = set()
 
     for f in body.faces:
         if _is_vertical_cylinder(f) and _is_full_circle_face(f) and _is_concave_cylinder(f):
+            if _is_groove(f):
+                continue
             h = _classify_hole(f, ztop, zbot, threads)
             holes.append(h)
             hole_ids.add(f.tempId)
@@ -604,7 +663,10 @@ def analyze_body(body, design=None, threads=None):
             top_face = f
         if not up and depth < EPS and (bot_face is None or f.area > bot_face.area):
             bot_face = f
-        # through windows: inner loops whose walls run down to the bottom of the part
+        # through windows: inner loops whose walls all run down to the bottom of
+        # the part. A loop only some of whose walls go through, round pockets
+        # that stop at a floor, is no window: cut through along the whole loop,
+        # the window's contour would cut those floors away
         if up:
             for loop in f.loops:
                 if loop.isOuter:
@@ -612,8 +674,14 @@ def analyze_body(body, design=None, threads=None):
                 walls = _walls_of_loop(loop, f)
                 if any(w is None or w.tempId in hole_ids for w in walls):
                     continue
-                wz0 = min(_zrange(w)[0] for w in walls)
-                if wz0 <= zbot + EPS:
+                through = [_zrange(w)[0] <= zbot + EPS for w in walls]
+                if all(through) and not _loop_clear(body, loop, zbot, z):
+                    through = through[:-1] + [False]  # something stands in the opening
+                if any(through) and not all(through):
+                    lb = loop.boundingBox
+                    partial.append([mm((lb.minPoint.x + lb.maxPoint.x) / 2),
+                                    mm((lb.minPoint.y + lb.maxPoint.y) / 2)])
+                if all(through):
                     rmin = None
                     for w in walls:
                         if _is_vertical_cylinder(w) and _is_concave_cylinder(w):
@@ -633,8 +701,16 @@ def analyze_body(body, design=None, threads=None):
             if any(w is None or w.tempId in hole_ids for w in walls):
                 continue
             ids = {w.tempId for w in walls}
-            if max(_zrange(w)[1] for w in walls) < ztop - EPS or \
-                    any(ids & wd['walls'] for wd in windows):
+            if any(ids & wd['walls'] for wd in windows):
+                continue
+            through = [_zrange(w)[1] >= ztop - EPS for w in walls]
+            if all(through) and not _loop_clear(body, loop, f.pointOnFace.z, ztop):
+                through = through[:-1] + [False]  # something stands in the opening
+            if any(through) and not all(through):
+                lb = loop.boundingBox
+                partial.append([mm((lb.minPoint.x + lb.maxPoint.x) / 2),
+                                mm((lb.minPoint.y + lb.maxPoint.y) / 2)])
+            if not all(through):
                 continue
             rmin = None
             for w in walls:
@@ -665,6 +741,8 @@ def analyze_body(body, design=None, threads=None):
         'ztop': mm(ztop), 'zbot': mm(zbot),
         'holes': holes, 'floors': floors, 'windows': windows,
         'side_holes': _side_holes(body),
+        'partial_windows': [list(q) for q in sorted({(round(x, 2), round(y, 2))
+                                                     for x, y in partial})],
         'chamfers': chamfers, 'sloped_faces': sloped,
         'top_face': top_face, 'bottom_face': bot_face,
     }
@@ -974,6 +1052,7 @@ def analyze(args=None):
         'floors': [_strip(f) for f in a['floors']],
         'windows': [_strip(w) for w in a['windows']],
         'side_holes': a['side_holes'],
+        'partial_windows': a['partial_windows'],
         'chamfers': [{k: v for k, v in _strip(c).items() if k != 'edges'} for c in a['chamfers']],
         'sloped_faces': a['sloped_faces'],
         'tab_z': _tab_height(a, min(1.0, 0.4 * a['size'][2]), min(0.5, 0.2 * a['size'][2]),
@@ -1016,7 +1095,7 @@ def _wall_list(run):
     ws = []
     for ce in run:
         e = ce.edge
-        ok, p0, p1 = e.evaluator.getEndPoints()
+        p0, p1 = e.startVertex.geometry, e.endVertex.geometry
         if ce.isOpposedToEdge:
             p0, p1 = p1, p0
         ws.append({'type': type(e.geometry).__name__, 'from': _xy(p0), 'to': _xy(p1),
@@ -2355,6 +2434,12 @@ def _open_walls(face):
     if run:
         runs.append(run)
     walls = [q for e in face.edges if e.tempId in rising for q in _edge_points(e)]
+    if not walls:
+        # a floor every edge of which falls away, such as a ring outside a
+        # groove: the passes run out from its inner loops (see _islands)
+        walls = [q for ces in _islands(face) for ce in ces for q in _edge_points(ce.edge)]
+    if not walls:
+        return [], 0.0
     reach = max((min(math.hypot(x - u, y - v) for u, v in walls)
                  for e in face.edges if e.tempId not in rising for x, y in _edge_points(e)),
                 default=0.0)
@@ -2362,11 +2447,18 @@ def _open_walls(face):
 
 
 def _islands(face):
-    """The islands in a pocket's floor: each inner loop whose edges all run
-    along walls rising from the floor, as its co-edges in loop order."""
+    """The islands in a pocket's floor: each inner loop with a wall rising from
+    the floor along any of its edges, as its co-edges in loop order, such as a
+    boss, or a pad that a slot cuts through. The passes round an island keep
+    the tool off the whole loop, which where the loop falls away to a deeper
+    pocket or a slot leaves that to the deeper cut. A floor with no wall
+    rising from it anywhere, such as a ring between a groove and the outline,
+    has every inner loop as an island, so that passes run out from them."""
     rising = {e.tempId for e in _rising_edges(face)}
-    return [list(lp.coEdges) for lp in face.loops
-            if not lp.isOuter and all(e.tempId in rising for e in lp.edges)]
+    inner = [lp for lp in face.loops if not lp.isOuter]
+    if not rising:
+        return [list(lp.coEdges) for lp in inner]
+    return [list(lp.coEdges) for lp in inner if any(e.tempId in rising for e in lp.edges)]
 
 
 def _draw_walls(sk, run, closed=False):
@@ -2376,11 +2468,25 @@ def _draw_walls(sk, run, closed=False):
     nothing."""
     out, prev = [], None
     P = lambda p: adsk.core.Point3D.create(p.x, p.y, 0)
+
+    def ends(ce):
+        a_, b_ = ce.edge.startVertex.geometry, ce.edge.endVertex.geometry
+        return (b_, a_) if ce.isOpposedToEdge else (a_, b_)
     for i, ce in enumerate(run):
         e = ce.edge
-        ok, a_, b_ = e.evaluator.getEndPoints()
-        if ce.isOpposedToEdge:
-            a_, b_ = b_, a_
+        a_, b_ = ends(ce)
+        # the evaluator's direction need not be the edge's, so go by where the
+        # neighbours meet it: the end it shares with the next wall is its far end
+        if len(run) > 1:
+            nb = run[(i + 1) % len(run)] if closed or i + 1 < len(run) else None
+            if prev is not None:
+                if P(b_).distanceTo(prev.geometry) < P(a_).distanceTo(prev.geometry):
+                    a_, b_ = b_, a_
+            elif nb is not None:
+                n0, n1 = ends(nb)
+                near = lambda p: min(p.distanceTo(n0), p.distanceTo(n1))
+                if near(a_) < near(b_):
+                    a_, b_ = b_, a_
         ok, t0, t1 = e.evaluator.getParameterExtents()
         ok, m = e.evaluator.getPointAtParameter((t0 + t1) / 2)
         start = prev if prev is not None else P(a_)
@@ -2620,10 +2726,17 @@ def _island_passes(sk, walls, d, ring, face):
     def redraw(c, t0, t1, pa, pb):
         A = pa if pa is not None else point(c, t0)
         B = pb if pb is not None else point(c, t1)
-        if isinstance(c, adsk.fusion.SketchLine):
+        ga = A.geometry if hasattr(A, 'geometry') else A
+        gb = B.geometry if hasattr(B, 'geometry') else B
+        if ga.distanceTo(gb) < 1e-5:  # a span too short to draw: the tool goes on from A
+            return None
+        m = point(c, (t0 + t1) / 2)
+        # a short span of an arc is all but straight, and Fusion refuses an arc through it
+        sag = abs((gb.x - ga.x) * (m.y - ga.y) - (gb.y - ga.y) * (m.x - ga.x)) / ga.distanceTo(gb)
+        if isinstance(c, adsk.fusion.SketchLine) or sag < 1e-6:
             new = sk.sketchCurves.sketchLines.addByTwoPoints(A, B)
         else:
-            new = sk.sketchCurves.sketchArcs.addByThreePoints(A, point(c, (t0 + t1) / 2), B)
+            new = sk.sketchCurves.sketchArcs.addByThreePoints(A, m, B)
         made.append(new)
         return new
 
@@ -2647,6 +2760,8 @@ def _island_passes(sk, walls, d, ring, face):
             pa = prev if prev is not None else (a_ if s0 == 'curve' else None)
             pb = b_ if s1 == 'curve' and not (loops_back and last) else None
             new = redraw(c, t0, t1, pa, pb)
+            if new is None:
+                continue
             path.append(new)
             prev = new.endSketchPoint if new.endSketchPoint.geometry.distanceTo(
                 point(c, t1)) < 1e-5 else new.startSketchPoint
@@ -2663,7 +2778,9 @@ def _island_passes(sk, walls, d, ring, face):
         b_ = pts(c)[1] if near(pts(c)[0], a_) else pts(c)[0]
         ev = c.geometry.evaluator
         ta, tb = ev.getParameterAtPoint(a_.geometry)[1], ev.getParameterAtPoint(b_.geometry)[1]
-        path.append(redraw(c, ta, gap_back(c, ta, tb), a_, None))
+        new = redraw(c, ta, gap_back(c, ta, tb), a_, None)
+        if new is not None:
+            path.append(new)
         out.append((path, order[0][1].geometry))
     for loop in loops:
         for c, _ in loop:
@@ -2740,9 +2857,8 @@ def _pass_path(sk, run, walls, d, ring, face):
     for c in curves:
         c.isConstruction = False
     # chain the offset curves, from the end beside the run's start
-    ok, s0, e0 = run[0].edge.evaluator.getEndPoints()
-    if run[0].isOpposedToEdge:
-        s0 = e0
+    # the run's start, by the edge's vertices: its evaluator can run the other way
+    s0 = (run[0].edge.endVertex if run[0].isOpposedToEdge else run[0].edge.startVertex).geometry
     pts = lambda c: (c.startSketchPoint, c.endSketchPoint)
     near = lambda p, r: p.geometry.distanceTo(r.geometry) < 1e-5
     ends = [p for c in curves for p in pts(c)
@@ -3654,6 +3770,8 @@ def _sketch_curve(sk, pc, a, b):
     p0, p1 = _flat(_point_on(pc, a)), _flat(_point_on(pc, b))
     if isinstance(g, adsk.core.Line3D):
         return [sk.sketchCurves.sketchLines.addByTwoPoints(p0, p1)]
+    if isinstance(g, adsk.core.Circle3D) and a < 1e-6 and b > pc['len'] - 1e-6:
+        return [sk.sketchCurves.sketchCircles.addByCenterRadius(_flat(g.center), g.radius)]
     if isinstance(g, (adsk.core.Arc3D, adsk.core.Circle3D)):
         pm = _flat(_point_on(pc, (a + b) / 2))
         return [sk.sketchCurves.sketchArcs.addByThreePoints(p0, pm, p1)]
@@ -3858,6 +3976,12 @@ def _edge_points(e, reverse=False):
             continue
         if ok:
             pts.append((q.x, q.y))
+    # in the edge's own direction, from its start vertex: its evaluator, such as
+    # an arc's, which runs counter-clockwise, can run the other way
+    v0, v1 = e.startVertex.geometry, e.endVertex.geometry
+    d = lambda v: math.hypot(pts[0][0] - v.x, pts[0][1] - v.y)
+    if pts and v0.distanceTo(v1) > 1e-6 and d(v1) < d(v0):
+        pts.reverse()
     return pts[::-1] if reverse else pts
 
 
@@ -3923,11 +4047,41 @@ def _rising_edges(face):
     return out
 
 
+def _column_clear(body, x, y, z, up, r):
+    """Whether a tool of radius r (cm) standing at (x, y) clears the part all the
+    way from z out to the part's face it comes in from: points round its edge,
+    every 0.25 mm up, all outside the body. A floor's own walls are not the only
+    ones a pocket's entry hole passes: walls of the pockets above the floor come
+    nearer the hole in narrow parts."""
+    bb = body.boundingBox
+    z1 = bb.maxPoint.z if up else bb.minPoint.z
+    n = max(1, int(abs(z1 - z) / 0.025))
+    out = adsk.fusion.PointContainment.PointOutsidePointContainment
+    for k in range(n + 1):
+        zk = z + (z1 - z) * k / n + (0.001 if up else -0.001) * (k == 0)
+        for j in range(16):
+            t = 2 * math.pi * j / 16
+            p = adsk.core.Point3D.create(x + r * math.cos(t), y + r * math.sin(t), zk)
+            if body.pointContainment(p) != out:
+                return False
+    return True
+
+
 def _pocket_entry(face):
     """The pocket's entry: its centre (the centre of the floor's outer loop, or
     else its centroid) where the end mill fits there clear of the walls rising
     from the floor, a deeper pocket, hole or window in the floor counting as
-    open; else the point on the floor farthest from its edges (see _entry_point)."""
+    open; else the point on the floor farthest from its edges (see _entry_point).
+    Either must leave the end mill room all the way up (see _column_clear);
+    where it does not, the room returned is 0."""
+    c, x, y, q = _pocket_entry_point(face)
+    if c >= TOOL_R and not _column_clear(face.body, x, y, face.pointOnFace.z,
+                                         _normal(face).z > 0, TOOL_R - 0.0005):
+        return 0.0, x, y, q
+    return c, x, y, q
+
+
+def _pocket_entry_point(face):
     bb = face.boundingBox
     z = face.pointOnFace.z
     fev = face.evaluator
@@ -4141,8 +4295,8 @@ def _make_layout(design, a, plan, warnings):
     lb, bb = loop.boundingBox, a['body'].boundingBox
     if (lb.maxPoint.x - lb.minPoint.x) < (bb.maxPoint.x - bb.minPoint.x) - 0.005 or \
             (lb.maxPoint.y - lb.minPoint.y) < (bb.maxPoint.y - bb.minPoint.y) - 0.005:
-        warnings.append('the part is wider in the middle than at its top and bottom faces; '
-                        'the tab chains follow the face outline, so check them')
+        warnings.append('the part is wider than the outer loop of any of its level faces; '
+                        'the tab chains follow the largest such loop, so check them')
     pieces = _clockwise(_loop_pieces(loop))
     if plan['outline']:
         tabs = _place_tabs(pieces, width)
@@ -4555,6 +4709,9 @@ def _shelf_regions(root, a, sk, pocket_entries):
                                                rings[0] + [q for r in rings[1] for q in r],
                                                (min(xs), min(ys), max(xs), max(ys)))
                     pt = (x, y) if c >= ENTRY_R else None
+                if pt is not None and not _column_clear(a['body'], pt[0], pt[1], z / 10,
+                                                        side == 'top', TOOL_R - 0.0005):
+                    pt = None  # the walls above the shelf close in on the hole
                 # the ring starts along the first profile curve's own direction;
                 # the chain starts along its sketch curve's
                 r0 = rings[0]
@@ -4989,9 +5146,14 @@ def _side_ops(b, setup, a, side, plan, warnings):
             groups.setdefault((d, h['through'], tuple(sorted(ends.items())), h['rise'][side]),
                               (ends, []))[1].append(h)
         out = []
-        for (d, through, _, _), (ends, hs) in sorted(groups.items(),
-                                                  key=lambda kv: (kv[0][0] != DRILL_3175,
-                                                                  kv[0][0], not kv[0][1])):
+        # those starting nearest the face first: a hole under a counterbore starts
+        # at the counterbore's floor, and its drill rapids down to there, through
+        # the hole the counterbore's own pre-drill has drilled by then
+        top_of = lambda hs: min(depth_of(h['z1'] if top else h['z0']) - h['rise'][side]
+                                for h in hs)
+        order = lambda kv: (kv[0][0] != DRILL_3175, kv[0][0], round(top_of(kv[1][1]), 3),
+                            not kv[0][1])
+        for (d, through, _, _), (ends, hs) in sorted(groups.items(), key=order):
             name = 'Pre-drill bores' if d == DRILL_3175 else 'Pre-drill bores %s' % d.split('*')[0]
             out.append(b.op(setup, 'drill',
                             drill_for(max(h['depth'] for h in hs)) if d == DRILL_3175 else d,
@@ -5253,9 +5415,20 @@ def _side_ops(b, setup, a, side, plan, warnings):
                     units.append((None, c, f['depth'],
                                   [side_entries[k]['point'] for k in c['keys']
                                    if k in side_entries and side_entries[k]['point']], False))
-            has_open = any(u[4] for u in units) and not all(u[4] for u in units)
             has_entries = any(f['face'].tempId in side_entries for f in pockets
                               if f not in narrow)
+            if has_entries and lay:
+                # a closed pocket with no room anywhere for the end mill's entry
+                # hole: a predrill pocket refuses it, and it could not cut it anyway
+                for u in [u for u in units if not u[4] and not u[3]]:
+                    units.remove(u)
+                    if which == 'rough':
+                        warnings.append('the pocket at z=%g mm has no room for the %g mm end '
+                                        "mill's entry hole, so it does not cut it; the small "
+                                        "end mills' passes cut what they reach"
+                                        % (mm(u[0].pointOnFace.z) if u[0] is not None else
+                                           u[1]['z'], ENDMILL_D))
+            has_open = any(u[4] for u in units) and not all(u[4] for u in units)
             bands = pocket_bands if which == 'rough' else [(-allow, None, [])]
             for k, band in enumerate(bands):
                 t, bot, _ = band
@@ -5560,14 +5733,36 @@ def _side_ops(b, setup, a, side, plan, warnings):
     # chamfering bit with its cone on the chamfer (Fusion's 2D chamfer of the
     # chamfer faces, its width and clearance 0), the point below the chamfer's
     # lower edge by as much as the floors and tabs below and the bit's reach allow
-    def chamfer_room(depth):
+    # the tabs start at the outline, so an edge of the part comes within the
+    # chamfering bit's reach of one only within its radius of the tab's points
+    tab_near = _near_points([(q.x, q.y) for q in (_tab_points(a, plan['tab']['width'] / 10)
+                                                  if plan['outline'] else [])],
+                            3.175 / 20 + 0.02)
+
+    def band_room(depth, edges=None):
+        # mm from `depth` below the face down to the tab band, or None where the
+        # band does not count: the chamfer lies past it, so the tabs are behind
+        # it, or none of `edges` comes near a tab
+        if not plan['outline']:
+            return None
+        near = a['ztop'] - band_top if top else band_bot - a['zbot']
+        far = a['ztop'] - band_bot if top else band_top - a['zbot']
+        if depth >= far - 1e-6:
+            return None
+        if edges is not None and not any(tab_near(x, y) for e in edges
+                                         for x, y in _edge_points(e)):
+            return None
+        return max(0.0, near - depth)
+
+    def chamfer_room(depth, edges=None):
         # mm from `depth` below the face down to the next floor, hole bottom or tab
         room = [f['depth'] - depth for f in floors
                 if f['role'] == 'pocket' and f['depth'] > depth + 1e-6]
         room += [h['depth'] - depth for h in holes
                  if not h['through'] and h['depth'] > depth + 1e-6]
-        if plan['outline']:
-            room.append((a['ztop'] - band_top if top else band_bot - a['zbot']) - depth)
+        r = band_room(depth, edges)
+        if r is not None:
+            room.append(r)
         return min(room + [CHAMFER_TIP_MAX + CHAMFER_CLEAR])
 
     # every chamfer's edges, cut or not, are left out of the deburr: a cut one
@@ -5577,7 +5772,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
         if c['side'] != side:
             continue
         depth = a['ztop'] - c['z0'] if top else c['z1'] - a['zbot']
-        tip = min(CHAMFER_TIP_MAX, chamfer_room(depth) - CHAMFER_CLEAR,
+        tip = min(CHAMFER_TIP_MAX, chamfer_room(depth, list(c['face'].edges)) - CHAMFER_CLEAR,
                   CHAMFER_REACH - c['width'])
         if tip < CHAMFER_TIP_MIN - 1e-6:
             warnings.append('a %g mm chamfer on the %s with its lower edge %g mm deep has '
@@ -5615,14 +5810,18 @@ def _side_ops(b, setup, a, side, plan, warnings):
     if face is not None and plan['chamfer']:
         width = float(CHAMFER_OP['chamferWidth'][:-2])
 
-        def chamfer_tip(depth, what):
-            # the point's offset below a chamfer at `depth` mm below the face
+        def chamfer_tip(depth, what, faces=None):
+            # the point's offset below a chamfer at `depth` mm below the face;
+            # the tabs count only for `faces` with a falling edge near a tab
             room = [f['depth'] - depth for f in floors
                     if f['role'] == 'pocket' and f['depth'] > depth + 1e-6]
             room += [h['depth'] - depth for h in holes
                      if not h['through'] and h['depth'] > depth + 1e-6]
-            if plan['outline']:
-                room.append((a['ztop'] - band_top if top else band_bot - a['zbot']) - depth)
+            r = band_room(depth, None if faces is None else [
+                ce.edge for g in faces for lp in g.loops for ce in lp.coEdges
+                if _falls_away(g, ce)])
+            if r is not None:
+                room.append(r)
             room.append(CHAMFER_TIP_MAX + width + CHAMFER_CLEAR)
             tip = max(CHAMFER_TIP_MIN, min(CHAMFER_TIP_MAX, min(room) - width - CHAMFER_CLEAR))
             if width + tip > min(room) - 0.02:
@@ -5648,7 +5847,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
             if f['role'] == 'pocket' and _has_falling_edges(f['face'], chamfered):
                 by_depth.setdefault(round(f['depth'], 3), []).append(f['face'])
         for dep, fs in sorted(by_depth.items()):
-            t = chamfer_tip(dep, 'the pocket floor %g mm deep' % dep)
+            t = chamfer_tip(dep, 'the pocket floor %g mm deep' % dep, fs)
             ops['main'].append(b.op(
                 setup, 'chamfer2d', CHAMFER,
                 'Deburr pocket floors' + (' %g mm' % dep if len(by_depth) > 1 else ''),
@@ -5806,8 +6005,10 @@ def _strategy(a, stock, sides):
                 'or be of the part\'s own X and Y size; it reaches %s past it'
                 % (need, ENDMILL_D, MIN_FRAME, ', '.join(short)))
     floors, holes = _bottom_work(a)
+    # the design's chamfers on the bottom, which only a bottom setup cuts
+    chamfers = [c for c in a.get('chamfers', []) if c['side'] == 'bottom']
     if sides is None:
-        sides = 2 if floors or holes or stock.get('bottom', 0) > 1e-3 else 1
+        sides = 2 if floors or holes or chamfers or stock.get('bottom', 0) > 1e-3 else 1
     elif sides == 1 and (floors or holes):
         what = [('%d pocket floor%s' % (len(floors), 's' if len(floors) > 1 else '')) if floors
                 else '', ('%d hole%s' % (len(holes), 's' if len(holes) > 1 else '')) if holes
@@ -6003,6 +6204,18 @@ def build(args):
         warnings.append('the design was a Part design, which holds only one component; it is '
                         'now a Hybrid design, so that the vise, tabs and face patches can be '
                         'components. Saving the document keeps the change')
+    if a['partial_windows']:
+        n_ = len(a['partial_windows'])
+        warnings.append('%d opening%s through the part (at x, y = %s mm) %s not open all the '
+                        'way through over %s whole outline: pockets round %s stop at a floor, or '
+                        'something juts into %s. No window cut goes through %s; the pockets on '
+                        'each side cut what they reach, so check with check_cam (rule U1) and '
+                        'the simulation that nothing is left in %s'
+                        % (n_, '' if n_ == 1 else 's',
+                           ', '.join('(%g, %g)' % tuple(q) for q in a['partial_windows']),
+                           'is' if n_ == 1 else 'are', 'its' if n_ == 1 else 'their',
+                           'it' if n_ == 1 else 'them', 'it' if n_ == 1 else 'them',
+                           'it' if n_ == 1 else 'them', 'it' if n_ == 1 else 'them'))
     if a['side_holes']:
         warnings.append('%d hole%s not along Z (%s mm across), such as holes into the '
                         "part's sides, which no tool reaches from the top or the bottom: "
