@@ -503,10 +503,12 @@ def _segment(to_world, x, y, z0, z1):
 
 
 def _drilled(moves, t, to_world, top, sn):
-    """[(x, y, lowest z, highest z, diameter, setup, point z)] in the design's
-    frame, for each hole a drill operation makes: full width from the stock top
-    down to the drill's deepest point at that spot, raised by the length of its
-    point; below that, the drill's cone narrows to its point at `point z`."""
+    """[(x, y, lowest z, highest z, diameter, setup, point z, point length)] in
+    the design's frame, for each hole a drill operation makes: full width from
+    the stock top down to the drill's deepest point at that spot, raised by the
+    length of its point; below that, the drill's cone narrows to its point at
+    `point z`. A drill whose point alone goes into the stock, as a shallow floor's
+    entry hole does, leaves only the cone: its full-width part is empty, at the top."""
     tip = 0.0
     if t['tip_angle']:
         tip = t['d'] / 2 / math.tan(math.radians(t['tip_angle']) / 2)
@@ -516,8 +518,9 @@ def _drilled(moves, t, to_world, top, sn):
             continue
         k = (round(m[4], 3), round(m[5], 3))
         deepest[k] = min(deepest.get(k, m[6]), m[6])
-    return [_segment(to_world, x, y, z + tip, top) + (t['d'], sn, to_world(x, y, z).z * 10)
-            for (x, y), z in deepest.items() if z + tip < top]
+    return [_segment(to_world, x, y, min(z + tip, top), top)
+            + (t['d'], sn, to_world(x, y, z).z * 10, tip)
+            for (x, y), z in deepest.items() if z < top]
 
 
 def _cleared_to(x, y, r, top, milled, other=()):
@@ -609,6 +612,7 @@ def _check_plunges(rep, rule, severity, sn, o, moves, t, holes, milled, to_world
                 continue
             where = '' if hs == sn else ' (drilled in %s)' % hs
             zpt = pt[0] if pt else None
+            cone = pt[1] if len(pt) > 1 else None  # the point's length
             if e + r > hd / 2 + 0.02:
                 why = ('the %.3g mm hole there%s is too narrow for it, or off its centre by '
                        '%.3f mm' % (hd, where, e))
@@ -619,9 +623,9 @@ def _check_plunges(rep, rule, severity, sn, o, moves, t, holes, milled, to_world
             # the plunge's deep end in the drill's cone, its shallow part in the
             # full-width hole: the cone, centred on the tool, must be half its width
             if zpt is not None and zpt < hlo - 1e-6 and hhi >= phi - 0.01 and plo >= zpt:
-                dist, tip = plo - zpt, hlo - zpt
+                dist, tip = plo - zpt, cone or hlo - zpt
             elif zpt is not None and zpt > hhi + 1e-6 and hlo <= plo + 0.01 and phi <= zpt:
-                dist, tip = zpt - phi, zpt - hhi
+                dist, tip = zpt - phi, cone or zpt - hhi
             else:
                 why = 'the hole there%s is not full width over %.2f mm of it' % (
                     where, max(hlo - plo, phi - hhi))

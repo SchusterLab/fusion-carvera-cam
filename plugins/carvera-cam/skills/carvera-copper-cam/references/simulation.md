@@ -94,6 +94,8 @@ Every error or warning in the Issues panel needs attention, except those of a si
 An event names the two things that met: the tool's `Cutter`, `Shaft`, `Shoulder` or `Holder`; the `Stock`; the `Fixture`, which is the modelled vise and fixture plate together; or a part of the machine, named by the axis that carries it: `Z` for the spindle head, `Y` for the bed, which rides on the Y axis, and `Base` for the frame that stays put.
 A `Fixture` event in a setup's own simulation means the tool, its holder or the spindle head reaches the vise or the plate: look at the operation's moves near the jaws (rule X1) and at where `build` placed that setup's vise.
 `Rapid move into stock` means a rapid, sideways or straight down, meets copper, or grazes it: a drill as wide as the slot it rapids into counts too.
+In the bottom setup's `Cut tabs`, it has also come up once or twice on parts whose every rapid there runs in columns the bottom outline had cleared across the tool's width (`PackageMount_K`, `sample-lid-with-tabs-v2-6port10x10`); the move it flags is not yet found, and rule H2 reports nothing there.
+`Base+Stock` means the stock itself meets the machine's frame: the bed carries it along the machine's Y axis, so a cut near one end of a long bar moves the bed far enough that the bar's other end reaches the frame (see SKILL.md's "Limits").
 
 Toolpaths made to collide on purpose, on the 30 × 20 × 4 mm test part, show what the simulation catches.
 It reports the cutter in the insert on a jaw's face or in the fixture plate beside the vise (`Fixture+Cutter`), the holder and the spindle head beside a jaw on a deep plunge (`Fixture+Holder`, `Fixture+Z`), and the cutter in the raised end of the bed, past the plate (`Y+Cutter`).

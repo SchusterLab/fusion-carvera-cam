@@ -141,7 +141,23 @@ def _is_concave_cylinder(face):
 
 
 def _is_full_circle_face(face):
-    return any(isinstance(e.geometry, adsk.core.Circle3D) for e in face.edges)
+    """Whether the cylinder goes all the way round at one of its ends: a circular
+    edge there, or arcs at one height that close the circle, where several faces
+    meet that end (a hole opening into sloped walls, with a slot into its side)."""
+    if any(isinstance(e.geometry, adsk.core.Circle3D) for e in face.edges):
+        return True
+    full = 2 * math.pi * face.geometry.radius
+    for z in {round(z, 5) for z in _zrange(face)}:
+        if abs(sum(e.length for e in _circle_edges(face, z)) - full) < 1e-4:
+            return True
+    return False
+
+
+def _circle_edges(face, z):
+    """The cylinder's circular edges and arcs at height z (cm)."""
+    return [e for e in face.edges
+            if isinstance(e.geometry, (adsk.core.Circle3D, adsk.core.Arc3D))
+            and abs(e.geometry.center.z - z) < EPS]
 
 
 def _zrange(entity):
@@ -373,10 +389,7 @@ def _is_groove(face):
 def _classify_hole(face, ztop, zbot, threads):
     g = face.geometry
     z0, z1 = _zrange(face)
-    top_edges = [e for e in face.edges if isinstance(e.geometry, adsk.core.Circle3D)
-                 and abs(e.geometry.center.z - z1) < EPS]
-    bot_edges = [e for e in face.edges if isinstance(e.geometry, adsk.core.Circle3D)
-                 and abs(e.geometry.center.z - z0) < EPS]
+    top_edges, bot_edges = _circle_edges(face, z1), _circle_edges(face, z0)
     top_open = bool(top_edges) and _end_open(face, top_edges[0], True)
     bot_open = bool(bot_edges) and _end_open(face, bot_edges[0], False)
     side = 'top' if top_open else ('bottom' if bot_open else 'none')
@@ -4445,6 +4458,10 @@ def _make_layout(design, a, plan, warnings):
             if g is f or g['role'] != 'pocket' or g['side'] != f['side'] or \
                     g['depth'] >= f['depth'] - 1e-6:
                 continue
+            # a pocket the 3.175 enters by itself, or one open to the side, which
+            # its passes cut, is not one the slot has to reach
+            if g['side_open'] or g['face'].tempId in pocket_entries:
+                continue
             gb = [lp for lp in g['face'].loops if lp.isOuter][0].boundingBox
             if not (gb.minPoint.x < ex < gb.maxPoint.x and gb.minPoint.y < ey < gb.maxPoint.y):
                 continue
@@ -5468,6 +5485,8 @@ def _side_ops(b, setup, a, side, plan, warnings):
                         for u in us:
                             by_depth.setdefault(round(u[2], 3), []).append(u)
                         for dep, grp in sorted(by_depth.items()):
+                            if which == 'rough' and floor and dep <= POCKET_FLOOR_ALLOWANCE + 1e-6:
+                                continue  # the rough pass, above the floor's allowance, mills air
                             paths = [pth for u in grp
                                      for pth in (lay['open_passes'].get(u[0].tempId, [])
                                                  if lay else [])]

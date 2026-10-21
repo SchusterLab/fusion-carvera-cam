@@ -352,12 +352,15 @@ Then, unless the user asks to skip it, check the toolpaths by Fusion's simulatio
 - An opening through the part that is not open all the way through over its whole outline gets no window cut, and `build` warns.
   Examples are a window ringed by pockets that stop at a floor, and one that a tongue juts into partway up.
   The pockets on each side cut what they reach of it, so check rule U1 and the simulation for copper left in it.
+- A round wall is a hole when it goes all the way round at one of its ends, as one circular edge or as arcs where several faces meet that end, such as a hole whose bottom opens into sloped walls; a round wall that a slot opens all the way down is the slot's rounded end, not a hole.
 - A hole closed at both ends, or one no tool in the library fits, is skipped with a warning.
 - A round wall with something standing up from the floor inside it, such as a groove round a boss, is a pocket with an island, not a hole.
 - A hole whose axis does not run along Z, such as a hole into the part's side, is not cut; `build` warns about each one.
 - The only sloped faces cut are the design's 45° chamfers and countersinks (`analyze`'s `chamfers`), by the chamfering bit, whose 45° cone reaches 1.5375 mm out from the edge of its 0.1 mm point. Its point goes 0.1 to 0.5 mm below the chamfer, as far as the chamfer's width and the floors and tabs below allow, so a chamfer can be at most 1.4375 mm wide. The bit cuts it 0.2 mm deeper at each pass, along the sharp edge `build` sketches for it, and the last pass follows the modelled chamfer.
   Any other sloped face, such as a chamfer at another angle, a wider one, or an 82° countersink, is left square, and `build` warns about it; so is a chamfer on the bottom face with one setup.
 - Nothing checks that a toolpath stays within the machine's travel: the machine model sets no limits on its axes, so the simulation reports none, and `check_cam.py` has no rule for travel.
+- Nor do `build` and `check_cam.py` check the stock against the machine's frame; only the simulation does.
+  The stock's X size runs along the machine's Y axis, the axis the bed moves on, so a cut near one end of a long bar moves its other end far out: on a 200 mm part in a 300 mm bar, the end cuts 100 mm from the bar's middle brought the far end into the frame (`Base+Stock` in the simulation), while a 146 mm part in a 305 mm bar, cut only out to 73 mm, cleared it.
 
 ## Re-learning the conventions
 
