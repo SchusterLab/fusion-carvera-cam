@@ -174,6 +174,8 @@ T3, each in one pass, in this order, with the drills of step 16a among them:
 ### Chamfers, deburring and the tabs
 
 28a. **Chamfers**, for the setup's side's entries in `features`' `chamfers` (the 45° chamfers and countersinks the design models, each at most 1.4375 mm wide): the chamfering bit, `chamfer2d`, `contours` `[chamfer:<k>, …]`, `chamferWidth` `0mm` and `chamferClearance` `0mm`, so that Fusion takes the chamfer's slope from the model, `chamferTipOffset` t, and no heights; one operation per t, named `Chamfers`, then ` 1`, ` 2`, … in order of t when there are more.
+    Before each, for each width w = 0.2 mm, 0.4 mm, … narrower than the widest of its chamfers: `chamfer2d`, `contours` `[chamfer_edge:<k>, …]` for its chamfers wider than w, `chamferWidth` w, `chamferClearance` `0mm`, the same t; named the same, then ` (w mm)`.
+    The bit then cuts each chamfer 0.2 mm deeper at each pass, on the same path: Fusion ignores stock to leave on a modelled chamfer.
     The bit's 45° cone reaches 1.5375 mm out from its point's edge, so t = 1.5375 mm − the chamfer's width at most.
     Room: step 29's, measured from the chamfer's `depth_mm` down.
     t = the smallest of 0.5 mm, room − 0.1 mm and 1.5375 mm − the width; when t is under 0.1 mm, leave that chamfer out and warn that nothing cuts it.

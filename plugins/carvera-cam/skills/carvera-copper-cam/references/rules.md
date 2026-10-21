@@ -73,7 +73,7 @@ A roughing pass below means a multi-depth pass that cuts the feature to size in 
 | D6 | a pocket's stepover is more than 0.6 × the tool's diameter | warning | 261 of 263 pockets step over 0.6 × the diameter | an overloaded end mill |
 | D8 | a bore's radial stepover is more than 0.3 mm | warning | 23 of 33 bores in the current parts step over 0.1 mm, the rest 0.3 to 0.5 mm | stall and broken end mills |
 | CH1 | a deburr (2D chamfer) keeps the chamfering bit's point less than 0.1 mm off the edge (Fusion's tip offset) | warning | all 104 deburr operations keep it at least 0.1 mm off, most 0.3 to 0.5 mm | the bit's sharp point doing the cutting and chipping |
-| CH2 | a deburr's chamfer width is more than 0.2 mm | warning | the generator deburrs 0.1 mm wide | a chamfer the design does not have |
+| CH2 | a deburr's chamfer width is more than 0.2 mm, and more than the widest 45° chamfer the model has facing the setup (a pass on a modelled chamfer) | warning | the generator deburrs 0.1 mm wide | a chamfer the design does not have |
 
 ### How the tool enters the cut
 

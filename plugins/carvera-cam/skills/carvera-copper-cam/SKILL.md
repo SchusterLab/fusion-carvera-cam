@@ -346,7 +346,7 @@ Then, unless the user asks to skip it, check the toolpaths by Fusion's simulatio
 - A through window's inside corners below R1.59 finish the same way, with a small end mill from the face through the part.
 - A hole closed at both ends, or one no tool in the library fits, is skipped with a warning.
 - A hole whose axis does not run along Z, such as a hole into the part's side, is not cut; `build` warns about each one.
-- The only sloped faces cut are the design's 45° chamfers and countersinks (`analyze`'s `chamfers`), by the chamfering bit, whose 45° cone reaches 1.5375 mm out from the edge of its 0.1 mm point. Its point goes 0.1 to 0.5 mm below the chamfer, as far as the chamfer's width and the floors and tabs below allow, so a chamfer can be at most 1.4375 mm wide.
+- The only sloped faces cut are the design's 45° chamfers and countersinks (`analyze`'s `chamfers`), by the chamfering bit, whose 45° cone reaches 1.5375 mm out from the edge of its 0.1 mm point. Its point goes 0.1 to 0.5 mm below the chamfer, as far as the chamfer's width and the floors and tabs below allow, so a chamfer can be at most 1.4375 mm wide. The bit cuts it 0.2 mm deeper at each pass, along the sharp edge `build` sketches for it, and the last pass follows the modelled chamfer.
   Any other sloped face, such as a chamfer at another angle, a wider one, or an 82° countersink, is left square, and `build` warns about it; so is a chamfer on the bottom face with one setup.
 - Nothing checks that a toolpath stays within the machine's travel: the machine model sets no limits on its axes, so the simulation reports none, and `check_cam.py` has no rule for travel.
 

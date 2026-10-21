@@ -311,7 +311,7 @@ def _check_op(rep, s, o, t, earlier, lab, threaded=frozenset()):
             rep.add('CH1', 'warning', sn, on, "chamfer tip offset %.2f mm is below %.1f mm: the "
                     "bit's point cuts the edge" % (tip, CHAMFER_TIP_MIN), tip_offset=tip)
         width = _mm(_v(p, 'chamferWidth'))
-        if width is not None and width > CHAMFER_WIDTH_MAX + 1e-6:
+        if width is not None and width > CHAMFER_WIDTH_MAX + 1e-6 and                 width > _modelled_chamfer_width(s) + 1e-6:
             rep.add('CH2', 'warning', sn, on, "chamfer width %.2f mm is above a deburr's %.1f mm: "
                     'it cuts a chamfer the design does not have' % (width, CHAMFER_WIDTH_MAX),
                     width=width)
@@ -782,6 +782,28 @@ def _check_cones(rep, sn, o, cuts, setup, points, milled, top, em):
                        'its point would have to go %.2f mm deeper' % (d, need, need - zb))
         rep.add('TH4', 'warning', sn, o.name, 'the %g mm end mill bores the hole at X%.3f '
                 'Y%.3f down to Z%.3f, but %s' % (em, cx, cy, zb, why), z_min=round(zb, 3))
+
+
+def _modelled_chamfer_width(setup):
+    """The widest 45-degree chamfer (mm, as deep as it is wide) the setup's model
+    has facing its tool, flat or a cone about the tool axis: a 2D chamfer that wide
+    or narrower cuts that chamfer, in passes, and is no extra chamfer."""
+    zx = setup.workCoordinateSystem.getAsCoordinateSystem()[3]
+    widest = 0.0
+    for body in _setup_bodies(setup):
+        for f in body.faces:
+            g = f.geometry
+            if not isinstance(g, (adsk.core.Plane, adsk.core.Cone)):
+                continue
+            ok, n = f.evaluator.getNormalAtPoint(f.pointOnFace)
+            if not ok or abs(n.dotProduct(zx) - math.sqrt(0.5)) > 0.01:
+                continue
+            bb = f.boundingBox
+            lo, hi = bb.minPoint, bb.maxPoint
+            # its extent along the tool axis
+            ext = abs((hi.x - lo.x) * zx.x + (hi.y - lo.y) * zx.y + (hi.z - lo.z) * zx.z)
+            widest = max(widest, ext * 10)
+    return widest
 
 
 def _setup_bodies(setup):

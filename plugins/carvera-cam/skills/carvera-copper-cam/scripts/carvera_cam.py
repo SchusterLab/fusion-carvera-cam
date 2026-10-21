@@ -1336,6 +1336,8 @@ def _save_layout(design, a, plan, name, setups, threads):
                   for sl in lay['slots']],
         'hole_centres': {str(hole_of[k]): tok(pt) for k, pt in lay['hole_centres'].items()
                          if k in hole_of},
+        'chamfer_edges': [{'curves': [tok(cv) for cv in e['curves']], 'reverted': e['reverted']}
+                          for e in lay.get('chamfer_edges', [])],
         'threads': {str(i): t for i, t in threads.items()},
     }
     attr = design.attributes.itemByName(*LAYOUT_ATTR)
@@ -1545,6 +1547,8 @@ def _sel_items(design, a, L, param, items, top):
                          both deburr items leave out the edges of modelled chamfers
       chamfer:<k>        modelled chamfer k's face (see features' chamfers), for a
                          2D chamfer of width and clearance 0
+      chamfer_edge:<k>   chamfer k's sharp edge, sketched by build, as open chains with
+                         the bit on the open side, for the passes before the last
       patch:<name>       a face patch (pockets)
       patch_outline:<n>  a patch's outer loop, as a closed boundary (pockets)
       region:<k>         a shelf region's closed chain
@@ -1601,6 +1605,13 @@ def _sel_items(design, a, L, param, items, top):
                 _add_falling_edges(sels, a['floors'][int(rest)]['face'], _chamfer_edges(a))
             elif kind == 'chamfer':
                 face_contour(a['chamfers'][int(rest)]['face'])
+            elif kind == 'chamfer_edge':
+                e = L['chamfer_edges'][int(rest)]
+                for t, rev in zip(e['curves'], e['reverted']):
+                    s = sels.createNewChainSelection()
+                    s.inputGeometry = [_entity(design, t)]
+                    s.isOpen = True
+                    s.isReverted = rev
             elif kind == 'patch':
                 sels.createNewPocketSelection().inputGeometry = [_ref(design, a, L, it)]
             elif kind == 'patch_outline':
@@ -3085,6 +3096,9 @@ CHAMFER_CLEAR = 0.1     # the point kept this far above floors and the tabs
 # 1.4375 mm; a slope within CHAMFER_ANGLE_TOL degrees of 45 counts.
 CHAMFER_REACH = (3.175 - 0.1) / 2
 CHAMFER_ANGLE_TOL = 0.5
+# A modelled chamfer is cut this much deeper at each pass, the last pass the full
+# chamfer: one pass the full width loads the bit's whole cone at once.
+CHAMFER_STEPDOWN = 0.2
 CHAMFER_OP = {
     'tolerance': '0.01mm',
     'chamferWidth': '0.1mm',
@@ -4036,6 +4050,83 @@ def _slot(face):
     t_open, t_end = (t0 - r - 0.03, t1 - r) if hi else (t1 + r + 0.03, t0 + r)
     at = lambda t: (mid * nx + t * ux, mid * ny + t * uy)
     return {'tool': tool, 'start': at(t_open), 'end': at(t_end)}
+
+
+def _chamfer_edge_sketches(design, a):
+    """For each of the part's modelled chamfers (a['chamfers']), its sharp edge: the
+    chamfer's far edges, where it meets its walls, raised (or lowered, on the bottom)
+    to the level face it meets, sketched in a sketch at that height. A 2D chamfer
+    along that edge at width w cuts the chamfer's first w mm, so passes at growing
+    widths cut it a layer at a time. Each curve comes with the chain direction that
+    puts the bit on the open side: Fusion's 2D chamfer of a chain keeps the bit on
+    the left of the chain's direction seen along the tool axis, and leaves out a
+    pass that would cut the part."""
+    root = design.rootComponent
+    sketches, out = {}, []
+    for c in a['chamfers']:
+        f = c['face']
+        near, far = (c['z1'], c['z0']) if c['side'] == 'top' else (c['z0'], c['z1'])
+        key = round(near, 4)
+        if key not in sketches:
+            pi = root.constructionPlanes.createInput()
+            pi.setByOffset(root.xYConstructionPlane, adsk.core.ValueInput.createByReal(near / 10))
+            plane = root.constructionPlanes.add(pi)
+            plane.name = LAYOUT_SKETCH + ' chamfer edges %g' % key
+            plane.isLightBulbOn = False
+            sk = root.sketches.add(plane)
+            sk.name = LAYOUT_SKETCH + ' chamfer edges %g' % key
+            sk.isVisible = False
+            sketches[key] = sk
+        sk = sketches[key]
+        dz = (near - far) / 10
+
+        def up(q):
+            return sk.modelToSketchSpace(adsk.core.Point3D.create(q.x, q.y, q.z + dz))
+        curves, reverted = [], []
+        for e in f.edges:
+            ez0, ez1 = _zrange(e)
+            if ez1 - ez0 > 1e-4 or abs(ez0 * 10 - far) > 1e-3:
+                continue
+            g = e.geometry
+            ok, t0, t1 = e.evaluator.getParameterExtents()
+            if isinstance(g, adsk.core.Circle3D):
+                cv = sk.sketchCurves.sketchCircles.addByCenterRadius(up(g.center), g.radius)
+            elif isinstance(g, adsk.core.Arc3D):
+                ok, mid = e.evaluator.getPointAtParameter((t0 + t1) / 2)
+                cv = sk.sketchCurves.sketchArcs.addByThreePoints(
+                    up(e.startVertex.geometry), up(mid), up(e.endVertex.geometry))
+            else:
+                cv = sk.sketchCurves.sketchLines.addByTwoPoints(
+                    up(e.startVertex.geometry), up(e.endVertex.geometry))
+            # the open side: the chamfer's normal, level, at the curve's start
+            ev = cv.worldGeometry.evaluator  # in the model's axes, as the normal is
+            ok, u0, u1 = ev.getParameterExtents()
+            ok, start = ev.getPointAtParameter(u0)
+            ok, der = ev.getFirstDerivative(u0)
+            q = adsk.core.Point3D.create(start.x, start.y, far / 10)
+            ok, q = f.evaluator.getPointAtParameter(f.evaluator.getParameterAtPoint(q)[1])
+            ok, n = f.evaluator.getNormalAtPoint(q)
+            left = der.x * n.y - der.y * n.x  # the open side seen from above
+            # seen from below, as the bottom setup sees it, left and right swap
+            reverted.append(left < 0 if c['side'] == 'top' else left > 0)
+            curves.append(cv)
+        out.append({'curves': curves, 'reverted': reverted})
+    return out
+
+
+def _sel_chamfer_edges(edges):
+    """Each sketched chamfer edge (see _chamfer_edge_sketches) as an open chain."""
+    def f(params):
+        v = params.itemByName('contours').value
+        sels = v.getCurveSelections()
+        for e in edges:
+            for cv, rev in zip(e['curves'], e['reverted']):
+                s = sels.createNewChainSelection()
+                s.inputGeometry = [cv]
+                s.isOpen = True
+                s.isReverted = rev
+        v.applyCurveSelections(sels)
+    return f
 
 
 def _make_layout(design, a, plan, warnings):
@@ -5493,12 +5584,26 @@ def _side_ops(b, setup, a, side, plan, warnings):
                             "a floor or the tabs too close below for the chamfering bit's "
                             'point: nothing cuts it' % (c['width'], side, round(depth, 3)))
             continue
-        by_tip.setdefault(round(tip, 3), []).append(c['face'])
-    for k, (tip, fs) in enumerate(sorted(by_tip.items())):
-        ops['main'].append(b.op(
-            setup, 'chamfer2d', CHAMFER, 'Chamfers' + (' %d' % (k + 1) if len(by_tip) > 1 else ''),
-            dict(CHAMFER_OP, chamferWidth='0mm', chamferClearance='0mm',
-                 chamferTipOffset='%gmm' % tip), _sel_face_contours(fs)))
+        by_tip.setdefault(round(tip, 3), []).append(c)
+    edges_of = (lay or {}).get('chamfer_edges') or []
+    for k, (tip, cs) in enumerate(sorted(by_tip.items())):
+        name = 'Chamfers' + (' %d' % (k + 1) if len(by_tip) > 1 else '')
+        params = dict(CHAMFER_OP, chamferClearance='0mm', chamferTipOffset='%gmm' % tip)
+        # the passes before the last, CHAMFER_STEPDOWN deeper each, along the sharp
+        # edges sketched for them; a chamfer joins those narrower than itself
+        widths = sorted({round(CHAMFER_STEPDOWN * j, 4) for c in cs
+                         for j in range(1, int(math.ceil(c['width'] / CHAMFER_STEPDOWN - 1e-6)))})
+        for w in widths:
+            es = [edges_of[a['chamfers'].index(c)] for c in cs
+                  if c['width'] > w + 1e-6 and edges_of]
+            if es:
+                ops['main'].append(b.op(setup, 'chamfer2d', CHAMFER, '%s (%g mm)' % (name, w),
+                                        dict(params, chamferWidth='%gmm' % w),
+                                        _sel_chamfer_edges(es)))
+        # the last pass: the chamfer as modelled
+        ops['main'].append(b.op(setup, 'chamfer2d', CHAMFER, name,
+                                dict(params, chamferWidth='0mm'),
+                                _sel_face_contours([c['face'] for c in cs])))
 
     # deburr the outer face's edges, the bit's point kept off the shallowest floor
     # and blind hole bottom below the face, and off the tabs, which still stand in
@@ -5954,6 +6059,7 @@ def build(args):
     # the layout first, so that the dry run sees the slots and makes the same
     # choices as the real one
     plan['layout'] = _make_layout(design, a, plan, warnings)
+    plan['layout']['chamfer_edges'] = _chamfer_edge_sketches(design, a)
     # dry run to learn which tools the part needs, then number them in slot order
     if not plan['recipe']:
         dry = Builder(cam, tools, [], dry=True)
