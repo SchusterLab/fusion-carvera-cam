@@ -51,21 +51,26 @@ One operation cuts the open floors of one depth, in one pass (`rough` or `finish
 
 A floor that runs out to every side of the part, round one or more islands, has no runs of walls, so the passes go round the islands instead: the first one tool radius (1.5875 mm) off them, each further one 1.905 mm farther out, n passes as in step 2.
 
-1. **Sketch each pass.**
-   `pass_path({"floor": i, "islands": true, "offset_mm": d})` offsets every island's walls by d mm at once and cuts each offset loop back to the outline cut's path, and to where it goes inside another island's loop.
-   Where two islands' loops cross, the pieces join there into one, so no two passes cross: Fusion splits a contour wherever its curves cross and plunges again at each piece, into copper nothing has cut.
-   It returns `paths`, one per piece, each with its id, its ends, its length and `entry`.
-   A piece that starts and ends on the outline cut's path has `entry` null.
-   A piece that never reaches that path, one island's whole loop or the loops of several joined all round them, closes on itself, stopping 0.05 mm short of its start, and `entry` names its start, `path_entry:<id>`: the end mill enters there down a hole drilled to the floor, since a line in from the outline would cross the passes farther out.
+1. **Sketch the passes.**
+   `island_passes({"floor": i})` sketches all n passes at once, as `build` cuts them.
+   Each pass offsets every island's walls and is cut back to the outline cut's path, and to where it goes inside another island's loop.
+   Where two islands' loops cross, the pieces join there into one, so no two passes cross: Fusion splits a contour wherever any of its curves cross, even curves of different chains, and plunges again at each piece, into copper nothing has cut.
+   A pass that never reaches the outline cut's path, such as one island's whole loop, closes on itself.
+   `island_passes` joins it to a pass farther out, so that the end mill enters on the outline cut's path, not down a hole drilled in the floor (user, 2026-10-21): the tool cuts the pass farther out, follows a line from it into the closed pass, goes round, and leads on into the next closed pass in.
+   Each such run, from the outline cut's path in to the islands, is one chain, because Fusion orders the chains of a contour as it likes, so a pass can rely only on what its own chain has cut before it.
+   A line in is at most two passes' spacing long, keeps a tool radius off the walls and crosses no pass.
+   It returns `paths`, one per chain, each with its id, its length and `entry`, and under `left_out` each pass it left out, with why.
+   A chain that starts on the outline cut's path has `entry` null.
+   A closed pass that no line can reach, such as the second of two islands inside one pass, starts a chain of its own, and `entry` names its start, `path_entry:<id>`: the end mill enters there down a hole drilled to the floor.
 2. **Drill the entries.**
    Sketch these passes before part.md's step 6, Pocket entry holes, and add every `entry` to that step's points, so that the holes are drilled to the floor with the other pocket entry holes and leave the same 1.59 mm dimple; warn about each one.
-3. **Check and add the operations** as in steps 4 to 6, with `paths` every piece's id, in the order sketched, from the islands out.
+3. **Check and add the operations** as in steps 4 to 6, with `paths` every chain's id.
 
 ## Calling the primitives
 
 They are functions in `scripts/carvera_cam.py`, run in Fusion like `build`.
 Each takes a dict and prints its result as JSON.
-`features`, `walls` and `coverage` change nothing and may run with `readOnly: true`; `pass_path` and `add_contour` change the design and may not.
+`features`, `walls` and `coverage` change nothing and may run with `readOnly: true`; `pass_path`, `island_passes` and `add_contour` change the design and may not.
 The calls for one part fit in one MCP call.
 In this example, `SCRIPTS` is the skill's `scripts` folder:
 
@@ -87,7 +92,7 @@ for x in pockets:
     if x['side_open']:
         by_depth.setdefault(round(x['depth'], 3), []).append(x['floor'])
 paths = {}
-entries = []  # where closed passes round islands enter: add them to part.md's step 6
+entries = []  # where chains round islands start in the floor: add them to part.md's step 6
 for dep, floors in by_depth.items():
     ids = []
     for i in floors:
@@ -101,14 +106,11 @@ for dep, floors in by_depth.items():
                 else:
                     print('floor', i, 'run', k, 'pass', j, 'failed')  # see below
         if not w['runs'] and w['islands']:  # open on every side: round the islands
-            for j in range(n):
-                p = call('pass_path', {'floor': i, 'islands': True,
-                                       'offset_mm': D / 2 + j * 0.6 * D})
-                if p['ok']:
-                    ids += [q['path'] for q in p['paths']]
-                    entries += [q['entry'] for q in p['paths'] if q['entry']]
-                else:
-                    print('floor', i, 'pass', j, 'failed:', p['why'])
+            p = call('island_passes', {'floor': i})
+            ids += [q['path'] for q in p['paths']]
+            entries += [q['entry'] for q in p['paths'] if q['entry']]
+            for q in p['left_out']:
+                print('floor', i, 'pass', q['offset_mm'], 'mm left out:', q['why'])
         print('floor', i, call('coverage', {'floor': i}))
     paths[dep] = ids
 

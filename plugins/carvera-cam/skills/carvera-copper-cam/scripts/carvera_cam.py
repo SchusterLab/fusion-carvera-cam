@@ -1141,71 +1141,86 @@ def walls(args):
     return out
 
 
-def pass_path(args):
-    """Sketch one contour pass along a run of walls (`args['floor']`, `run`,
-    default 0) as the tool centre's path, `offset_mm` off the walls, with a
-    line at each end out to the outline cut's path. With `"islands": true` in
-    place of `run`, for a floor open on every side, sketch the pass
-    `offset_mm` round all its islands at once (see _island_passes): pieces
-    that start and end on the outline cut's path, and loops that close on
-    themselves, each entered through a hole drilled at its start, the point
-    `path_entry:<id>`. Returns the path's id for add_contour (with islands,
-    each piece's id and entry point), or why there is none."""
-    design, body, a = _built(args)
-    f = a['floors'][args['floor']]
+def _sketch_for(design, a):
     sk = design.rootComponent.sketches.itemByName(LAYOUT_SKETCH)
     if sk is None:
         raise RuntimeError('no "%s" sketch: run build first' % LAYOUT_SKETCH)
     faces = [g for g in (a['top_face'], a['bottom_face']) if g is not None]
-    ring = _loop_ring(_outline_loop(faces)[0])
+    return sk, _loop_ring(_outline_loop(faces)[0])
+
+
+def _mark_path(design, floor, path):
+    """Tag a sketched path's curves for add_contour and coverage; its id."""
+    pid = '%d-%d' % (floor, len(design.findAttributes(*PATH_ATTR)))
+    for k, c in enumerate(path):
+        c.attributes.add(PATH_ATTR[0], PATH_ATTR[1], '%s:%d' % (pid, k))
+    return pid
+
+
+def pass_path(args):
+    """Sketch one contour pass along a run of walls (`args['floor']`, `run`,
+    default 0) as the tool centre's path, `offset_mm` off the walls, with a
+    line at each end out to the outline cut's path. Returns the path's id for
+    add_contour, or why there is none."""
+    design, body, a = _built(args)
+    f = a['floors'][args['floor']]
+    sk, ring = _sketch_for(design, a)
     d = args['offset_mm'] / 10
-    islands = args.get('islands')
-    if islands:
-        if _open_walls(f['face'])[0]:
-            raise RuntimeError('floor %d has walls along its sides: give a run, not islands'
-                               % args['floor'])
-        walls = [_draw_walls(sk, run, True) for run in _islands(f['face'])]
-        got = _island_passes(sk, walls, d, ring, f['face']) if walls else None
-        why = WHY[0] if walls else 'the floor has no islands'
-    else:
-        run = _open_walls(f['face'])[0][args.get('run', 0)]
-        walls = [_draw_walls(sk, run)]
-        path = _pass_path(sk, run, walls[0], d, ring, f['face'])
-        got = None if path is None else [(path, None)]
-        why = "an end of the pass does not reach the outline cut's path, or the walls "               "offset that far leave no path"
-    for c in [c for ws in walls for c in ws]:
+    run = _open_walls(f['face'])[0][args.get('run', 0)]
+    walls = _draw_walls(sk, run)
+    path = _pass_path(sk, run, walls, d, ring, f['face'])
+    for c in walls:
         if c.isValid:
             c.deleteMe()
     rising = [q for e in _rising_edges(f['face']) for q in _edge_points(e)]
-    if got and _too_near([p for p, _ in got], rising, TOOL_R - 0.002):
-        for c in [c for p, _ in got for c in p]:
+    if path is not None and _too_near([path], rising, TOOL_R - 0.002):
+        for c in path:
             if c.isValid:
                 c.deleteMe()
         out = {'ok': False, 'why': 'the pass comes within a tool radius of a wall rising '
                                    'from the floor, and would cut into it'}
-    elif not got:
-        out = {'ok': False, 'why': why}
+    elif path is None:
+        out = {'ok': False, 'why': "an end of the pass does not reach the outline cut's path, "
+                                   'or the walls offset that far leave no path'}
     else:
-        made = []
-        for path, e in got:
-            pid = '%d-%d' % (args['floor'], len(design.findAttributes(*PATH_ATTR)))
-            for k, c in enumerate(path):
-                c.attributes.add(PATH_ATTR[0], PATH_ATTR[1], '%s:%d' % (pid, k))
-            first, last = path[0], path[-1]
-            ends = [p for c in (first, last) for p in (c.startSketchPoint, c.endSketchPoint)]
-            free = [p for p in ends
-                    if sum(1 for c in path for q in (c.startSketchPoint, c.endSketchPoint)
-                           if q.geometry.distanceTo(p.geometry) < 1e-5) == 1]
-            item = {'path': pid, 'ends': [_xy(p.geometry) for p in free],
-                    'length_mm': round(mm(sum(c.length for c in path)), 3)}
-            if islands:
-                item['entry'] = None
-                if e is not None:
-                    sp = sk.sketchPoints.add(adsk.core.Point3D.create(e.x, e.y, 0))
-                    sp.attributes.add(PATH_ATTR[0], PATH_ENTRY_ATTR, pid)
-                    item['entry'] = 'path_entry:' + pid
-            made.append(item)
-        out = {'ok': True, 'paths': made} if islands else dict(made[0], ok=True)
+        ends = _path_ends(path)
+        out = {'ok': True, 'path': _mark_path(design, args['floor'], path),
+               'ends': [_xy(p.geometry) for p in ends],
+               'length_mm': round(mm(sum(c.length for c in path)), 3)}
+    print(json.dumps(out, indent=1))
+    return out
+
+
+def island_passes(args):
+    """Sketch all the passes round the islands of a floor open on every side,
+    `args['floor']`, as build cuts them (see _island_chains): `n` of them
+    (default: as many as cover the floor), joined into chains that start on
+    the outline cut's path where they can. Returns each chain's id for
+    add_contour, its length, and `entry`: null for a chain that starts on
+    the outline cut's path, else `path_entry:<id>`, the point in the floor
+    where it starts, down a hole drilled to the floor; and the passes left
+    out, with why."""
+    design, body, a = _built(args)
+    f = a['floors'][args['floor']]
+    if _open_walls(f['face'])[0]:
+        raise RuntimeError('floor %d has walls along its sides: use pass_path' % args['floor'])
+    sk, ring = _sketch_for(design, a)
+    reach = _open_walls(f['face'])[1]
+    step = 0.6 * ENDMILL_D / 10
+    n = args.get('n') or max(1, math.ceil((reach + 0.01 - 2 * TOOL_R) / step) + 1)
+    left_out = []
+    made = []
+    for path, e in _island_chains(sk, f['face'], n, ring, left_out):
+        pid = _mark_path(design, args['floor'], path)
+        item = {'path': pid, 'length_mm': round(mm(sum(c.length for c in path)), 3),
+                'entry': None}
+        if e is not None:
+            sp = sk.sketchPoints.add(adsk.core.Point3D.create(e.x, e.y, 0))
+            sp.attributes.add(PATH_ATTR[0], PATH_ENTRY_ATTR, pid)
+            item['entry'] = 'path_entry:' + pid
+        made.append(item)
+    out = {'ok': bool(made), 'paths': made,
+           'left_out': [{'offset_mm': round(mm(d), 3), 'why': why} for d, why in left_out]}
     print(json.dumps(out, indent=1))
     return out
 
@@ -2822,6 +2837,236 @@ def _island_passes(sk, walls, d, ring, face):
                 c.deleteMe()
     out = [(p, e) for p, e in out if sum(c.length for c in p) > 1e-3]
     return out or fail('nothing is left')
+
+
+def _path_ends(path, e=None):
+    """The sketch points where the tool starts and ends a sketched path, its
+    curves in the order the tool follows them; a one-curve path starts at the
+    end nearest e, if given."""
+    same = lambda p, q: p.geometry.distanceTo(q.geometry) < 1e-5
+    ps = lambda c: (c.startSketchPoint, c.endSketchPoint)
+    if len(path) == 1:
+        a_, b_ = ps(path[0])
+        if e is not None and b_.geometry.distanceTo(e) < a_.geometry.distanceTo(e):
+            a_, b_ = b_, a_
+        return a_, b_
+    first = [p for p in ps(path[0]) if not any(same(p, q) for q in ps(path[1]))]
+    last = [p for p in ps(path[-1]) if not any(same(p, q) for q in ps(path[-2]))]
+    return (first or [ps(path[0])[0]])[0], (last or [ps(path[-1])[1]])[0]
+
+
+def _split_path(sk, path, q):
+    """Split an open sketched path at the point on it nearest q (cm): the
+    curves before that point and after it, in the order the tool follows
+    them, and the sketch point where they meet. The curve the point falls on
+    is redrawn as two."""
+    at = _path_ends(path)[0]
+    best = None
+    for i, c in enumerate(path):
+        a_, b_ = c.startSketchPoint, c.endSketchPoint
+        fwd = a_.geometry.distanceTo(at.geometry) < 1e-5
+        ev = c.geometry.evaluator
+        ok, t0, t1 = ev.getParameterExtents()
+        n = max(4, int(c.length / 0.005))
+        for k in range(n + 1):
+            t = t0 + (t1 - t0) * k / n
+            d = ev.getPointAtParameter(t)[1].distanceTo(q)
+            if best is None or d < best[0]:
+                best = (d, i, t, fwd)
+        at = b_ if fwd else a_
+    _, i, t, fwd = best
+    c = path[i]
+    ev = c.geometry.evaluator
+    ok, t0, t1 = ev.getParameterExtents()
+    a_, b_ = c.startSketchPoint, c.endSketchPoint
+    P = lambda u: ev.getPointAtParameter(u)[1]
+    first, last = (a_, b_) if fwd else (b_, a_)
+    if P(t).distanceTo(first.geometry) < 1e-4:
+        return path[:i], path[i:], first
+    if P(t).distanceTo(last.geometry) < 1e-4:
+        return path[:i + 1], path[i + 1:], last
+    if isinstance(c, adsk.fusion.SketchLine):
+        c1 = sk.sketchCurves.sketchLines.addByTwoPoints(a_, P(t))
+        qp = c1.endSketchPoint
+        c2 = sk.sketchCurves.sketchLines.addByTwoPoints(qp, b_)
+    else:
+        arcs = sk.sketchCurves.sketchArcs
+        c1 = arcs.addByThreePoints(a_, P((t0 + t) / 2), P(t))
+        qp = min((c1.startSketchPoint, c1.endSketchPoint),
+                 key=lambda sp: sp.geometry.distanceTo(P(t)))
+        c2 = arcs.addByThreePoints(qp, P((t + t1) / 2), b_)
+    c.deleteMe()
+    before, after = (c1, c2) if fwd else (c2, c1)
+    return path[:i] + [before], [after] + path[i + 1:], qp
+
+
+class _Seg:
+    """A straight line between two points (cm), standing in for a sketch
+    line in _too_near."""
+    def __init__(self, a_, b_):
+        self.geometry = adsk.core.Line3D.create(a_, b_)
+        self.length = a_.distanceTo(b_)
+
+
+def _samples(path, h=0.03):
+    """(x, y) points (cm) every `h` cm or so along a sketched path."""
+    out = []
+    for c in path:
+        ev = c.geometry.evaluator
+        ok, t0, t1 = ev.getParameterExtents()
+        n = max(2, int(c.length / h))
+        out += [(q.x, q.y) for q in (ev.getPointAtParameter(t0 + (t1 - t0) * j / n)[1]
+                                     for j in range(n + 1))]
+    return out
+
+
+def _reopen(sk, path, e, q):
+    """Closed pass `path` (open ISLAND_GAP short of its start, entered near e)
+    opened instead at its point nearest q (cm): from there all the way round
+    to ISLAND_GAP short of that point, the old gap bridged. Returns the new
+    path, its curves in the order followed."""
+    s0, s1 = _path_ends(path, e)
+    before, after, qp = _split_path(sk, path, q)
+    if not before or not after:  # q is at the path's start or end
+        return path
+    new = after + [sk.sketchCurves.sketchLines.addByTwoPoints(s1, s0)] + before
+    c = new[-1]
+    ev = c.geometry.evaluator
+    ok, t0, t1 = ev.getParameterExtents()
+    if qp.geometry.distanceTo(ev.getPointAtParameter(t0)[1]) < 1e-5:
+        t0, t1 = t1, t0
+    ok, length = ev.getLengthAtParameter(min(t0, t1), max(t0, t1))
+    if length <= ISLAND_GAP:
+        c.deleteMe()
+        return new[:-1]
+    back = ev.getPointAtParameter(t1 - (t1 - t0) * ISLAND_GAP / length)[1]
+    keep, drop, _ = _split_path(sk, new, back)
+    for c in drop:
+        c.deleteMe()
+    return keep
+
+
+def _crosses(a_, b_, polys):
+    """Does the segment a_-b_ ((x, y), cm) cross any of the polylines? Not
+    its last 0.003 cm at each end, where it meets the passes it joins: their
+    polylines, sampled from arcs, sag that far off them."""
+    L = math.hypot(b_[0] - a_[0], b_[1] - a_[1])
+    if L < 0.007:
+        return False
+    ux, uy = (b_[0] - a_[0]) / L, (b_[1] - a_[1]) / L
+    p0 = (a_[0] + ux * 0.003, a_[1] + uy * 0.003)
+    p1 = (b_[0] - ux * 0.003, b_[1] - uy * 0.003)
+    lo = (min(p0[0], p1[0]), min(p0[1], p1[1]))
+    hi = (max(p0[0], p1[0]), max(p0[1], p1[1]))
+    cr = lambda o, p, q: (p[0] - o[0]) * (q[1] - o[1]) - (p[1] - o[1]) * (q[0] - o[0])
+    for pl in polys:
+        for q0, q1 in zip(pl, pl[1:]):
+            if max(q0[0], q1[0]) < lo[0] or min(q0[0], q1[0]) > hi[0] or \
+                    max(q0[1], q1[1]) < lo[1] or min(q0[1], q1[1]) > hi[1]:
+                continue
+            if cr(p0, p1, q0) * cr(p0, p1, q1) < 0 and cr(q0, q1, p0) * cr(q0, q1, p1) < 0:
+                return True
+    return False
+
+
+def _join_closed(sk, levels, step, rising, ring):
+    """Join each closed pass round islands (see _island_passes) into a chain
+    that starts on the outline cut's path, so that the end mill enters there
+    rather than down a hole drilled in the floor (user, 2026-10-21): the tool
+    cuts a pass farther out, then follows a line from it into the closed
+    pass, which is opened where the line meets it, and goes round. Fusion
+    orders the chains of a contour as it likes, so the pass farther out must
+    be in the same chain. An open pass is split where it comes nearest the
+    closed pass: the tool cuts it up to there, leads in and goes round, and
+    the rest of it, reversed, is a chain of its own from the outline cut's
+    path. The end of a closed pass leads on into the next closed pass in.
+    A lead is at most two steps long, keeps a tool radius off the walls and
+    crosses no pass: Fusion splits a contour where any of its curves cross.
+    Only an open pass with both ends on the outline cut's path is split, as
+    the rest of it starts at its far end.
+    A closed pass that no chain reaches starts a chain of its own, entered
+    down a hole drilled at its start. `levels` holds, for each pass offset k
+    cut, k and the passes _island_passes made.
+
+    Returns [(chain, entry)]: each chain's curves in the order followed, and
+    for a chain that starts in the floor, its entry point (cm), else None."""
+    on_ring = lambda sp: _outside_ring(ring, sp.geometry.x, sp.geometry.y) >= TOOL_R - 1e-3
+    chains = [{'curves': p, 'tail': None, 'k': k,
+               'open': all(on_ring(sp) for sp in _path_ends(p))}
+              for k, got in levels for p, e in got if e is None]
+    closed = sorted(((k, p, e) for k, got in levels for p, e in got if e is not None),
+                    key=lambda kpe: -kpe[0])
+    for n_, (k, p, e) in enumerate(closed):
+        pts = _samples(p)
+        polys = [_samples(ch['curves'], 0.02) for ch in chains] + \
+            [_samples(q, 0.02) for _, q, _ in closed[n_:]]
+        options = []
+        for ch in chains:
+            if ch['tail'] is not None and ch['tail'][1] > k:
+                t = ch['tail'][0].geometry
+                d, x, y = min((math.hypot(x - t.x, y - t.y), x, y) for x, y in pts)
+                options.append((d, ch, t, adsk.core.Point3D.create(x, y, 0)))
+            elif ch['open'] and k < ch['k'] <= k + 2:
+                d, a_, b_ = min((math.hypot(x - u, y - v), (u, v), (x, y))
+                                for u, v in _samples(ch['curves'], 0.05) for x, y in pts)
+                options.append((d, ch, adsk.core.Point3D.create(*a_, 0),
+                                adsk.core.Point3D.create(*b_, 0)))
+        joined = None
+        for d, ch, a_, b_ in sorted(options, key=lambda o: o[0]):
+            if d > 2 * step + 1e-3:
+                break
+            if _too_near([[_Seg(a_, b_)]], rising, TOOL_R - 0.002) or \
+                    _crosses((a_.x, a_.y), (b_.x, b_.y), polys):
+                continue
+            q = _reopen(sk, p, e, b_)
+            s0, s1 = _path_ends(q)
+            if ch['tail'] is not None:
+                link = sk.sketchCurves.sketchLines.addByTwoPoints(ch['tail'][0], s0)
+                ch['curves'] = ch['curves'] + [link] + q
+            else:
+                before, after, qp = _split_path(sk, ch['curves'], a_)
+                link = sk.sketchCurves.sketchLines.addByTwoPoints(qp, s0)
+                ch['curves'] = before + [link] + q
+                ch['open'] = False
+                if after:
+                    chains.append({'curves': list(reversed(after)), 'tail': None,
+                                   'open': not before, 'k': ch['k']})
+            ch['tail'] = (s1, k)
+            joined = ch
+            break
+        if joined is None:
+            chains.append({'curves': p, 'tail': (_path_ends(p, e)[1], k), 'open': False,
+                           'k': k, 'entry': e})
+    return [(ch['curves'], ch.get('entry')) for ch in chains]
+
+
+def _island_chains(sk, face, n, ring, left_out):
+    """The passes round the islands of a floor open on every side: n of them,
+    the first a tool radius off the islands, each further one 0.6 x the end
+    mill's diameter farther out (see _island_passes), joined into chains
+    (see _join_closed). Each pass left out goes on `left_out` as (offset cm,
+    why). Returns _join_closed's [(chain, entry)]."""
+    step = 0.6 * ENDMILL_D / 10
+    rising = [q for e in _rising_edges(face) for q in _edge_points(e)]
+    walls = [_draw_walls(sk, run, True) for run in _islands(face)]
+    levels = []
+    for k in range(n):
+        d = TOOL_R + k * step
+        got = _island_passes(sk, walls, d, ring, face) if walls else None
+        if got and _too_near([p for p, _ in got], rising, TOOL_R - 0.002):
+            for c in [c for p, _ in got for c in p]:
+                if c.isValid:
+                    c.deleteMe()
+            got = False
+        if not got:
+            left_out.append((d, 'it would cut into a wall' if got is False else
+                             WHY[0] if walls else 'the floor has no islands'))
+            continue
+        levels.append((k, got))
+    for c in [c for ws in walls for c in ws]:
+        if c.isValid:
+            c.deleteMe()
+    return _join_closed(sk, levels, step, rising, ring)
 
 
 def _walk_points(c, a_):
@@ -4575,8 +4820,8 @@ def _make_layout(design, a, plan, warnings):
         n = max(1, math.ceil((reach + 0.01 - 2 * TOOL_R) / step) + 1)
         # a pass must keep a tool radius off every wall rising from the floor,
         # not only its own. A floor open on every side, with islands, is cut
-        # by passes round the islands (see _island_passes), which drill an
-        # entry hole for each pass that closes on itself. The passes run from
+        # by passes round the islands (see _island_chains), each pass that
+        # closes on itself entered from one farther out. The passes run from
         # the walls out.
         rising = [q for e in _rising_edges(f['face']) for q in _edge_points(e)]
         islands = _islands(f['face'])
@@ -4615,30 +4860,17 @@ def _make_layout(design, a, plan, warnings):
                     if c.isValid:
                         c.deleteMe()
         elif islands:
-            walls = [_draw_walls(sk, run, True) for run in islands]
-            for k in range(n):
-                d = TOOL_R + k * step
-                got = _island_passes(sk, walls, d, ring, f['face'])
-                if got and _too_near([p for p, _ in got], rising, TOOL_R - 0.002):
-                    for c in [c for p, _ in got for c in p]:
-                        if c.isValid:
-                            c.deleteMe()
-                    got = False
-                if not got:
-                    warnings.append('the pass %g mm round the islands of the pocket open to the '
-                                    'side at z=%g mm is left out (%s), so check that pocket'
-                                    % (mm(d), f['z'], 'it would cut into a wall' if got is False
-                                       else WHY[0]))
-                    continue
-                for pth, e in got:
-                    passes.append((k, pth))
-                    if e is not None:
-                        pocket_entries[(f['face'].tempId, 'island', len(passes))] = {
-                            'point': sk.sketchPoints.add(adsk.core.Point3D.create(e.x, e.y, 0)),
-                            'side': f['side'], 'depth': f['depth'], 'drill': True}
-            for c in [c for ws in walls for c in ws]:
-                if c.isValid:
-                    c.deleteMe()
+            left_out = []
+            joined, entries = _island_chains(sk, f['face'], n, ring, left_out)
+            for d, why in left_out:
+                warnings.append('the pass %g mm round the islands of the pocket open to the '
+                                'side at z=%g mm is left out (%s), so check that pocket'
+                                % (mm(d), f['z'], why))
+            passes += [(0, pth) for pth, _ in joined]
+            for j, e in enumerate(e for _, e in joined if e is not None):
+                pocket_entries[(f['face'].tempId, 'island', j)] = {
+                    'point': sk.sketchPoints.add(adsk.core.Point3D.create(e.x, e.y, 0)),
+                    'side': f['side'], 'depth': f['depth'], 'drill': True}
         paths = [pth for k, pth in sorted(passes, key=lambda kp: kp[0])]
         for i_, pth in enumerate(paths):
             pid = 'build-%d-%d' % (a['floors'].index(f), i_)
