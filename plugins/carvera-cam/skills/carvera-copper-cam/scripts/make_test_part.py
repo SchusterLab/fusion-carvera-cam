@@ -10,6 +10,7 @@ true} a 2.2 mm hole through the top pocket's floor. Used to test
 carvera_cam.py.
 """
 
+import math
 import adsk.core
 import adsk.fusion
 
@@ -157,9 +158,14 @@ def make_open_pockets(args=None):
     the open-pocket recipe: a wide notch on the +X edge whose walls meet the
     outline about 30 degrees off square (it takes several passes), a channel
     across the part open at both ends (two runs of walls), and a notch on the
-    -Y edge whose long wall runs about 10 degrees off the outline (a pass along
-    it does not reach the outline cut). Each is cut from the top and has R2
-    inside corners."""
+    -Y edge whose long wall runs about 10 degrees off the outline, so that the
+    passes along it are cut back to the outline cut's path. Each is cut from
+    the top and has R2 inside corners. With {"lip": true}, a notch on the +Y
+    edge whose wall meets the outline at 12 degrees with a sliver of the part
+    outside it, so that a pass along it has to turn out of the part before
+    the next wall; with {"island": true}, a 2 mm pin standing in the +X
+    notch's floor."""
+    args = args or {}
     app = adsk.core.Application.get()
     app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType)
     des = adsk.fusion.Design.cast(app.activeProduct)
@@ -196,11 +202,15 @@ def make_open_pockets(args=None):
     pi.setByOffset(xy, V('4 mm'))
     top_plane = root.constructionPlanes.add(pi)
 
-    def notch(pts, depth, inside):
+    def notch(pts, depth, inside, pin=None):
         s = root.sketches.add(top_plane)
         for p0, p1 in zip(pts, pts[1:] + pts[:1]):
             s.sketchCurves.sketchLines.addByTwoPoints(p0, p1)
-        prof = min(s.profiles, key=lambda p: p.areaProperties().area)
+        if pin:  # the notch less a pin standing in it: the larger profile
+            s.sketchCurves.sketchCircles.addByCenterRadius(P(*pin[0]), pin[1] / 10)
+            prof = max(s.profiles, key=lambda p: p.areaProperties().area)
+        else:
+            prof = min(s.profiles, key=lambda p: p.areaProperties().area)
         ei = ext.createInput(prof, CUT)
         ei.setDistanceExtent(False, V(depth))
         side = ext.add(ei).sideFaces
@@ -210,11 +220,17 @@ def make_open_pockets(args=None):
 
     inside = lambda p: abs(p.x) < 2.0 - 0.05 and abs(p.y) < 1.5 - 0.05
     # +X edge: walls from the outline in to x = 14, about 30 degrees off square
-    notch([P(21, 0.5), P(14, 4.5), P(14, 9), P(21, 13)], '-1.5 mm', inside)
+    notch([P(21, 0.5), P(14, 4.5), P(14, 9), P(21, 13)], '-1.5 mm', inside,
+          ((18.5, 6.75), 1.0) if args.get('island') else None)
     # a channel across the part along Y, 6 mm wide
     notch([P(-15, -16), P(-9, -16), P(-9, 16), P(-15, 16)], '-1.5 mm', inside)
     # -Y edge: one wall square to the outline, the long one about 10 degrees off it
     notch([P(-2, -16), P(-2, -12.5), P(12, -15.5), P(12, -16)], '-1 mm', inside)
+    if args.get('lip'):
+        # +Y edge: a wall rising 12 degrees from (-6, 12.5), which meets the
+        # outline at x = 5.76, and a square wall at x = 10
+        t = math.tan(math.radians(12))
+        notch([P(-6, 12.5), P(10, 12.5 + 16 * t), P(10, 7), P(-6, 7)], '-1 mm', inside)
 
     bad = [des.timeline.item(i).name for i in range(des.timeline.count)
            if des.timeline.item(i).healthState != adsk.fusion.FeatureHealthStates.HealthyFeatureHealthState]

@@ -5,7 +5,7 @@ The outline cut is the contour that cuts round the part, one end mill wide, and 
 It has already cleared the stock there, so every plunge goes into empty space.
 In stock of the part's own size there is no outline cut, and that path lies beside the part, outside the stock, so the plunges are clear all the same.
 A pocket toolpath is the wrong tool here: Fusion picks where it enters an open pocket, whatever the ramp type or lead-in, and it plunges with the edge of the tool in copper that nothing has cut.
-A floor open on every side of the part has no walls along its sides to follow, so its passes run round the islands standing on it instead (see "A floor open on every side").
+A floor with islands standing on it, such as the floor round a boss, has its passes run round the islands instead, and round its walls as well if it has any (see "Floors with islands, and walls a pass cannot follow").
 
 ## When it applies
 
@@ -21,20 +21,22 @@ One operation cuts the open floors of one depth, in one pass (`rough` or `finish
 ## Steps
 
 1. **Read the walls.**
-   `walls({"floor": i})` lists the walls that rise from the floor, as runs between the pocket's openings, and `reach_mm`, the farthest any part of the floor lies from its walls.
+   `walls({"floor": i})` lists the walls that rise from the floor, as runs between the pocket's openings, and `reach_mm`, the farthest any part of the floor lies from its walls, along its openings or inside it.
    The farthest point often lies on the opening, where nothing else cuts inside the part, so the passes must reach it.
    `walls` also lists `islands`: for each island standing on the floor, the walls all round it.
-   A floor with no runs but with islands, such as the floor round a boss that runs out to every side of the part, is cut by passes round its islands instead (see "A floor open on every side").
+   A floor with islands is cut by passes round them instead (see "Floors with islands, and walls a pass cannot follow").
 2. **Plan the passes.**
    The first pass runs one radius of the 3.175 mm end mill (1.5875 mm) off the walls, so it finishes them.
    Each further pass runs 0.6 × the tool diameter (1.905 mm) farther out, until the passes reach the whole floor: with diameter D, that takes n = ⌈(reach_mm + 0.1 − D) / 0.6D⌉ + 1 passes, and at least one.
 3. **Sketch each pass.**
    `pass_path({"floor": i, "run": k, "offset_mm": d})` draws the tool centre's path d mm off run k of the walls.
    At each end it runs the path on, along the walls' direction there, to the outline cut's path; where the offset walls already reach past that path, it cuts the path back to it.
+   Where that line would run on more than 10 mm, or into a wall, as along a wall that meets the outline at a shallow angle with a sliver of the part outside it, the path runs on only until the tool can turn straight out of the part a radius clear of every wall, and turns there.
    An end that runs into a through window instead, as on a ledge open both to the outside and to a window, stops where the tool is a radius inside the window, clear of the ledge and of the window's walls; there it cuts copper that the window's pocket removes anyway.
    The path then starts at its other end, on the outline cut's path, since the tool would plunge into uncut copper where the window is not yet cut.
    It returns the path's id, its two ends and its length.
-   It returns `"ok": false`, and leaves nothing sketched, when an end run on 10 mm reaches neither the outline cut's path nor a window, when both ends reach windows, when the walls offset that far leave no path, or when the pass would come within a tool radius of another wall rising from the floor, such as an island's; see "Shapes the steps do not cover".
+   It returns `"ok": false`, and leaves nothing sketched, when an end reaches neither the outline cut's path nor a window, when both ends reach windows, when the walls offset that far leave no path, when the pass strays past the outline cut's path between its ends, as a pass wider than a narrow floor does, where it would cut the stock round the part beyond what the outline cut clears, or when the pass would come within a tool radius of another wall rising from the floor.
+   If any pass of a floor fails, cut that floor with `island_passes` instead (see "Floors with islands, and walls a pass cannot follow"), and pass `add_contour` only the ids `island_passes` returns: an offset of an open run of walls keeps a tool radius off them only square to them, so near the run's ends, such as the tip of a sliver of the part, it can cut into the part.
    Each call returns a new id, so two passes along the same walls have different ids.
 4. **Check the passes cover the floor.**
    `coverage({"floor": i})` samples the floor every 0.1 mm against every pass sketched for it and returns `uncut_area_mm2`, split into `in_corners_mm2`, stock within a tool radius of the walls, and `elsewhere_mm2`, with the extent of what stays uncut and its point farthest from a pass.
@@ -49,16 +51,22 @@ One operation cuts the open floors of one depth, in one pass (`rough` or `finish
 6. **Generate and check**, as in SKILL.md.
    Rule E4 must report nothing for the new operations: it accepts a plunge only into stock that an end mill in this setup or an earlier one has cleared, or down a drilled hole.
 
-## A floor open on every side
+## Floors with islands, and walls a pass cannot follow
 
-A floor that runs out to every side of the part, round one or more islands, has no runs of walls, so the passes go round the islands instead: the first one tool radius (1.5875 mm) off them, each further one 1.905 mm farther out, n passes as in step 2.
+A floor with islands standing on it is cut by passes round the islands: the first one tool radius (1.5875 mm) off them, each further one 1.905 mm farther out, n passes as in step 2.
+So is a floor where a pass along its walls fails (step 3).
+A floor that runs out to every side of the part, such as the floor round a boss, has no runs of walls.
+A floor that has runs has each run drawn as one more island, closed round the outside of the part, far enough out that the passes round it are cut back before they get there.
+The passes round a run then follow its walls and turn out to the outline cut's path, and where they meet an island's they join it rather than cross.
 
 1. **Sketch the passes.**
    `island_passes({"floor": i})` sketches all n passes at once, as `build` cuts them.
    Each pass offsets every island's walls and is cut back to the outline cut's path, and to where it goes inside another island's loop.
+   Where a pass vanishes because the floor is too narrow for it there, the pass before it can leave a strip uncut; `island_passes` then adds a pass one tool radius beyond that one, which reaches the strip.
    Where two islands' loops cross, the pieces join there into one, so no two passes cross: Fusion splits a contour wherever any of its curves cross, even curves of different chains, and plunges again at each piece, into copper nothing has cut.
    A pass that never reaches the outline cut's path, such as one island's whole loop, closes on itself.
    `island_passes` joins it to a pass farther out, so that the end mill enters on the outline cut's path, not down a hole drilled in the floor (user, 2026-10-21): the tool cuts the pass farther out, follows a line from it into the closed pass, goes round, and leads on into the next closed pass in.
+   Where no pass farther out reaches, it joins one of the same offset or one nearer the islands: so it does for an island beside a run of walls, and for a pass pinched off inside a run's walls, which lies farther from the run than the pass it joins.
    Each such run, from the outline cut's path in to the islands, is one chain, because Fusion orders the chains of a contour as it likes, so a pass can rely only on what its own chain has cut before it.
    A line in is at most two passes' spacing long, keeps a tool radius off the walls and crosses no pass.
    It returns `paths`, one per chain, each with its id, its length and `entry`, and under `left_out` each pass it left out, with why.
@@ -100,20 +108,22 @@ for dep, floors in by_depth.items():
     for i in floors:
         w = call('walls', {'floor': i})
         n = max(1, math.ceil((w['reach_mm'] + 0.1 - D) / (0.6 * D)) + 1)
-        for k in range(len(w['runs'])):
+        mine, failed = [], False  # this floor's passes along its runs
+        for k in range(0 if w['islands'] else len(w['runs'])):
             for j in range(n):
                 p = call('pass_path', {'floor': i, 'run': k, 'offset_mm': D / 2 + j * 0.6 * D})
                 if p['ok']:
-                    ids.append(p['path'])
+                    mine.append(p['path'])
                 else:
-                    print('floor', i, 'run', k, 'pass', j, 'failed')  # see below
-        if not w['runs'] and w['islands']:  # open on every side: round the islands
+                    failed = True
+        if w['islands'] or failed:  # round the islands, and round the runs as islands
             p = call('island_passes', {'floor': i})
-            ids += [q['path'] for q in p['paths']]
+            mine = [q['path'] for q in p['paths']]
             entries += [q['entry'] for q in p['paths'] if q['entry']]
             for q in p['left_out']:
                 print('floor', i, 'pass', q['offset_mm'], 'mm left out:', q['why'])
-        print('floor', i, call('coverage', {'floor': i}))
+        ids += mine
+        print('floor', i, call('coverage', {'floor': i, 'paths': mine}))
     paths[dep] = ids
 
 def add_open_pockets(which, top_at_h):
@@ -135,14 +145,12 @@ def add_open_pockets(which, top_at_h):
 
 ## Shapes the steps do not cover
 
-The steps assume the walls meet the outline steeply, as they do where a pocket is cut straight in from the side, so that a pass run on along them crosses the outline cut.
+The steps cover the shapes `build` was tested on: walls that meet the outline steeply or at a shallow angle, islands with or without walls beside them, and ledges open to a window.
 Look at the part before trusting them, and after `generate`, look at the operations' toolpaths in Fusion.
 
-- **A pass that cannot reach the outline cut.**
-  `pass_path` fails when a wall runs so nearly along the outline that the pass, run on 10 mm, never crosses the outline cut's path.
-  Never let a pass end anywhere else: there it would plunge into uncut copper.
+- **A pass left out.**
+  `island_passes` lists under `left_out` each pass it could not make, with why.
+  Never let a pass end anywhere but the outline cut's path or a window: elsewhere it would plunge into uncut copper.
   A pass the floor does not need can be left out: `coverage` shows whether the floor is covered without it.
-  When the floor needs it, add the operations with the passes that work, and tell the user where copper stays (the uncut extent `coverage` gives) and that the pocket needs another way in, such as a drilled entry.
+  When the floor needs it, add the operations with the passes that work, and tell the user where copper stays (the uncut extent `coverage` gives).
 - **A pocket open on two sides that are not next to each other**, such as a channel across the part, has two runs of walls; give each run its own passes.
-- **An island in a floor that also has runs of walls** is not cut round: the passes follow only the runs, and `pass_path` refuses a pass that would come within a tool radius of the island.
-  Tell the user where copper stays round the island (the uncut extent `coverage` gives).
