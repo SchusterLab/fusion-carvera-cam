@@ -1,6 +1,6 @@
 # Recipe: a pocket open to the side
 
-Cut a pocket that opens to the side of the part with 2D contour passes along its walls, each pass starting and ending on the outline cut's path.
+Cut a pocket that opens to the side of the part with 2D contour passes along its walls, each pass starting and ending on the outline cut's path, or, on a ledge that also opens into a through window, ending in the window.
 The outline cut is the contour that cuts round the part, one end mill wide, and its path is where the centre of its tool runs.
 It has already cleared the stock there, so every plunge goes into empty space.
 In stock of the part's own size there is no outline cut, and that path lies beside the part, outside the stock, so the plunges are clear all the same.
@@ -31,8 +31,10 @@ One operation cuts the open floors of one depth, in one pass (`rough` or `finish
 3. **Sketch each pass.**
    `pass_path({"floor": i, "run": k, "offset_mm": d})` draws the tool centre's path d mm off run k of the walls.
    At each end it runs the path on, along the walls' direction there, to the outline cut's path; where the offset walls already reach past that path, it cuts the path back to it.
+   An end that runs into a through window instead, as on a ledge open both to the outside and to a window, stops where the tool is a radius inside the window, clear of the ledge and of the window's walls; there it cuts copper that the window's pocket removes anyway.
+   The path then starts at its other end, on the outline cut's path, since the tool would plunge into uncut copper where the window is not yet cut.
    It returns the path's id, its two ends and its length.
-   It returns `"ok": false`, and leaves nothing sketched, when an end run on 10 mm does not reach the outline cut's path, when the walls offset that far leave no path, or when the pass would come within a tool radius of another wall rising from the floor, such as an island's; see "Shapes the steps do not cover".
+   It returns `"ok": false`, and leaves nothing sketched, when an end run on 10 mm reaches neither the outline cut's path nor a window, when both ends reach windows, when the walls offset that far leave no path, or when the pass would come within a tool radius of another wall rising from the floor, such as an island's; see "Shapes the steps do not cover".
    Each call returns a new id, so two passes along the same walls have different ids.
 4. **Check the passes cover the floor.**
    `coverage({"floor": i})` samples the floor every 0.1 mm against every pass sketched for it and returns `uncut_area_mm2`, split into `in_corners_mm2`, stock within a tool radius of the walls, and `elsewhere_mm2`, with the extent of what stays uncut and its point farthest from a pass.

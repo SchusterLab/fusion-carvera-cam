@@ -1160,15 +1160,17 @@ def _mark_path(design, floor, path):
 def pass_path(args):
     """Sketch one contour pass along a run of walls (`args['floor']`, `run`,
     default 0) as the tool centre's path, `offset_mm` off the walls, with a
-    line at each end out to the outline cut's path. Returns the path's id for
-    add_contour, or why there is none."""
+    line at each end out to the outline cut's path, or at one end into a
+    through window (see _pass_path). Returns the path's id for add_contour,
+    or why there is none."""
     design, body, a = _built(args)
     f = a['floors'][args['floor']]
     sk, ring = _sketch_for(design, a)
     d = args['offset_mm'] / 10
     run = _open_walls(f['face'])[0][args.get('run', 0)]
     walls = _draw_walls(sk, run)
-    path = _pass_path(sk, run, walls, d, ring, f['face'])
+    path = _pass_path(sk, run, walls, d, ring, f['face'],
+                      [_loop_ring(w['loop']) for w in a['windows']])
     for c in walls:
         if c.isValid:
             c.deleteMe()
@@ -1180,8 +1182,9 @@ def pass_path(args):
         out = {'ok': False, 'why': 'the pass comes within a tool radius of a wall rising '
                                    'from the floor, and would cut into it'}
     elif path is None:
-        out = {'ok': False, 'why': "an end of the pass does not reach the outline cut's path, "
-                                   'or the walls offset that far leave no path'}
+        out = {'ok': False, 'why': "an end of the pass reaches neither the outline cut's path "
+                                   'nor a window, both ends reach windows, or the walls offset '
+                                   'that far leave no path'}
     else:
         ends = _path_ends(path)
         out = {'ok': True, 'path': _mark_path(design, args['floor'], path),
@@ -3118,13 +3121,18 @@ def _same_path(p, q):
     return ends(p) == ends(q)
 
 
-def _pass_path(sk, run, walls, d, ring, face):
+def _pass_path(sk, run, walls, d, ring, face, windows=()):
     """One contour pass along a pocket's open walls (`run`, co-edges, drawn as
     `walls`, see _draw_walls): the tool centre's path `d` cm off the walls,
     sketched, with a line at each end out to the outline cut's path, one tool
     radius outside the outline (`ring`); an end already beyond that path is cut
-    back to it instead. The curves in the order the tool follows them, or None
-    (leaving nothing sketched) when an end, run on 10 mm, does not meet that path."""
+    back to it instead. One end may instead run on into a through window
+    (`windows`, their rings), as a ledge open to the outside and to a window
+    has it: until the tool is a radius inside the window, clear of the floor
+    and of the window's walls. The tool then starts at the other end, where
+    the outline cut has cleared the stock for its plunge. The curves in the
+    order the tool follows them, or None (leaving nothing sketched) when an
+    end, run on 10 mm, meets neither."""
     q = face.pointOnFace
     coll = adsk.core.ObjectCollection.create()
     for c in walls:
@@ -3180,19 +3188,30 @@ def _pass_path(sk, run, walls, d, ring, face):
         f = lambda L: outside(x0 + L * ux, y0 + L * uy) - TOOL_R
         if f(0) > -1e-4:
             return False
-        lo, hi, L = 0.0, None, 0.0
-        while L < 1.0:
-            L += 0.002
-            if f(L) >= 0:
-                hi = L
-                break
-            lo = L
-        if hi is None:
-            return None
-        for _ in range(30):
-            mid = (lo + hi) / 2
-            lo, hi = (mid, hi) if f(mid) < 0 else (lo, mid)
-        return adsk.core.Point3D.create(x0 + hi * ux, y0 + hi * uy, 0)
+
+        def in_window(L):  # how far the tool is inside a window, less a radius
+            x, y = x0 + L * ux, y0 + L * uy
+            return max((_ring_clearance((w, [], None), x, y) - TOOL_R - 0.001
+                        for w in windows if _inside(w, x, y)), default=-1.0)
+        for g in (f, in_window):
+            lo, hi, L = 0.0, None, 0.0
+            while L < 1.0:
+                L += 0.002
+                if g(L) >= 0:
+                    hi = L
+                    break
+                lo = L
+            if hi is None:
+                continue
+            for _ in range(30):
+                mid = (lo + hi) / 2
+                lo, hi = (mid, hi) if g(mid) < 0 else (lo, mid)
+            q = adsk.core.Point3D.create(x0 + hi * ux, y0 + hi * uy, 0)
+            # an end into a window must not first cross the outline cut's path
+            if g is in_window and any(f(hi * k / 50) >= 0 for k in range(51)):
+                return None
+            return (q, g is in_window)
+        return None
 
     def trim_back(end, chain):
         # an end beyond the cut's path: cut the chain back to where it crosses
@@ -3250,6 +3269,8 @@ def _pass_path(sk, run, walls, d, ring, face):
         q = run_on(end, chain[0])
         if q is None:
             return fail()
+        into_window = bool(q) and q[1]
+        q = q and q[0]
         if q is False and outside(end.geometry.x, end.geometry.y) - TOOL_R > 1e-4:
             end = trim_back(end, chain)
             if end is None:
@@ -3258,8 +3279,10 @@ def _pass_path(sk, run, walls, d, ring, face):
                 order[:] = chain
             else:
                 order[:] = chain[::-1]
-        ends_out.append((end, q))
-    (start, qa), (stop, qb) = ends_out
+        ends_out.append((end, q, into_window))
+    (start, qa, wa), (stop, qb, wb) = ends_out
+    if wa and wb:  # both ends in windows: nowhere cleared to plunge
+        return fail()
     path = list(order)
     if qa:
         ln = sk.sketchCurves.sketchLines.addByTwoPoints(qa, start)
@@ -3269,6 +3292,8 @@ def _pass_path(sk, run, walls, d, ring, face):
         ln = sk.sketchCurves.sketchLines.addByTwoPoints(stop, qb)
         made.append(ln)
         path.append(ln)
+    if wa:
+        path.reverse()
     return path
 
 
@@ -4805,8 +4830,9 @@ def _make_layout(design, a, plan, warnings):
     # pockets open to the side, cut by contour passes along their walls, 0.6 x
     # the end mill's diameter apart, as many as cover the floor. Each pass runs
     # on at both ends to the outline cut's path, where the outline cut has
-    # cleared the stock for its plunge.
+    # cleared the stock for its plunge, or at one end into a through window.
     ring = _loop_ring(loop)
+    window_rings = [_loop_ring(w['loop']) for w in a['windows']]
     open_passes = {}
     if plan['recipe']:
         a_floors = []  # sketched by the open-pocket recipe
@@ -4835,7 +4861,7 @@ def _make_layout(design, a, plan, warnings):
                 walls = _draw_walls(sk, run)
                 for k in range(n):
                     d = TOOL_R + k * step
-                    pth = _pass_path(sk, run, walls, d, ring, f['face'])
+                    pth = _pass_path(sk, run, walls, d, ring, f['face'], window_rings)
                     if pth is not None and _too_near([pth], rising, TOOL_R - 0.002):
                         for c in pth:
                             if c.isValid:
@@ -4845,8 +4871,8 @@ def _make_layout(design, a, plan, warnings):
                                         'it is left out, so check that pocket' % (mm(d), f['z']))
                     elif pth is None:
                         warnings.append('a pass along the walls of the pocket open to the side '
-                                        'at z=%g mm does not end on the outline cut; it is left '
-                                        'out, so check that pocket' % f['z'])
+                                        'at z=%g mm ends neither on the outline cut nor in a '
+                                        'window; it is left out, so check that pocket' % f['z'])
                     elif any(_same_path(pth, q) for _, q in passes):
                         # a slot as wide as the end mill: the passes along its two
                         # walls are one line, which Fusion would chain into a closed
