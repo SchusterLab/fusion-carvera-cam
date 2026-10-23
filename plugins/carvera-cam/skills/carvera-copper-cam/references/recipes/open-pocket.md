@@ -34,8 +34,11 @@ One operation cuts the open floors of one depth, in one pass (`rough` or `finish
    Where that line would run on more than 10 mm, or into a wall, as along a wall that meets the outline at a shallow angle with a sliver of the part outside it, the path runs on only until the tool can turn straight out of the part a radius clear of every wall, and turns there.
    An end that runs into a through window instead, as on a ledge open both to the outside and to a window, stops where the tool is a radius inside the window, clear of the ledge and of the window's walls; there it cuts copper that the window's pocket removes anyway.
    The path then starts at its other end, on the outline cut's path, since the tool would plunge into uncut copper where the window is not yet cut.
+   The path keeps a tool radius off every wall above the floor, not only off the walls rising from it.
+   Where the floor drops into a deeper pocket beside it, the offset walls run on over that pocket, which leaves the tool room to cut the floor right up to the walls; where the path then comes within a radius of that pocket's own walls near an end, it is cut back from that end.
+   Where the path strays past the outline cut's path between its ends, as it does round the outside of a corner where two walls meet, it follows the outline cut's path there instead, since the outline cut has cleared that.
    It returns the path's id, its two ends and its length.
-   It returns `"ok": false`, and leaves nothing sketched, when an end reaches neither the outline cut's path nor a window, when both ends reach windows, when the walls offset that far leave no path, when the pass strays past the outline cut's path between its ends, as a pass wider than a narrow floor does, where it would cut the stock round the part beyond what the outline cut clears, or when the pass would come within a tool radius of another wall rising from the floor.
+   It returns `"ok": false`, and leaves nothing sketched, when an end reaches neither the outline cut's path nor a window, when both ends reach windows, when the walls offset that far leave no path, or when the pass would come within a tool radius of a wall above the floor anywhere but near an end.
    If any pass of a floor fails, cut that floor with `island_passes` instead (see "Floors with islands, and walls a pass cannot follow"), and pass `add_contour` only the ids `island_passes` returns: an offset of an open run of walls keeps a tool radius off them only square to them, so near the run's ends, such as the tip of a sliver of the part, it can cut into the part.
    Each call returns a new id, so two passes along the same walls have different ids.
 4. **Check the passes cover the floor.**
@@ -145,7 +148,7 @@ def add_open_pockets(which, top_at_h):
 
 ## Shapes the steps do not cover
 
-The steps cover the shapes `build` was tested on: walls that meet the outline steeply or at a shallow angle, islands with or without walls beside them, and ledges open to a window.
+The steps cover the shapes `build` was tested on: walls that meet the outline steeply or at a shallow angle, islands with or without walls beside them, ledges open to a window, and ledges beside a deeper pocket.
 Look at the part before trusting them, and after `generate`, look at the operations' toolpaths in Fusion.
 
 - **A pass left out.**

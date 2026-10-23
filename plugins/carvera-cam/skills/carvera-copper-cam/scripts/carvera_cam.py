@@ -1174,13 +1174,12 @@ def pass_path(args):
     for c in walls:
         if c.isValid:
             c.deleteMe()
-    rising = [q for e in _rising_edges(f['face']) for q in _edge_points(e)]
-    if path is not None and _too_near([path], rising, TOOL_R - 0.002):
+    if path is not None and _too_near([path], _walls_over(f['face']), TOOL_R - 0.002):
         for c in path:
             if c.isValid:
                 c.deleteMe()
-        out = {'ok': False, 'why': 'the pass comes within a tool radius of a wall rising '
-                                   'from the floor, and would cut into it'}
+        out = {'ok': False, 'why': 'the pass comes within a tool radius of a wall above '
+                                   'the floor, and would cut into it'}
     elif path is None:
         out = {'ok': False, 'why': "an end of the pass reaches neither the outline cut's path "
                                    'nor a window, both ends reach windows, or the walls offset '
@@ -3185,6 +3184,7 @@ def _island_chains(sk, face, n, ring, left_out):
     why). Returns _join_closed's [(chain, entry)]."""
     step = 0.6 * ENDMILL_D / 10
     rising = [q for e in _rising_edges(face) for q in _edge_points(e)]
+    over = _walls_over(face)
     walls = [_draw_walls(sk, run, True) for run in _islands(face)]
     far = TOOL_R + n * step + 0.2
     for run in _open_walls(face)[0]:
@@ -3197,7 +3197,7 @@ def _island_chains(sk, face, n, ring, left_out):
     for k in range(n):
         d = TOOL_R + k * step
         got = _island_passes(sk, walls, d, ring, face) if walls else None
-        if got and _too_near([p for p, _ in got], rising, TOOL_R - 0.002):
+        if got and _too_near([p for p, _ in got], over, TOOL_R - 0.002):
             for c in [c for p, _ in got for c in p]:
                 if c.isValid:
                     c.deleteMe()
@@ -3213,7 +3213,7 @@ def _island_chains(sk, face, n, ring, left_out):
     for k in _gap_levels(face, levels, rising, step):
         d = TOOL_R + k * step + TOOL_R - 0.001
         got = _island_passes(sk, walls, d, ring, face)
-        if got and _too_near([p for p, _ in got], rising, TOOL_R - 0.002):
+        if got and _too_near([p for p, _ in got], over, TOOL_R - 0.002):
             for c in [c for p, _ in got for c in p]:
                 if c.isValid:
                     c.deleteMe()
@@ -3224,7 +3224,7 @@ def _island_chains(sk, face, n, ring, left_out):
     for c in [c for ws in walls for c in ws]:
         if c.isValid:
             c.deleteMe()
-    return _join_closed(sk, levels, step, rising, ring)
+    return _join_closed(sk, levels, step, over, ring)
 
 
 def _gap_levels(face, levels, rising, step):
@@ -3304,6 +3304,21 @@ def _same_path(p, q):
     return ends(p) == ends(q)
 
 
+def _simplify(pts, tol):
+    """The polyline `pts` ((x, y), cm) with the points it can do without
+    dropped, keeping it within `tol` cm of them (Douglas-Peucker)."""
+    if len(pts) < 3:
+        return list(pts)
+    (x0, y0), (x1, y1) = pts[0], pts[-1]
+    L = math.hypot(x1 - x0, y1 - y0)
+    dev = [abs((x1 - x0) * (y - y0) - (y1 - y0) * (x - x0)) / L if L > 1e-12
+           else math.hypot(x - x0, y - y0) for x, y in pts[1:-1]]
+    k = max(range(len(dev)), key=lambda i: dev[i])
+    if dev[k] <= tol:
+        return [pts[0], pts[-1]]
+    return _simplify(pts[:k + 2], tol)[:-1] + _simplify(pts[k + 1:], tol)
+
+
 def _pass_path(sk, run, walls, d, ring, face, windows=()):
     """One contour pass along a pocket's open walls (`run`, co-edges, drawn as
     `walls`, see _draw_walls): the tool centre's path `d` cm off the walls,
@@ -3313,9 +3328,12 @@ def _pass_path(sk, run, walls, d, ring, face, windows=()):
     (`windows`, their rings), as a ledge open to the outside and to a window
     has it: until the tool is a radius inside the window, clear of the floor
     and of the window's walls. The tool then starts at the other end, where
-    the outline cut has cleared the stock for its plunge. The curves in the
-    order the tool follows them, or None (leaving nothing sketched) when an
-    end, run on 10 mm, meets neither."""
+    the outline cut has cleared the stock for its plunge. The path keeps a
+    tool radius off every wall above the floor (see _walls_over): near an end
+    it is cut back from that end instead, and where it strays past the
+    outline cut's path between its ends it follows that path. The curves in
+    the order the tool follows them, or None (leaving nothing sketched) when
+    an end, run on 10 mm, meets neither."""
     q = face.pointOnFace
     coll = adsk.core.ObjectCollection.create()
     for c in walls:
@@ -3355,17 +3373,14 @@ def _pass_path(sk, run, walls, d, ring, face, windows=()):
         dd = _ring_clearance((ring, [], None), x, y)
         return -dd if _inside(ring, x, y) else dd
 
-    clear = _near_points([q for e in _rising_edges(face) for q in _edge_points(e)],
-                         TOOL_R - 0.002)
+    clear = _near_points(_walls_over(face), TOOL_R - 0.002)
 
     def seg_clear(a_, b_):  # the tool kept a radius off the walls from a_ to b_
         n = max(2, int(math.hypot(b_[0] - a_[0], b_[1] - a_[1]) / 0.005))
         return not any(clear(a_[0] + (b_[0] - a_[0]) * k / n, a_[1] + (b_[1] - a_[1]) * k / n)
                        for k in range(n + 1))
 
-    def straight_out(x, y):
-        # from (x, y) straight out of the part, square to the outline nearest,
-        # to the cut's path: the point, or None
+    def nearest(x, y):  # the outline's point nearest (x, y): (distance, x, y)
         best = None
         for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]):
             L2 = (x2 - x1) ** 2 + (y2 - y1) ** 2
@@ -3374,7 +3389,12 @@ def _pass_path(sk, run, walls, d, ring, face, windows=()):
             dd = math.hypot(x - nx, y - ny)
             if best is None or dd < best[0]:
                 best = (dd, nx, ny)
-        dd, nx, ny = best
+        return best
+
+    def straight_out(x, y):
+        # from (x, y) straight out of the part, square to the outline nearest,
+        # to the cut's path: the point, or None
+        dd, nx, ny = nearest(x, y)
         if dd < 1e-6:
             return None
         sg = 1 if _inside(ring, x, y) else -1
@@ -3488,6 +3508,126 @@ def _pass_path(sk, run, walls, d, ring, face, windows=()):
                 c.deleteMe()
         return None
 
+    # the walls offset can leave the floor: round the end of a wall standing
+    # over a deeper pocket beside the floor, where the tool has room above
+    # the floor but must keep off that pocket's own walls, and round the
+    # outside of a corner where two walls meet, past the outline cut's path.
+    # Where the path comes within a radius of the part near an end, it is cut
+    # back from that end; where it strays past the outline cut's path between
+    # its ends, it follows that path instead, which the outline cut has cleared
+    walk, node = [], start  # (curve, parameter from, parameter to), in order
+    for c in order:
+        ev = c.geometry.evaluator
+        ok, t0, t1 = ev.getParameterExtents()
+        ok, tn = ev.getParameterAtPoint(node.geometry)
+        walk.append((c, t0, t1) if abs(tn - t0) < abs(tn - t1) else (c, t1, t0))
+        a_, b_ = pts(c)
+        node = b_ if near(a_, node) else a_
+    at = lambda i, t: walk[i][0].geometry.evaluator.getPointAtParameter(t)[1]
+    smp = []  # (curve index, parameter, x, y) every 0.05 mm or so
+    for i, (c, ta, tb) in enumerate(walk):
+        n = max(4, int(c.length / 0.005))
+        for k in range(0 if i == 0 else 1, n + 1):
+            q = at(i, ta + (tb - ta) * k / n)
+            smp.append((i, ta + (tb - ta) * k / n, q.x, q.y))
+    bad = [clear(x, y) for _, _, x, y in smp]
+    lo, hi, k = 0, len(smp) - 1, 0
+    while k < len(smp):
+        if not bad[k]:
+            k += 1
+            continue
+        j = k
+        while j + 1 < len(smp) and bad[j + 1]:
+            j += 1
+        if k <= len(smp) - 1 - j:  # nearer the start: cut back from there
+            lo = max(lo, j + 1)
+        else:
+            hi = min(hi, k - 1)
+        k = j + 1
+    if hi - lo < 2:
+        return fail()
+    out_ = [outside(x, y) - TOOL_R > 1e-4 for _, _, x, y in smp]
+    strays, k = [], lo
+    while k <= hi and out_[k]:  # an end beyond the path: trim_back's
+        k += 1
+    while k <= hi:
+        if not out_[k]:
+            k += 1
+            continue
+        j = k
+        while j + 1 <= hi and out_[j + 1]:
+            j += 1
+        if j == hi:
+            break
+        strays.append((k, j))
+        k = j + 1
+    if lo > 0 or hi < len(smp) - 1 or strays:
+        def crossing(a, b):
+            # where the path crosses the outline cut's path between samples
+            # a and b = a + 1, one inside it and one beyond: (curve index,
+            # parameter). Sample a may end the curve before b's
+            i, tb = smp[b][0], smp[b][1]
+            ta = smp[a][1] if smp[a][0] == i else walk[i][1]
+            g = lambda t: (lambda q: outside(q.x, q.y) - TOOL_R)(at(i, t)) > 1e-4
+            ga = g(ta)
+            for _ in range(40):
+                mid = (ta + tb) / 2
+                ta, tb = (mid, tb) if g(mid) == ga else (ta, mid)
+            return i, (ta + tb) / 2
+
+        def pull(x, y):  # (x, y) beyond the path, moved square onto it
+            dd, nx, ny = nearest(x, y)
+            return nx + (x - nx) * TOOL_R / dd, ny + (y - ny) * TOOL_R / dd
+        pieces, pos = [], (smp[lo][0], smp[lo][1])
+        for k, j in strays:
+            e_in, e_out = crossing(k - 1, k), crossing(j, j + 1)
+            pieces.append(('along', pos, e_in))
+            qa, qb = at(*e_in), at(*e_out)
+            route = _simplify([(qa.x, qa.y)] + [pull(x, y) for _, _, x, y in smp[k:j + 1]]
+                              + [(qb.x, qb.y)], 0.0002)[1:-1]
+            pieces.append(('route', qa, [adsk.core.Point3D.create(x, y, 0) for x, y in route] + [qb]))
+            pos = e_out
+        pieces.append(('along', pos, (smp[hi][0], smp[hi][1])))
+        new, node = [], None
+        for p in pieces:
+            if p[0] == 'route':
+                if node is None:
+                    node = sk.sketchPoints.add(p[1])
+                for q in p[2]:
+                    if node.geometry.distanceTo(q) < 1e-5:
+                        continue
+                    ln = sk.sketchCurves.sketchLines.addByTwoPoints(node, q)
+                    new.append(ln)
+                    node = ln.endSketchPoint
+                continue
+            (i0, f0), (i1, f1) = p[1], p[2]
+            for i in range(i0, i1 + 1):
+                c, ta, tb = walk[i]
+                fa, fb = (f0 if i == i0 else ta), (f1 if i == i1 else tb)
+                A, B = at(i, fa), at(i, fb)
+                if A.distanceTo(B) < 1e-5:
+                    continue
+                if isinstance(c, adsk.fusion.SketchLine):
+                    nc = sk.sketchCurves.sketchLines.addByTwoPoints(node or A, B)
+                elif isinstance(c, adsk.fusion.SketchArc):
+                    nc = sk.sketchCurves.sketchArcs.addByThreePoints(node or A, at(i, (fa + fb) / 2), B)
+                else:
+                    for c_ in new:
+                        c_.deleteMe()
+                    return fail()
+                new.append(nc)
+                node = nc.endSketchPoint if nc.endSketchPoint.geometry.distanceTo(B) < 1e-5 \
+                    else nc.startSketchPoint
+        first = at(smp[lo][0], smp[lo][1])
+        for c in order:
+            c.deleteMe()
+        order[:] = new
+        if not new:
+            return fail()
+        a_, b_ = pts(new[0])
+        start = min((a_, b_), key=lambda p: p.geometry.distanceTo(first))
+        stop = node
+
     ends_out = []
     for which in (0, 1):
         chain = order if which == 0 else order[::-1]
@@ -3509,9 +3649,8 @@ def _pass_path(sk, run, walls, d, ring, face, windows=()):
     (start, qa, wa), (stop, qb, wb) = ends_out
     if wa and wb:  # both ends in windows: nowhere cleared to plunge
         return fail()
-    # a pass that strays past the outline cut's path between its ends, as one
-    # offset wider than a narrow floor does, would cut the stock round the
-    # part beyond what the outline cut clears
+    # a pass that still strays past the outline cut's path between its ends
+    # would cut the stock round the part beyond what the outline cut clears
     if any(outside(x, y) - TOOL_R > 0.01 for x, y in _samples(order, 0.02)):
         return fail()
     path = list(order)
@@ -4628,6 +4767,43 @@ def _rising_edges(face):
     return out
 
 
+_WALLS_OVER = {}
+
+
+def _walls_over(face):
+    """(x, y) points (cm) every 0.1 mm along the walls a tool cutting the floor
+    must keep off: those rising from it, and every edge of the part above it
+    (below, for a floor facing down). A pass that runs on past the floor, such
+    as over a deeper pocket beside it, meets walls that do not stand on the
+    floor itself, such as that pocket's walls where they rise past the floor."""
+    key = face.tempId
+    if key in _WALLS_OVER:
+        return _WALLS_OVER[key]
+    up = _normal(face).z > 0
+    zf = face.pointOnFace.z
+    beyond = (lambda z: z > zf + 0.002) if up else (lambda z: z < zf - 0.002)
+    pts = [q for e in _rising_edges(face) for q in _edge_points(e)]
+    for e in face.body.edges:
+        bb = e.boundingBox
+        if not beyond(bb.maxPoint.z if up else bb.minPoint.z):
+            continue
+        if bb.maxPoint.x - bb.minPoint.x < 1e-4 and bb.maxPoint.y - bb.minPoint.y < 1e-4:
+            pts.append((bb.minPoint.x, bb.minPoint.y))  # an edge along Z
+            continue
+        ev = e.evaluator
+        ok, t0, t1 = ev.getParameterExtents()
+        n = max(2, int(e.length / 0.01))
+        for k in range(n + 1):
+            try:
+                ok, q = ev.getPointAtParameter(min(max(t0 + (t1 - t0) * k / n, t0), t1))
+            except RuntimeError:
+                continue
+            if ok and beyond(q.z):
+                pts.append((q.x, q.y))
+    _WALLS_OVER[key] = pts
+    return pts
+
+
 def _column_clear(body, x, y, z, up, r):
     """Whether a tool of radius r (cm) standing at (x, y) clears the part all the
     way from z out to the part's face it comes in from: points round its edge,
@@ -5077,12 +5253,12 @@ def _make_layout(design, a, plan, warnings):
             continue
         runs, reach = _open_walls(f['face'])
         n = max(1, math.ceil((reach + 0.01 - 2 * TOOL_R) / step) + 1)
-        # a pass must keep a tool radius off every wall rising from the floor,
-        # not only its own. A floor with islands is cut by passes round the
+        # a pass must keep a tool radius off every wall above the floor, not
+        # only its own (see _walls_over). A floor with islands is cut by passes round the
         # islands (see _island_chains), and round its runs of walls too, if
         # it has any, each pass that closes on itself entered from one
         # farther out. The passes run from the walls out.
-        rising = [q for e in _rising_edges(f['face']) for q in _edge_points(e)]
+        over = _walls_over(f['face'])
         islands = _islands(f['face'])
         passes = []  # (k, path)
         # a floor whose passes along its walls cannot all be made, such as
@@ -5097,7 +5273,7 @@ def _make_layout(design, a, plan, warnings):
                 for k in range(n):
                     d = TOOL_R + k * step
                     pth = _pass_path(sk, run, walls, d, ring, f['face'], window_rings)
-                    if pth is not None and _too_near([pth], rising, TOOL_R - 0.002):
+                    if pth is not None and _too_near([pth], over, TOOL_R - 0.002):
                         for c in pth:
                             if c.isValid:
                                 c.deleteMe()
