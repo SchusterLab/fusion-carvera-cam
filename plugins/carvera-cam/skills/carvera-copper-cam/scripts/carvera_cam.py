@@ -2019,15 +2019,19 @@ RAY_DOWN = (0.15, 0.4, 0.7, 1.0, 1.3, 1.6)          # mm below it
 RAY_REACH = 3.5                                     # mm: copper farther off is clear
 
 
-def _deburr_tip(faces, up, depth, hi, width, skip=frozenset()):
+def _deburr_tip(faces, up, depth, hi, width, skip=frozenset(), frame=None):
     """The tip offset, in mm, for deburring the falling edges of `faces`, a pocket
     floor `depth` mm below the face, seen along `up` (the tool axis, away from
     the part): of the offsets from CHAMFER_TIP_MIN to `hi` (the most the floors,
     holes and tabs below allow), the deepest at which the bit keeps
     CHAMFER_CLEAR off the part at the most sample points, three along each edge;
-    and how many of them it clears there, of how many."""
-    root = adsk.fusion.Design.cast(adsk.core.Application.get().activeDocument.products.itemByProductType(
-        'DesignProductType')).rootComponent
+    and how many of them it clears there, of how many. With `frame`, the
+    part's outline (cm) in window machining, the bit also keeps CHAMFER_CLEAR
+    inside the outline cut's groove, one end mill wide: the stock beyond it is
+    copper that no ray sees, since it is no body."""
+    products = adsk.core.Application.get().activeDocument.products
+    root = adsk.fusion.Design.cast(products.itemByProductType('DesignProductType')).rootComponent
+    faces_only = adsk.fusion.BRepEntityTypes.BRepFaceEntityType
     tips = [hi - TIP_STEP * k for k in range(int((hi - CHAMFER_TIP_MIN) / TIP_STEP + 1e-9) + 1)]
     score = [0] * len(tips)
     n = 0
@@ -2061,8 +2065,7 @@ def _deburr_tip(faces, up, depth, hi, width, skip=frozenset()):
                                 out.y * math.cos(a) + side.y * math.sin(a),
                                 out.z * math.cos(a) + side.z * math.sin(a))
                             hits = adsk.core.ObjectCollection.create()
-                            found = root.findBRepUsingRay(
-                                o, d, adsk.fusion.BRepEntityTypes.BRepFaceEntityType, -1, True, hits)
+                            found = root.findBRepUsingRay(o, d, faces_only, -1, True, hits)
                             if not found.count or found.item(0).tempId in own:
                                 continue  # nothing, or the edge's own wall, which the cone clears
                             q = hits.item(0)
@@ -2070,14 +2073,20 @@ def _deburr_tip(faces, up, depth, hi, width, skip=frozenset()):
                             if r < RAY_REACH:
                                 near.append((r * math.cos(a), r * math.sin(a), h))
                     n += 1
+                    def in_groove(along):
+                        # the bit, its axis `along` mm out from the edge, keeps
+                        # CHAMFER_CLEAR off the stock beyond the outline cut
+                        x, y = pt.x + out.x * along / 10, pt.y + out.y * along / 10
+                        return ENDMILL_D - _outside_ring(frame, x, y) * 10 >= \
+                            CHAMFER_R + CHAMFER_CLEAR
                     for i, t in enumerate(tips):
                         # the axis, along out from the edge, in the cut and its leads
                         axes = [CHAMFER_TIP_R + t + CHAMFER_LEAD * f for f in (0, 0.5, 1)]
-                        clear = True
+                        clear = not frame or all(in_groove(ax) for ax in axes)
                         for x, y, h in near:
                             z = h + t + width  # above the point
-                            if z > 0 and any(math.hypot(x - ax, y) < min(CHAMFER_TIP_R + z, CHAMFER_R)
-                                             + CHAMFER_CLEAR for ax in axes):
+                            reach = min(CHAMFER_TIP_R + z, CHAMFER_R) + CHAMFER_CLEAR
+                            if z > 0 and any(math.hypot(x - ax, y) < reach for ax in axes):
                                 clear = False
                                 break
                         score[i] += clear
@@ -6336,10 +6345,11 @@ class _Side:
             for f in floors:
                 if f['role'] == 'pocket' and _has_falling_edges(f['face'], chamfered):
                     by_depth.setdefault(round(f['depth'], 3), []).append(f['face'])
+            frame = _FOOT['outline'] if plan['outline'] else None  # the stock round the part
             for dep, fs in sorted(by_depth.items()):
                 t, _, _ = _deburr_tip(fs, adsk.core.Vector3D.create(0, 0, 1 if top else -1), dep,
                                       chamfer_tip(dep, 'the pocket floor %g mm deep' % dep, fs),
-                                      width, chamfered)
+                                      width, chamfered, frame)
                 ops['main'].append(b.op(
                     setup, 'chamfer2d', CHAMFER,
                     'Deburr pocket floors' + (' %g mm' % dep if len(by_depth) > 1 else ''),
