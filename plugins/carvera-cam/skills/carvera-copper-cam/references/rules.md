@@ -3,7 +3,7 @@
 The `carvera-copper-cam` skill checks the toolpaths of an open Fusion document against the lab's rules for avoiding crashes, spindle stalls and tool wear on the Carvera, and lists each breach as a finding.
 Ask Claude to check a document's Carvera toolpaths, or run `check({})` from `scripts/check_cam.py` inside Fusion as SKILL.md shows.
 The check covers every milling setup in the document: setups the lab programmed by hand as well as those made by `build`, the skill's toolpath generator, and those toolpaths after someone has edited them.
-Its written counterpart, [review.md](review.md), judges the same toolpaths by reading their G-code and screenshots; the skill runs both and compares them, so that each catches what the other misses.
+The written review, [review.md](review.md), comes after it: it judges whether each finding is real, and looks at what no rule checks.
 
 Each finding gives a rule id from the tables below, a severity, the setup, the operation and a message with the numbers behind it; in short, for example:
 `H5 error | Setup1 | Drill3 | cuts 9.50 mm deep with a 7.40 mm flute`.

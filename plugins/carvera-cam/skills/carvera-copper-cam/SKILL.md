@@ -72,7 +72,7 @@ The check's rule X1 then tests the G-code itself, every 0.5 mm along each move.
 
 `scripts/sim_check.py` and `scripts/sim_ui.ps1` check the toolpaths by Fusion's own simulation: they run it on each setup, read the collisions and other issues Fusion flags, save the stock it leaves, and compare that stock with the part (see [references/simulation.md](references/simulation.md)).
 
-The toolpaths are checked two ways, by `scripts/check_cam.py` and by reading them as [references/review.md](references/review.md) describes, and then by Fusion's simulation, which shows whether the stock it leaves is the part.
+The toolpaths are checked by `scripts/check_cam.py`'s rules, by reading them for what no rule covers as [references/review.md](references/review.md) describes, and then by Fusion's simulation, which shows whether the stock it leaves is the part.
 By default the skill does all of these, compares the results, and improves whatever falls short (see "Improving the skill").
 
 The lab's conventions it applies are in [references/conventions.md](references/conventions.md); read that file before changing any parameter.
@@ -131,7 +131,7 @@ Before building, confirm with the user, briefly and in one message:
 
 ### 4. Build
 
-Always do steps 7 and 8 after this one, without asking, unless the user asks to skip them: every run of the skill checks the toolpaths both ways and compares the simulated stock with the part (user, 2026-10-24).
+Always do steps 7 and 8 after this one, without asking, unless the user asks to skip them: every run of the skill checks the toolpaths, reviews them and compares the simulated stock with the part (user, 2026-10-24).
 Build the part in the user's document:
 
 ```python
@@ -185,18 +185,15 @@ It prints `"status": "partial"`, with the operations not yet generated under `pe
 When done, it reports every operation. If Fusion discards thread-mill passes, it lowers that operation's pass count below the one `build` computed from `threads.toml` and lists the change under `adjusted`; report any such change to the user.
 Any operation with `"toolpath": false`, `hasError` or `hasWarning` needs attention before the program is used.
 
-### 7. Check both ways
+### 7. Check and review
 
 Always do this step, without asking, unless the user asks to skip it.
 
-1. Read the toolpaths as [references/review.md](references/review.md) describes, and write down what you find, before you run the checker.
-2. Run the toolpath check (see "Checking existing toolpaths").
-3. Compare the checker's findings with yours, as review.md's "Comparing with the checker" says.
+1. Run the toolpath check (see "Checking existing toolpaths").
+2. Review the toolpaths as [references/review.md](references/review.md) describes: judge whether each of the checker's findings is real, and look at what no rule checks, the run order, the times, the screenshots and the machine's travel.
 
 Where a check finds a problem, fix the skill (see "Improving the skill"), then build the part again.
 To compare a build with an earlier one, as after a change to the skill, `check_cam.py`'s `summary({})` lists every operation's tool, time, cut length, deepest Z, extent and plunge points; run it on both and compare operation by operation.
-
-In window machining, take a screenshot with the outline operation selected and check the tabs and the stock position; with stock that fits along one side, select the `Ends` operation instead and check that the end cuts run outside the jaws; to check the vise as well, show `carvera-cam vise top` for the screenshot and hide it again after.
 
 ### 8. Simulate in Fusion
 
@@ -316,7 +313,7 @@ Then, unless the user asks to skip it, check the toolpaths by Fusion's simulatio
 - A hole whose axis does not run along Z, such as a hole into the part's side, is not cut; `build` warns about each one.
 - The only sloped faces cut are the design's 45° chamfers and countersinks (`analyze`'s `chamfers`), by the chamfering bit, whose 45° cone reaches 1.5375 mm out from the edge of its 0.1 mm point. Its point goes 0.1 to 0.5 mm below the chamfer, as far as the chamfer's width and the floors and tabs below allow, so a chamfer can be at most 1.4375 mm wide. The bit cuts it 0.2 mm deeper at each pass, along the sharp edge `build` sketches for it, and the last pass follows the modelled chamfer.
   Any other sloped face, such as a chamfer at another angle, a wider one, or an 82° countersink, is left square, and `build` warns about it; so is a chamfer on the bottom face with one setup.
-- Nothing checks that a toolpath stays within the machine's travel: the machine model sets no limits on its axes, so the simulation reports none, and `check_cam.py` has no rule for travel.
+- Nothing checks automatically that a toolpath stays within the machine's travel: the machine model sets no limits on its axes, so the simulation reports none, and `check_cam.py` has no rule for travel; the review looks at the toolpaths' span by eye.
 - Nor do `build` and `check_cam.py` check the stock against the machine's frame; only the simulation does.
   The stock's X size runs along the machine's Y axis, the axis the bed moves on, so a cut near one end of a long bar moves its other end far out: on a 200 mm part in a 300 mm bar, the end cuts 100 mm from the bar's middle brought the far end into the frame (`Base+Stock` in the simulation), while a 146 mm part in a 305 mm bar, cut only out to 73 mm, cleared it.
 
