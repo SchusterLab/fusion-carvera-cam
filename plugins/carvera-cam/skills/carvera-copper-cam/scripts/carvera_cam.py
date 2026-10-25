@@ -2025,7 +2025,10 @@ def _deburr_tip(faces, up, depth, hi, width, skip=frozenset(), frame=None):
     the part): of the offsets from CHAMFER_TIP_MIN to `hi` (the most the floors,
     holes and tabs below allow), the deepest at which the bit keeps
     CHAMFER_CLEAR off the part at the most sample points, three along each edge;
-    and how many of them it clears there, of how many. With `frame`, the
+    and the hole rims among the edges that it clears at no offset, as when a
+    wall rises too near the rim for the bit's body: these count for nothing,
+    and the deburr leaves them out (conventions.md, Operation order, step 11).
+    With `frame`, the
     part's outline (cm) in window machining, the bit also keeps CHAMFER_CLEAR
     inside the outline cut's groove, one end mill wide: the stock beyond it is
     copper that no ray sees, since it is no body."""
@@ -2033,8 +2036,7 @@ def _deburr_tip(faces, up, depth, hi, width, skip=frozenset(), frame=None):
     root = adsk.fusion.Design.cast(products.itemByProductType('DesignProductType')).rootComponent
     faces_only = adsk.fusion.BRepEntityTypes.BRepFaceEntityType
     tips = [hi - TIP_STEP * k for k in range(int((hi - CHAMFER_TIP_MIN) / TIP_STEP + 1e-9) + 1)]
-    score = [0] * len(tips)
-    n = 0
+    clears = []  # per edge: (edge, a hole's rim?, per sample: clear at each offset)
     ux, uy, uz = up.x, up.y, up.z
     for face in faces:
         for lp in face.loops:
@@ -2043,6 +2045,9 @@ def _deburr_tip(faces, up, depth, hi, width, skip=frozenset(), frame=None):
                 if e.tempId in skip or not _falls_away(face, ce):
                     continue
                 own = {g.tempId for g in e.faces}
+                rim = not lp.isOuter and any(isinstance(g.geometry, adsk.core.Cylinder)
+                                             for g in e.faces if g != face)
+                clears.append((e, rim, []))
                 ev = e.evaluator
                 ok, p0, p1 = ev.getParameterExtents()
                 for k in (1, 2, 3):
@@ -2072,14 +2077,14 @@ def _deburr_tip(faces, up, depth, hi, width, skip=frozenset(), frame=None):
                             r = q.distanceTo(o) * 10
                             if r < RAY_REACH:
                                 near.append((r * math.cos(a), r * math.sin(a), h))
-                    n += 1
                     def in_groove(along):
                         # the bit, its axis `along` mm out from the edge, keeps
                         # CHAMFER_CLEAR off the stock beyond the outline cut
                         x, y = pt.x + out.x * along / 10, pt.y + out.y * along / 10
                         return ENDMILL_D - _outside_ring(frame, x, y) * 10 >= \
                             CHAMFER_R + CHAMFER_CLEAR
-                    for i, t in enumerate(tips):
+                    row = []
+                    for t in tips:
                         # the axis, along out from the edge, in the cut and its leads
                         axes = [CHAMFER_TIP_R + t + CHAMFER_LEAD * f for f in (0, 0.5, 1)]
                         clear = not frame or all(in_groove(ax) for ax in axes)
@@ -2089,11 +2094,15 @@ def _deburr_tip(faces, up, depth, hi, width, skip=frozenset(), frame=None):
                             if z > 0 and any(math.hypot(x - ax, y) < reach for ax in axes):
                                 clear = False
                                 break
-                        score[i] += clear
-    if not n:
-        return hi, 0, 0
-    best = max(score)
-    return tips[score.index(best)], best, n
+                        row.append(clear)
+                    clears[-1][2].append(row)
+    left = [e for e, rim, rows in clears
+            if rim and not any(all(r[i] for r in rows) for i in range(len(tips)))]
+    score = [sum(r[i] for e, _, rows in clears if e not in left for r in rows)
+             for i in range(len(tips))]
+    if not any(score):
+        return hi, left
+    return tips[score.index(max(score))], left
 
 
 def _add_falling_edges(sels, face, skip=frozenset()):
@@ -6347,14 +6356,29 @@ class _Side:
                     by_depth.setdefault(round(f['depth'], 3), []).append(f['face'])
             frame = _FOOT['outline'] if plan['outline'] else None  # the stock round the part
             for dep, fs in sorted(by_depth.items()):
-                t, _, _ = _deburr_tip(fs, adsk.core.Vector3D.create(0, 0, 1 if top else -1), dep,
+                t, left = _deburr_tip(fs, adsk.core.Vector3D.create(0, 0, 1 if top else -1), dep,
                                       chamfer_tip(dep, 'the pocket floor %g mm deep' % dep, fs),
                                       width, chamfered, frame)
+                if left and not b.dry:
+                    centre = lambda g: '(%.2f, %.2f)' % (mm(g.center.x), mm(g.center.y))
+                    at_ = ', '.join(centre(e.geometry) if isinstance(e.geometry, adsk.core.Circle3D)
+                                    else '?' for e in left)
+                    one = len(left) == 1
+                    warnings.append(
+                        'the chamfering bit cannot reach the %s of %d hole%s in the pocket floor '
+                        "%g mm deep: a wall beside %s is too near for the bit's body, so %s; at "
+                        'x, y = %s mm' % ('rim' if one else 'rims', len(left), '' if one else 's',
+                                          dep, 'it' if one else 'each',
+                                          'it keeps its burr' if one else 'they keep their burrs',
+                                          at_))
+                skip = set(chamfered) | {e.tempId for e in left}
+                if not any(_has_falling_edges(f, skip) for f in fs):
+                    continue  # nothing left that the bit reaches
                 ops['main'].append(b.op(
                     setup, 'chamfer2d', CHAMFER,
                     'Deburr pocket floors' + (' %g mm' % dep if len(by_depth) > 1 else ''),
                     dict(CHAMFER_OP, chamferTipOffset='%gmm' % round(t, 3)),
-                    _sel_deburr_faces(fs, skip=chamfered)))
+                    _sel_deburr_faces(fs, skip=skip)))
         # the edges of the holes under counterbores, at the counterbore's floor, which
         # the face's deburr does not reach; the point goes down the hole below
         if plan['chamfer']:
