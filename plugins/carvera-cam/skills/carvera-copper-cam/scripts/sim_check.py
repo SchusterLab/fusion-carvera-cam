@@ -334,36 +334,43 @@ def _cam():
 def simulate(args):
     """In Fusion: start Simulate with Machine on one setup, with its Issues panel open.
 
-    args: setup (its name); operations (optional), names of some of its operations to
-    simulate alone, from the uncut stock, to find where an issue starts or what the stock
-    is like before an operation. Simulate one setup at a time: with several selected, Fusion
-    warns that their work offsets differ and reports collisions with the fixture that the
-    setups' own simulations do not have. With a simulation open, Fusion refuses this script
-    (it is not read-only): stop() that one first, in a call of its own. The simulation
-    opens after the script returns; sim_ui.ps1 then reads it.
+    args: setup (its name), or "all" for every setup together; operations (optional),
+    names of some of a setup's operations to simulate alone, from the uncut stock, to
+    find where an issue starts or what the stock is like before an operation. Read the
+    issues one setup at a time: with several selected, Fusion warns that their work
+    offsets differ and reports collisions with the fixture that the setups' own
+    simulations do not have. Save the stock from all the setups together, which leaves
+    the part they cut between them; ignore that simulation's issues, which only the
+    collision checks get wrong (user, 2026-10-25). With a simulation open, Fusion refuses
+    this script (it is not read-only): stop() that one first, in a call of its own. The
+    simulation opens after the script returns; sim_ui.ps1 then reads it.
     """
     ui, cam = _cam()
-    setup = cam.setups.itemByName(args['setup'])
-    if setup is None:
-        raise ValueError('no setup %r; setups: %s' % (args['setup'], [s.name for s in cam.setups]))
-    ops = [o for o in setup.allOperations if not o.isSuppressed]
+    if args['setup'] == 'all':
+        setups = list(cam.setups)
+    else:
+        setups = [cam.setups.itemByName(args['setup'])]
+        if setups[0] is None:
+            raise ValueError('no setup %r; setups: %s' % (args['setup'], [s.name for s in cam.setups]))
+    ops = [o for s in setups for o in s.allOperations if not o.isSuppressed]
     names = args.get('operations')
     if names:
         missing = [n for n in names if n not in [o.name for o in ops]]
         if missing:
-            raise ValueError('no operations %s in %s' % (missing, setup.name))
+            raise ValueError('no operations %s in %s' % (missing, args['setup']))
         ops = [o for o in ops if o.name in names]
     bad = [o.name for o in ops if not o.isToolpathValid]
     if bad:
         raise RuntimeError('generate these toolpaths first: %s' % bad)
     ui.activeSelections.clear()
-    for x in ops if names else [setup]:
+    for x in ops if names else setups:
         ui.activeSelections.add(x)
     ui.commandDefinitions.itemById(SIM_COMMANDS[0]).execute()
     ui.commandDefinitions.itemById('SimulationIssues').execute()
     # An operation Fusion generated but found nothing to cut has no toolpath; the
     # simulation passes over it.
-    print(json.dumps({'simulating': setup.name, 'empty': [o.name for o in ops if not o.hasToolpath]}))
+    print(json.dumps({'simulating': [s.name for s in setups],
+                      'empty': [o.name for o in ops if not o.hasToolpath]}))
 
 
 def stop(args):

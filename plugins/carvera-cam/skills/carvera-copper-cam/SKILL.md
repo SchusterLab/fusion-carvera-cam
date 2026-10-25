@@ -243,7 +243,7 @@ In window machining, take a screenshot with the outline operation selected and c
 ### 8. Simulate in Fusion
 
 Always do this step, without asking, unless the user asks to skip it.
-In the user's document, once its toolpaths are the ones that stand, follow [references/simulation.md](references/simulation.md): simulate each setup on its own with the machine, read the issues Fusion flags, save the stock each setup leaves, and compare the stock with the part.
+In the user's document, once its toolpaths are the ones that stand, follow [references/simulation.md](references/simulation.md): simulate each setup on its own with the machine and read the issues Fusion flags, then simulate all the setups together, save the stock they leave, and compare it with the part (that simulation's issues are ignored: with several setups, Fusion's collision checks are wrong).
 Every issue, and every difference between the stock and the part that is not by design (that table lists those), needs attention before the program is used: compare it with the two checks' findings, and fix the toolpath or the skill.
 This step needs Windows, where `sim_ui.ps1` runs; elsewhere, ask the user to run Fusion's simulation with collision checking on each setup.
 

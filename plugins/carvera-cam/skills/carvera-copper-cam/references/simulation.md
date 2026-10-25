@@ -12,11 +12,11 @@ The menu also opens only where Fusion's canvas shows on screen: with another win
 
 ## Running it
 
-Simulate each setup on its own, in run order.
-With several setups selected, Fusion warns that their work offsets differ, and reports collisions with the vise that each setup's own simulation does not have (on the 30 × 20 × 4 mm test part: 103 errors in the bottom setup together, none alone).
-A setup simulated on its own starts from the whole stock, not from what the setups before it left, so each setup's saved stock has only its own cuts in it; since each setup only removes copper, the part they leave between them is the intersection of those stocks, and `compare` takes that intersection.
+Read the issues from each setup on its own, in run order, and save the stock from all the setups simulated together (user, 2026-10-25).
+With several setups selected, Fusion warns that their work offsets differ, and reports collisions with the vise that each setup's own simulation does not have (on the 30 × 20 × 4 mm test part: 103 errors in the bottom setup together, none alone); those errors touch only the collision checks, so the stock it leaves is right, and its issues are ignored.
+A setup simulated on its own starts from the whole stock, not from what the setups before it left, so its stock has only its own cuts in it; the setups together leave the part as they cut it between them, in one save.
 
-For each setup:
+For each setup, and then for all of them together (`{'setup': 'all'}`):
 
 1. Start the simulation, with its Issues panel open (a script that is not read-only, so no simulation or other command dialog may be open).
    It refuses a setup with a toolpath not yet generated or out of date, and lists under `empty` the operations Fusion generated but found nothing to cut; report each of those, since an empty operation is one `build` made for a feature it then did not machine:
@@ -26,13 +26,14 @@ For each setup:
        runpy.run_path(SCRIPTS + r'\sim_check.py')['simulate']({'setup': 'Top (carvera-cam)'})
    ```
 
-2. Run the UI script from a shell, with an STL path in a scratch folder:
+2. Run the UI script from a shell; for all the setups together, with an STL path in a scratch folder, so that it saves the stock:
 
    ```
-   powershell -ExecutionPolicy Bypass -File <SCRIPTS>\sim_ui.ps1 -Stl <scratch>\top.stl
+   powershell -ExecutionPolicy Bypass -File <SCRIPTS>\sim_ui.ps1
+   powershell -ExecutionPolicy Bypass -File <SCRIPTS>\sim_ui.ps1 -Stl <scratch>\stock.stl
    ```
 
-   It waits until the simulation has verified the whole setup, prints the Issues panel's counts and every issue under its operation, moves the simulation to its end, and saves the stock there to the STL ("Save Stock…" in the canvas's right-click menu, which saves the stock at the playhead), to this computer only.
+   It waits until the simulation has verified the whole setup, prints the Issues panel's counts and every issue under its operation, and with `-Stl` moves the simulation to its end and saves the stock there to the STL ("Save Stock…" in the canvas's right-click menu, which saves the stock at the playhead), to this computer only.
    After the move to the end, Fusion builds the stock a little at a time, and Save Stock saves it as far as it has got: on a 120 × 250 mm part, a save 3 s after the move left out every operation from the deburr on.
    So the script saves the stock again every few seconds until two saves in a row have the same number of triangles, and lists each save's count under `saves`.
    It prints JSON: `errors`, `warnings`, `issues` (each with the `operation`, the `count`, and the `events`, each a list of what collided, such as `Fixture+Holder`) and any `notices` Fusion showed.
@@ -47,8 +48,10 @@ It meshes the faces to within 0.005 mm (`deviation`), not by Fusion's preset ref
 Compare, outside Fusion or inside it:
 
 ```
-python <SCRIPTS>\sim_check.py <scratch>\part.stl <scratch>\top.stl <scratch>\bottom.stl
+python <SCRIPTS>\sim_check.py <scratch>\part.stl <scratch>\stock.stl
 ```
+
+`compare` takes several stocks too, and compares the part with what they share, as for stocks saved one setup at a time.
 
 It takes a few seconds for a 30 × 20 mm part at the default 0.05 mm grid; pass `pitch` (in `compare(args)`) to coarsen it for a large part.
 
