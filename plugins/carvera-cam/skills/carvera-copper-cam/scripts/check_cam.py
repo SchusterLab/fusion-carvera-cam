@@ -317,8 +317,8 @@ def _check_op(rep, s, o, t, earlier, lab, threaded=frozenset()):
                     'it cuts a chamfer the design does not have' % (width, CHAMFER_WIDTH_MAX),
                     width=width)
     # a finishing pass: a single-depth pass after a multi-depth roughing pass of
-    # the same kind by an end mill of the same size (as in D4); an end mill
-    # under 3.175 mm finishes what it roughed (user, 2026-10-21)
+    # the same kind by an end mill of the same size (as in D4); only the 3.175 mm
+    # end mill takes a finishing pass (user, 2026-10-24)
     if strat in ('pocket2d', 'contour2d') and milling and t['type'] != 'chamfer mill' \
             and multi is False and not rest and d >= 3.175 - 1e-3:
         rough = [e for e in earlier if e['strategy'] == strat and e['multi']
@@ -588,7 +588,12 @@ def _check_plunges(rep, rule, severity, sn, o, moves, t, holes, milled, to_world
     move down at the feed, or also at a rapid with `rapids`. A plunge with the
     whole tool outside `box`, the stock's (x0, x1, y0, y1), is in the air beside
     the stock: stock of the part's own size has no outline cut, and the facing
-    and the cuts open to the side enter there."""
+    and the cuts open to the side enter there. What made room for a plunge is
+    an earlier operation whose cuts pass within its tool's radius at that depth
+    or deeper, in this setup or the other one (_cleared_to), or a drill whose
+    plunge lands on the same point at least as deep. A pocket's entry hole stops
+    exactly where its cone is half the end mill wide at the floor, so the
+    finishing pass's plunge to the floor passes TH4 with no margin."""
     r = t['d'] / 2
     kinds = (0, 1) if rapids else (1,)
     plunges = {}  # (x, y) -> deepest plunge
@@ -1147,6 +1152,11 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
         tip = 0.0
         if t['type'] == 'drill' and t['tip_angle']:
             tip = t['d'] / 2 / math.tan(math.radians(t['tip_angle']) / 2)
+        # cuts that go below the stock's bottom by design: the main entry hole,
+        # drilled through the stock 0.5 mm past it with the tip through, so that
+        # the bottom setup can enter it from the other side; and with one setup,
+        # the through cuts, the outline between tabs and the tab cut, since the
+        # part's bottom face is the stock's
         below = bottom - zmin
         if below > BELOW_STOCK_MAX + tip + 0.01:
             rep.add('H3', 'error', sn, o.name, 'cuts %.2f mm below the stock bottom (the lab '
@@ -1168,7 +1178,13 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
                 rep.add('H6', 'error' if ratio > STICKOUT_ERROR else 'warning', sn, o.name,
                         'reaches %.2f mm below the stock top, %.0f%% of the %.1f mm the tool '
                         'sticks out of its holder' % (reach, 100 * ratio, t['body_len']))
-        # the tool against the fixture's bodies
+        # the tool against the fixture's bodies. Every operation's cuts lie inside
+        # the stock, but by design the facing and the passes of a pocket open to
+        # the side run past the edge of stock of the part's own size, and the end
+        # cuts past that of stock that fits along one side: there no cut beside
+        # a gripped edge may go below the jaws' top, the end cuts lie outside the
+        # jaws' width, and no cut through the stock's bottom comes within 1.9 mm
+        # of a gripped edge, over the jaw's ledge under the stock
         if fx_boxes and time.time() < deadline and hits < 3:
             # every 0.5 mm along each move: the tip's centre, and eight points
             # round the tool's full diameter, which a drill reaches its point's
@@ -1447,6 +1463,12 @@ def _check_surfaces(rep, cam, surf, threaded, deadline):
     if late:
         rep.add('G0', 'warning', None, None, "the check of the part's faces ran out of time, so "
                 'G1, U1 and TB1 are incomplete: run check again with a larger budget')
+    # G1 and U1 compare every setup's cuts with the part's model, so they catch
+    # an edited operation that now cuts into the part or leaves a face: a
+    # changed height, stock to leave, tool or compensation moves its cut off the
+    # model, and a suppressed or deleted operation leaves its feature uncut.
+    # Each operation's deepest Z matches its feature: a pocket's floor, a rough
+    # pass 0.2 mm above it, a through cut 0.5 mm past the far face
     for k, (depth, p, n) in sorted(gouged.items()):
         sn, on, kind = ops[k][:3]
         if depth is None:
@@ -1464,7 +1486,10 @@ def _check_surfaces(rep, cam, surf, threaded, deadline):
                 % (len(uncut), '' if len(uncut) == 1 else 's', 'is' if len(uncut) == 1 else 'are',
                    'it' if len(uncut) == 1 else 'them', kind, p[0], p[1], p[2]),
                 faces=len(uncut), at=[[kind] + [round(v, 3) for v in q] for q, kind in uncut[:10]])
-    # the tabs: only the tab program may cut them
+    # the tabs: only the tab program may cut them, so four tabs stand at the
+    # outline until it runs. Stock of the part's own size, and stock that fits
+    # the part along one side (cut free by the Ends cut), have no outline or
+    # tabs: the vise holds the part there, and X1 matters the more
     hit = {}
     for b in tabs:
         for f in b.faces:
@@ -1517,6 +1542,9 @@ def check(args=None):
                         for item in nc.operations
                         for x in (list(item.allOperations) if hasattr(item, 'allOperations')
                                   else [item]))
+    # each slot holds one tool throughout the job (N1), finishing passes run on
+    # T3, not on T2, which roughs (N6), and a slot above 6 needs a manual tool
+    # change (N3)
     numbers = {}  # tool number -> description, across the document
     for s in setups:
         for o in s.allOperations:
