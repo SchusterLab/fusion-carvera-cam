@@ -7417,15 +7417,20 @@ def _side_ops(b, setup, a, side, plan, warnings):
             # the point's offset below a chamfer at `depth` mm below the face;
             # the tabs count only for `faces` with a falling edge near a tab.
             # Floors whose edges fall away only round openings in them (holes,
-            # windows, deeper pockets) take the point as deep as the room below
-            # allows, down to 0.1 mm above the part's far face and as deep as the
-            # bit's cone reaches: the deeper the point, the farther in the bit's
-            # axis, and the nearer a wall beside the rim it reaches it (user,
-            # 2026-10-24: 0.5 mm left part of the rims of holes beside a
-            # pocket's walls)
+            # windows, deeper pockets) take the point as deep as there is room:
+            # the deeper the point, the farther in the bit's axis, and the
+            # nearer a wall beside the rim it reaches it (user, 2026-10-24: 0.5 mm
+            # left part of the rims of holes beside a pocket's walls). A through
+            # opening sets no depth; a hole's width does: the axis lies the point's
+            # offset plus the chamfer's width in from the rim, and Fusion keeps
+            # the bit its clearance off the hole's far side (it refused 0.9 mm in
+            # a 2.2 mm hole, "the given lead parameters would cause a collision")
             inner = faces is not None and all(
                 not lp.isOuter for g in faces for lp in g.loops for ce in lp.coEdges
                 if _falls_away(g, ce))
+            ids = {g.tempId for g in faces or []}
+            rims = [h for h in holes if (lambda r: r is not None and r.face.tempId in ids)(
+                _hole_ends(h, top)[0])]
             room = [f['depth'] - depth for f in floors
                     if f['role'] == 'pocket' and f['depth'] > depth + 1e-6]
             room += [h['depth'] - depth for h in holes
@@ -7436,7 +7441,9 @@ def _side_ops(b, setup, a, side, plan, warnings):
             if r is not None:
                 room.append(r)
             most = CHAMFER_REACH - width if inner else CHAMFER_TIP_MAX
-            room.append(thickness - depth if inner else most + width + CHAMFER_CLEAR)
+            if inner:
+                most = min([most] + [h['dia'] / 2 - width - CHAMFER_CLEAR - 0.01 for h in rims])
+            room.append(most + width + CHAMFER_CLEAR)
             tip = max(CHAMFER_TIP_MIN, min(most, min(room) - width - CHAMFER_CLEAR))
             if width + tip > min(room) - 0.02:
                 warnings.append('a floor or the tabs lie %.2f mm below %s, too close for a '
