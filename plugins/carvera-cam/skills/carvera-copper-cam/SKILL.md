@@ -67,17 +67,13 @@ The check's rule X1 then tests the G-code itself, every 0.5 mm along each move.
 | `analyze(args)` | Recognizes the part's holes, tapped holes, pocket floors, through windows and faces, and prints them as JSON. Changes nothing. |
 | `build(args)` | Deletes what an earlier build made (setups ending in `(carvera-cam)`, and the `carvera-cam` sketches and planes), then creates the setups, tools, operations and NC programs. It orders each setup's operations for the fewest tool changes, keeping each one after those it depends on (conventions.md, "Run order"). Does not compute toolpaths. |
 | `generate(args)` | Computes the toolpaths within a time budget and reports each operation's errors, warnings and machining time. |
-| `features`, `walls`, `pass_path`, `island_passes`, `coverage`, `tools`, `add_operation`, `add_operations`, `add_contour`, `renumber_tools` | The primitives the recipes use; each recipe says which it needs and how to call them. |
 
 `scripts/check_cam.py` has `check(args)`, the toolpath check, and `summary(args)`, which lists each operation's tool, time, cut length, depth, extent and plunge points from the G-code, for comparing two builds.
 
 `scripts/sim_check.py` and `scripts/sim_ui.ps1` check the toolpaths by Fusion's own simulation: they run it on each setup, read the collisions and other issues Fusion flags, save the stock it leaves, and compare that stock with the part (see [references/simulation.md](references/simulation.md)).
 
-The whole part can be programmed two ways: by `build` itself, the script's way, or by the recipes, written methods in [references/recipes/](references/recipes/) that you carry out with smaller functions in the same script, the primitives, such as `features`, `add_operation` and `pass_path`.
-[part.md](references/recipes/part.md) makes every operation from the lab's conventions, in the run order `build` uses; it hands pockets open to the side to [open-pocket.md](references/recipes/open-pocket.md) and tight inside corners to [corners.md](references/recipes/corners.md), features whose shapes vary too much for one fixed method.
-Each recipe says when it applies, how to cut the feature, and which shapes it does not cover.
-The toolpaths are likewise checked two ways, by `scripts/check_cam.py` and by reading them as [references/review.md](references/review.md) describes, and then by Fusion's simulation, which shows whether the stock it leaves is the part.
-By default the skill does all of these, compares the results, and improves whichever falls short (see "Improving the skill").
+The toolpaths are checked two ways, by `scripts/check_cam.py` and by reading them as [references/review.md](references/review.md) describes, and then by Fusion's simulation, which shows whether the stock it leaves is the part.
+By default the skill does all of these, compares the results, and improves whatever falls short (see "Improving the skill").
 
 The lab's conventions it applies are in [references/conventions.md](references/conventions.md); read that file before changing any parameter.
 
@@ -133,10 +129,10 @@ Before building, confirm with the user, briefly and in one message:
 - **Dimples in pocket floors.** Each closed pocket's entry hole is drilled at the pocket's centre where the end mill fits there, else at the point farthest from its walls, with the drill's point only as far below its floor as the end mill needs: the end mill enters copper only down a hole at least half its width, the drill's cone included (rule TH4), so the point stops where the cone is half the end mill wide at the floor. That leaves the smallest dimple the rule allows, a cone 1.59 mm across and 0.37 mm deep in the floor. `build` lists where they are. Blind drilled holes are drilled the same way, so the drill's point goes its length below the hole's bottom; `build` warns about those too, unless the hole has a modelled point that matches the drill's angle, and asks the user to model it. Say so, and go on unless the user objects.
 - **Anything skipped or doubtful**, such as sharp inside corners, holes no tool fits, or more than six tools (the Carvera's automatic tool changer holds six; the seventh and later need a manual change).
 
-### 4. Build both ways
+### 4. Build
 
-Always do this step, and steps 7 and 8, without asking, unless the user asks to skip them: every run of the skill builds the part both ways, checks both builds both ways, and compares the simulated stock with the part (user, 2026-10-24).
-Build the part twice: the script's way in the user's document, and the recipes' way in a fresh copy of the part.
+Always do steps 7 and 8 after this one, without asking, unless the user asks to skip them: every run of the skill checks the toolpaths both ways and compares the simulated stock with the part (user, 2026-10-24).
+Build the part in the user's document:
 
 ```python
 def run(_context: str):
@@ -147,46 +143,15 @@ def run(_context: str):
     })
 ```
 
-Other arguments: `body`, `sides` (1 or 2 setups; by default 2 when the bottom has features to cut, such as pocket floors, holes or the design's chamfers, or stock to face, else 1), `face` (face off the stock above and below the part, default true), `chamfer` (deburr the machined edges: the outer faces', the pocket floors' where walls fall away from them, and those of holes under counterbores; default true; the design's own chamfers are cut either way), `fixture` (model the vise, default true), `tab_width` (default 5 mm), `top` (the design's face to machine first; see "Which face is the top"), `tab_z` (the tab band's centre, in mm, along the design's axis that `top` names), `mode` (`"script"`, the default, or `"recipe"` for the recipes' way, below), and in `stock`, `y_mode` (default `back`), `y_offset` (default 10 mm) and `bottom`.
+Other arguments: `body`, `sides` (1 or 2 setups; by default 2 when the bottom has features to cut, such as pocket floors, holes or the design's chamfers, or stock to face, else 1), `face` (face off the stock above and below the part, default true), `chamfer` (deburr the machined edges: the outer faces', the pocket floors' where walls fall away from them, and those of holes under counterbores; default true; the design's own chamfers are cut either way), `fixture` (model the vise, default true), `tab_width` (default 5 mm), `top` (the design's face to machine first; see "Which face is the top"), `tab_z` (the tab band's centre, in mm, along the design's axis that `top` names), and in `stock`, `y_mode` (default `back`), `y_offset` (default 10 mm) and `bottom`.
 `bottom` is the stock left below the part, in mm; the default centres the part in the stock's thickness with two setups, and is 0 with one.
 With two setups, it sets how long the top program runs before the operator flips the stock: more stock below the part moves facing time from the top program to the bottom one.
 `build` prints the machining strategy (`strategy`: the number of `sides`, whether there is an `outline` cut with tabs, and whether the vise holds the part by its sides while `ends` cuts free its ends), whether it turned the part a quarter (`quarter_turned`), the tool slots, the operations, the tab layout, the number of pocket entry holes and any warnings; it takes about 10 seconds.
-In recipe mode it prints the strategy, whether it turned the part, the setups' names, the machine and post, and the warnings, and `next`, what to call next.
 Call `build` and `generate` in separate MCP calls: a call that runs longer than about a minute times out.
 
-For the recipes' way, copy the part's body into a new, unsaved document and build there with `"mode": "recipe"` and the same other arguments.
-The copy keeps the shape but not the Hole features that mark tapped holes, so pass every tapped hole `analyze` found in the user's document under `taps`.
-Both documents are named "Untitled" when the part is unsaved, so tell them apart by `doc.creationId`: note each one's when you make it, and bring a document forward with `doc.activate()` before each call, since every function works on the active document.
+### 5. Look at the part in Fusion
 
-```python
-import adsk.core, adsk.fusion
-
-def run(_context: str):
-    app = adsk.core.Application.get()
-    print('user document', app.activeDocument.creationId)
-    src = adsk.fusion.Design.cast(app.activeDocument.products.itemByProductType('DesignProductType'))
-    body = adsk.fusion.TemporaryBRepManager.get().copy(<the part's body in src>)
-    doc = app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType)
-    des = adsk.fusion.Design.cast(doc.products.itemByProductType('DesignProductType'))
-    des.designType = adsk.fusion.DesignTypes.ParametricDesignType
-    root = des.rootComponent
-    bf = root.features.baseFeatures.add()
-    bf.startEdit()
-    root.bRepBodies.add(body, bf)
-    bf.finishEdit()
-    root.bRepBodies.item(0).name = '<the body's name>'
-    print('copy', doc.creationId)
-```
-
-The copy is a throwaway: never save it.
-`build` with `"mode": "recipe"` makes the setups, the layout sketch, the tabs, the face patches and the vise, and no operations.
-
-### 5. Follow the recipes
-
-In the copy, follow [part.md](references/recipes/part.md): it reads the part with `features({})` and adds every operation in run order, with [open-pocket.md](references/recipes/open-pocket.md) and [corners.md](references/recipes/corners.md) where it sends you.
-Look at the feature in Fusion first (a screenshot with the MCP `read` tool), since a recipe lists the shapes it does not cover.
-When a feature fits none of them, leave it out and tell the user.
-
+Look at the part with a screenshot (the MCP `read` tool), to see any feature `build` warned about, and the toolpaths of the operations in question.
 After `build` the Manufacture workspace is active, so a script reaches the design with `doc.products.itemByProductType('DesignProductType')`, not `app.activeProduct`.
 The default screenshot shows the whole fixture plate, with the part small; aim the camera at the part first:
 
@@ -209,8 +174,6 @@ To show an operation's toolpath in the screenshot, select it: `app.userInterface
 
 ### 6. Generate the toolpaths
 
-In each document:
-
 ```python
 def run(_context: str):
     runpy.run_path(SCRIPTS + r'\carvera_cam.py')['generate']({'budget': 50})
@@ -222,28 +185,23 @@ It prints `"status": "partial"`, with the operations not yet generated under `pe
 When done, it reports every operation. If Fusion discards thread-mill passes, it lowers that operation's pass count below the one `build` computed from `threads.toml` and lists the change under `adjusted`; report any such change to the user.
 Any operation with `"toolpath": false`, `hasError` or `hasWarning` needs attention before the program is used.
 
-### 7. Check both ways and compare
+### 7. Check both ways
 
-Always do this step, without asking, unless the user asks to skip it. In each document:
+Always do this step, without asking, unless the user asks to skip it.
 
 1. Read the toolpaths as [references/review.md](references/review.md) describes, and write down what you find, before you run the checker.
 2. Run the toolpath check (see "Checking existing toolpaths").
 3. Compare the checker's findings with yours, as review.md's "Comparing with the checker" says.
 
-Then compare the two documents.
-`check_cam.py`'s `summary({})` lists every operation's tool, time, cut length, deepest Z, extent and plunge points; run it in each document and compare operation by operation.
-Where the two builds agree, and both pass both checks, the result stands.
-Where they differ, decide which is better from the evidence: the plunge points against what has cleared the stock, `coverage` for pockets cut by passes, the times, and screenshots of the operations that differ.
-The better one is the one that cuts every feature fully, never plunges into uncut copper, keeps the part held and clear of the vise, and, those being equal, takes less time.
-When the evidence does not settle it, for example a faster toolpath against a better finish, show the user the two and ask.
-Then improve whichever way fell short (see "Improving the skill"), and leave the better toolpaths in the user's document: if the recipes' way won, build the user's document again with `"mode": "recipe"` and follow the recipes there too.
+Where a check finds a problem, fix the skill (see "Improving the skill"), then build the part again.
+To compare a build with an earlier one, as after a change to the skill, `check_cam.py`'s `summary({})` lists every operation's tool, time, cut length, deepest Z, extent and plunge points; run it on both and compare operation by operation.
 
 In window machining, take a screenshot with the outline operation selected and check the tabs and the stock position; with stock that fits along one side, select the `Ends` operation instead and check that the end cuts run outside the jaws; to check the vise as well, show `carvera-cam vise top` for the screenshot and hide it again after.
 
 ### 8. Simulate in Fusion
 
 Always do this step, without asking, unless the user asks to skip it.
-In the user's document, once its toolpaths are the ones that stand, follow [references/simulation.md](references/simulation.md): simulate each setup on its own with the machine and read the issues Fusion flags, then simulate all the setups together, save the stock they leave, and compare it with the part (that simulation's issues are ignored: with several setups, Fusion's collision checks are wrong).
+In the user's document, once its toolpaths pass both checks, follow [references/simulation.md](references/simulation.md): simulate each setup on its own with the machine and read the issues Fusion flags, then simulate all the setups together, save the stock they leave, and compare it with the part (that simulation's issues are ignored: with several setups, Fusion's collision checks are wrong).
 Every issue, and every difference between the stock and the part that is not by design (that table lists those), needs attention before the program is used: compare it with the two checks' findings, and fix the toolpath or the skill.
 This step needs Windows, where `sim_ui.ps1` runs; elsewhere, ask the user to run Fusion's simulation with collision checking on each setup.
 
@@ -256,21 +214,20 @@ Report to the user, plainly:
 - the total machining time, and that aluminum runs the same programs at 200% feed and spindle override;
 - every warning from `build`, `generate` and the check, and every feature the generator did not machine;
 - what the simulation flagged in each setup, and where the simulated stock differs from the part beyond the differences by design;
-- how the two ways compared, and any change you made to the skill.
+- any change you made to the skill.
 
 Post-process (write the G-code) only when the user asks.
 
 ## Improving the skill
 
-When the comparison shows one way falling short, fix the skill, not just this part:
+When a check shows the toolpaths falling short, fix the skill, not just this part:
 
-- **The script's way was worse:** fix `scripts/carvera_cam.py`, or the convention in [references/conventions.md](references/conventions.md) it follows.
-- **The recipes' way was worse:** fix the recipe's text, or the primitive it calls.
+- **The generator was wrong:** fix `scripts/carvera_cam.py`, or the convention in [references/conventions.md](references/conventions.md) it follows.
 - **The checker missed something, or flagged something wrong:** fix the rule in `scripts/check_cam.py` and its row in [references/rules.md](references/rules.md).
 - **The written review missed something:** add it to [references/review.md](references/review.md).
 - **The simulation found something both checks missed:** add the rule or the review item that catches it, as [references/simulation.md](references/simulation.md) says.
 
-Then build, generate and check this part both ways again, to show that the fix works and changes nothing else.
+Then build, generate and check this part again, and the other parts the change touches, to show that the fix works and changes nothing else.
 Keep each fix small and about one thing, and never weaken a rule to make a finding go away.
 
 Offer each improvement to the skill's repository, [SchusterLab/fusion-carvera-cam](https://github.com/SchusterLab/fusion-carvera-cam), as a pull request, so that every user gets it.
@@ -318,7 +275,7 @@ Then, unless the user asks to skip it, check the toolpaths by Fusion's simulatio
 
 **After a crash.**
 1. Fusion's window is gone and only a "Fusion Error Report" window is left (`cer_dialog.exe`). Close it; stopping the process is fine.
-2. Unsaved documents are lost apart from Fusion's crash recovery. That includes a throwaway copy, so make a new copy for the recipes' way.
+2. Unsaved documents are lost apart from Fusion's crash recovery.
 3. Before starting Fusion again, clear the recovery entries of throwaway documents, so the Recovered Documents window does not block the next calls (user, 2026-10-17):
    - The entries are in `%LOCALAPPDATA%\Autodesk\Autodesk Fusion 360\<user id>\CrashRecovery`. `AutoSavedFileList.xml` has one element per document, with its `Name`, its `DocGuid` (the document's `creationId`) and its `RecoveryPath`, a `.backup` file.
    - With Fusion stopped, delete each throwaway's element and its `.backup` file. Match a throwaway by the `creationId` you noted when you made it.
@@ -345,7 +302,7 @@ Then, unless the user asks to skip it, check the toolpaths by Fusion's simulatio
 - The tabs follow the part's outline: the largest outer loop of any level face, usually the top or bottom face's, but a floor's on a plate whose top and bottom faces are small pads standing proud of it.
   A part wider than every level face's outer loop, such as one whose widest part is a sloped wall, gets a warning.
 - Stock of the part's own X and Y size works only for a part whose outline is that rectangle, and stock that fits along one side only for a part longer than the jaws' 95.5 mm width the other way, with straight sides where the jaws grip.
-- A pocket open to the side is cut by contour passes along its walls, each starting and ending in the outline cut beside it, or, in stock of the part's size, beside the part, where there is no stock; on a ledge that also opens into a through window, a pass ends in the window instead; on a ledge beside a deeper pocket, the passes run on over that pocket, clear of its walls, to cut the ledge up to its walls. A floor with islands, such as the floor round a boss, is cut by passes round its islands instead, with any runs of walls it has drawn as islands too, closed round the part; so is a floor where a pass along its walls would cut into the part, as where a wall meets the outline at a shallow angle with a sliver of the part outside it; a pass that closes on itself is entered from the pass outside it, which starts in the outline cut, except where no line in reaches it without crossing another pass, as for the second of two islands that one pass goes round: that pass enters through a pocket entry hole, which leaves a dimple in the floor; where every pass closes short of the outline cut, the passes go on farther out until one reaches it. Openings in a floor that other tools cut are patched: the passes run over a slot through a pad, or a hole, instead of round it, and a closed floor beside a floor open to the side, at the same height and separated from it only by a groove the 3.175 mm end mill cannot enter, is cut with that floor's passes, with no entry hole of its own. In stock of the part's own size, `build` refuses a pocket open to a side the vise grips, where the passes would run into the jaws. A pass `build` cannot make is left out with a warning; [references/recipes/open-pocket.md](references/recipes/open-pocket.md) says what to tell the user. The chamfering bit's body keeps it 1.59 mm, its radius, from a wall rising beside an edge, so the last 1.59 mm of an edge that runs into such a wall, as where a pocket's wall meets the part's side, keep their burr.
+- A pocket open to the side is cut by contour passes along its walls, each starting and ending in the outline cut beside it, or, in stock of the part's size, beside the part, where there is no stock; on a ledge that also opens into a through window, a pass ends in the window instead; on a ledge beside a deeper pocket, the passes run on over that pocket, clear of its walls, to cut the ledge up to its walls. A floor with islands, such as the floor round a boss, is cut by passes round its islands instead, with any runs of walls it has drawn as islands too, closed round the part; so is a floor where a pass along its walls would cut into the part, as where a wall meets the outline at a shallow angle with a sliver of the part outside it; a pass that closes on itself is entered from the pass outside it, which starts in the outline cut, except where no line in reaches it without crossing another pass, as for the second of two islands that one pass goes round: that pass enters through a pocket entry hole, which leaves a dimple in the floor; where every pass closes short of the outline cut, the passes go on farther out until one reaches it. Openings in a floor that other tools cut are patched: the passes run over a slot through a pad, or a hole, instead of round it, and a closed floor beside a floor open to the side, at the same height and separated from it only by a groove the 3.175 mm end mill cannot enter, is cut with that floor's passes, with no entry hole of its own. In stock of the part's own size, `build` refuses a pocket open to a side the vise grips, where the passes would run into the jaws. A pass `build` cannot make is left out with a warning: tell the user where copper stays, as the simulated stock shows. The chamfering bit's body keeps it 1.59 mm, its radius, from a wall rising beside an edge, so the last 1.59 mm of an edge that runs into such a wall, as where a pocket's wall meets the part's side, keep their burr.
   An island is any inner loop of the floor with a wall rising from it, such as a pad that a slot cuts through, and the passes keep the tool off its whole loop.
   A floor that no wall rises from, such as a ring between a groove and the outline, has its passes run out from its inner loops.
 - A pocket's inside corners finish at the radius of the smallest end mill that fits: 1 mm diameter leaves R0.5 in a sharp corner.
@@ -366,7 +323,7 @@ Then, unless the user asks to skip it, check the toolpaths by Fusion's simulatio
 ## Re-learning the conventions
 
 `scripts/dump_cam.py` dumps every CAM setup of a Fusion project to JSON (one document per few seconds; call `dump` repeatedly until it prints `ALL DONE`).
-Use it when the lab's practice changes, compare its output with [references/conventions.md](references/conventions.md), and update `carvera_cam.py` and the recipes in [references/recipes/](references/recipes/) to match, so that both ways of cutting a feature keep agreeing.
+Use it when the lab's practice changes, compare its output with [references/conventions.md](references/conventions.md), and update `carvera_cam.py` to match.
 To rebuild the tool library, [assets/carvera-tools.json](assets/carvera-tools.json), run `python -I scripts/tool_library.py` outside Fusion; it fetches Makera's tool files again and remakes the drills from McMaster-Carr's table (see [references/conventions.md](references/conventions.md), "Machine, post and material").
 When the lab's practice changes, update the thresholds at the top of `check_cam.py`, the evidence in [references/rules.md](references/rules.md) and the written review in [references/review.md](references/review.md) to match.
 `scripts/make_test_part.py` builds test parts in new, unsaved documents, for testing changes: `make({})` a 30 × 20 × 4 mm part with one of each feature (`{"angled_notch": true}` adds a notch open to the side with slanted walls, `{"pocket_hole": true}` a hole through the top pocket's floor, and `{"side_slot": false}` leaves out the slot open to the side), `make_open_pockets({})` a 40 × 30 × 4 mm plate with three pockets open to the side, one with a wall 10° off the outline (`{"lip": true}` adds one whose wall meets the outline at 12° with a sliver of the part outside it, and `{"island": true}` a pin in another's floor), and `make_open_floor({})` a 30 × 20 × 3 mm plate whose top floor runs out to every side round a boss and a pin, to build in stock larger than the part.

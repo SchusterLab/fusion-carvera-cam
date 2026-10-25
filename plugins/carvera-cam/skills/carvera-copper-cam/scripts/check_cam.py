@@ -1627,7 +1627,7 @@ def check(args=None):
 
 def summary(args=None):
     """Facts per operation, read from the G-code, for comparing two builds of a
-    part (the script's and the recipes'): the tool, machining time, cut length,
+    part, such as before and after a change: the tool, machining time, cut length,
     deepest Z, the area the cuts span, and every plunge (a straight move down at
     the feed), in each setup's WCS, in mm, with the plunges also in the design's
     frame. Prints them as JSON. args['max_points'] caps the plunges listed per

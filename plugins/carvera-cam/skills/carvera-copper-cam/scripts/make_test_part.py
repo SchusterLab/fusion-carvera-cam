@@ -155,7 +155,7 @@ def make(args=None):
 
 def make_open_pockets(args=None):
     """A throwaway 40 x 30 x 4 mm plate with only pockets open to the side, for
-    the open-pocket recipe: a wide notch on the +X edge whose walls meet the
+    testing the passes that cut them: a wide notch on the +X edge whose walls meet the
     outline about 30 degrees off square (it takes several passes), a channel
     across the part open at both ends (two runs of walls), and a notch on the
     -Y edge whose long wall runs about 10 degrees off the outline, so that the

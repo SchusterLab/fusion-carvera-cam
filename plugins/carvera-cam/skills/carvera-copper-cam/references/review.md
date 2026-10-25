@@ -9,8 +9,7 @@ Each item names the checker rule that covers the same ground, from [rules.md](ru
 - `check_cam.py`'s `summary({})`: for every operation, in run order, its tool and slot, machining time, cut length, deepest Z, the area its cuts span (`xy_extent`) and every plunge (`plunge_points`, a straight move down at the feed), all in its setup's coordinates, in mm; `plunge_points_design` gives the plunges again in the design's frame, the one `analyze` gives the features in.
   Both lists stop at 40 points, and every peck of a drill counts as one, so pass `{"max_points": 1000}` to see them all.
 - `analyze`'s features: the floors' depths, the holes, the windows and the part's size.
-- Screenshots of each setup, with the operation in question selected; SKILL.md's "Follow the recipes" says how to aim the camera and select one.
-- For a pocket cut by passes, `coverage({"floor": i})`.
+- Screenshots of each setup, with the operation in question selected; SKILL.md's "Look at the part in Fusion" says how to aim the camera and select one.
 
 ## What to look for
 
@@ -24,7 +23,7 @@ Each item names the checker rule that covers the same ground, from [rules.md](ru
    After an edit to an operation, look hardest at what it cuts: a changed height, stock to leave, tool or compensation moves the cut off the model, and a suppressed or deleted operation leaves its feature uncut.
    An operation's deepest Z should match its feature: a pocket's floor, a rough pass 0.2 mm above it, a through cut 0.5 mm past the far face.
    Nothing should go deeper than 0.5 mm below the stock's bottom, besides a drill's point: the main entry hole is drilled through the stock, 0.5 mm past it with the tip through, so that the bottom setup can enter it from the other side; with one setup, the through cuts, the outline between tabs and the tab cut also go 0.5 mm below the stock's bottom, since the part's bottom face is the stock's.
-   For a pocket cut by passes, `coverage` must report no uncut area; for others, the screenshot should show the toolpath filling the pocket.
+   The screenshot should show the toolpath filling each pocket; the simulated stock compared with the part ([simulation.md](simulation.md)) shows any floor left uncut, as between the passes of a pocket open to the side.
 3. **The order makes sense** (E4, N6).
    Drills come before the cuts that enter their holes, the outline cut before anything that enters from its groove, every roughing pass before its finishing pass, the deburr last but for the tab cut, and the tab cut last of all.
 4. **The tools are right** (N1, N3, N6).
