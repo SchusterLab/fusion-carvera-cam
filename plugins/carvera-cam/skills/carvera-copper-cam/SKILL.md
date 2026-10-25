@@ -183,6 +183,7 @@ If it prints `"status": "running"`, call it again; it resumes where it stopped.
 `{'limit': 8}` starts at most 8 operations per call, which keeps each call short on a large part.
 It prints `"status": "partial"`, with the operations not yet generated under `pending`, until every operation has a toolpath.
 When done, it reports every operation. If Fusion discards thread-mill passes, it lowers that operation's pass count below the one `build` computed from `threads.toml` and lists the change under `adjusted`; report any such change to the user.
+It also generates each "Deburr pocket floors" again at a few shallower tip offsets than the one `build` set, and keeps the one that cuts the most edges by rule DB1's test, listing any change under `adjusted` too (conventions.md, the operation order's step 11).
 Any operation with `"toolpath": false`, `hasError` or `hasWarning` needs attention before the program is used.
 
 ### 7. Check and review
@@ -263,22 +264,41 @@ Then, unless the user asks to skip it, check the toolpaths by Fusion's simulatio
 - A modal window, such as Recovered Documents after a crash, blocks every call, read-only ones included: each one times out. Ask the user to close it.
 
 **Long calls.**
-- A call that runs past about a minute times out, and one that keeps Fusion busy much longer can crash it. One call that ran `build` and then `generate` on the sample puck did both.
-- Keep `build`, `generate` and `check` in separate calls, and let `generate` resume over several.
+- A call that runs past about a minute times out, but its script goes on running in Fusion, and the next call waits behind it. Send one call at a time, and after a timeout, wait for the script to finish before sending another.
+- A call that keeps Fusion busy much longer can crash it. One call that ran `build` and then `generate` on the sample puck did both. Keep `build`, `generate` and `check` in separate calls, and let `generate` resume over several.
+- Don't make Fusion regenerate one operation over and over in a call, as when trying a parameter at several values: a call that regenerated three chamfers at nine tip offsets each kept Fusion busy for 45 minutes, until it was stopped (2026-10-25). Bound every wait for a toolpath, as `generate` does, and try a few values per call.
+- A call that may run past a minute, such as `build` on a large part, should write what it prints to a file, with `faulthandler` on, so that a crash still leaves the Python line it crashed at:
+
+  ```python
+  import faulthandler, io, contextlib
+  LOG = r'<scratch folder>\build'
+
+  def run(_context: str):
+      faulthandler.enable(open(LOG + '_fault.txt', 'w'), all_threads=True)
+      out = io.StringIO()
+      with contextlib.redirect_stdout(out):
+          runpy.run_path(SCRIPTS + r'\carvera_cam.py')['build']({...})
+      open(LOG + '.txt', 'w', encoding='utf-8').write(out.getvalue())
+      faulthandler.disable()
+  ```
+
+  Then wait for `build.txt` outside Fusion, with a shell loop that also stops when Fusion is gone (`tasklist | grep -i fusion360`).
 
 **A failed call.**
 - When a script fails, Fusion undoes what it did. A script that made the document's CAM product and then failed, such as a `build` that stopped on the part's shape, or a call that ran `build` and then failed in code of its own, leaves the document with no working workspace: every later `build` in it fails with "InternalValidationError : pCurrentSession". Close the document without saving and make a new copy.
 - `build` checks the stock against the part before it makes the CAM product, so a stock it refuses does not do this.
 
-**After a crash.**
-1. Fusion's window is gone and only a "Fusion Error Report" window is left (`cer_dialog.exe`). Close it; stopping the process is fine.
-2. Unsaved documents are lost apart from Fusion's crash recovery.
-3. Before starting Fusion again, clear the recovery entries of throwaway documents, so the Recovered Documents window does not block the next calls (user, 2026-10-17):
-   - The entries are in `%LOCALAPPDATA%\Autodesk\Autodesk Fusion 360\<user id>\CrashRecovery`. `AutoSavedFileList.xml` has one element per document, with its `Name`, its `DocGuid` (the document's `creationId`) and its `RecoveryPath`, a `.backup` file.
-   - With Fusion stopped, delete each throwaway's element and its `.backup` file. Match a throwaway by the `creationId` you noted when you made it.
-   - The documents open in a running Fusion have entries too (`Fusion_PID` is that process's id), and stopping Fusion turns them into recoveries. Clear an entry for the user's own document only if it holds no unsaved work of theirs, for example when it was opened just for this skill and only the skill changed it. Otherwise ask the user first.
-4. Start Fusion from its Start-menu shortcut, `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Autodesk\Autodesk Fusion.lnk`. A `FusionLauncher.exe` under `%LOCALAPPDATA%\Autodesk\webdeploy\production` may belong to an older version, and fails with "Configuration file … is missing or incomplete".
-5. Wait until the window title no longer starts with "Initializing" before calling the MCP tools.
+**A crash or a hang.**
+`scripts/fusion_restart.ps1` (Windows only) tells what state Fusion is in, and starts it again (user, 2026-10-25: recovering from a crash is part of the skill).
+1. When calls keep timing out, or the file a long call writes never appears, run `powershell -ExecutionPolicy Bypass -File fusion_restart.ps1 -Status` twice, a few seconds apart:
+   - Fusion runs and its CPU seconds climb: it is busy, so wait. A window that does not respond only means that a script is still running.
+   - Fusion runs, but its CPU seconds hardly move for minutes: it hangs. Stopping it loses every unsaved document apart from its crash recovery, so ask the user first, unless only throwaway copies are open.
+   - Fusion is gone, or `error_dialog` is true (the "Fusion Error Report" window, `cer_dialog.exe`): it crashed. Unsaved documents are lost apart from their crash recovery.
+2. Restart it with `fusion_restart.ps1 -Throwaway <creationId>,<creationId>`, adding `-Stop` for a Fusion that hangs. It closes the error report, clears the crash-recovery entries of the throwaway copies you name, by the `creationId` you noted when you made each, starts Fusion from its Start-menu shortcut, and waits until it is ready. Otherwise the Recovered Documents window opens on start and blocks every call (user, 2026-10-17).
+   - It lists every other recovery entry under `kept`, and leaves it. Such an entry may hold the user's own unsaved work: ask the user what to do with it before the next call, since its window blocks every call until someone closes it.
+   - The entries are in `%LOCALAPPDATA%\Autodesk\Autodesk Fusion 360\<user id>\CrashRecovery`. `AutoSavedFileList.xml` has one element per document, with its `Name`, its `DocGuid` (the document's `creationId`) and its `RecoveryPath`, a `.backup` file. The documents open in a running Fusion have entries too (`Fusion_PID` is that process's id), and stopping Fusion turns them into recoveries.
+3. Open the part again, make a new throwaway copy where one was lost, and go on from the step that crashed.
+4. If it was a call that crashed, read the `faulthandler` file it wrote: its first lines name the Python line Fusion crashed at. A crash that comes back at the same line is a bug in the skill: fix it (see "Improving the skill"). It may follow an update: Fusion updates itself when it starts, and the version number (`app.version`) and the `webdeploy` folder in the trace change. Fusion 2706.1.14 crashed with an access violation where `build` set a height's reference geometry, or an open chain of sketch curves, on an operation's input, which the version before had accepted; `build` now sets the selections and the heights taken from geometry on the operation once it is made (2026-10-25). To find such a line, log each operation's name to a file before `Builder.make` makes it, and apply a doubtful selection to a throwaway operation one variant at a time, logging each before Fusion runs it.
 
 **API facts the skill relies on.**
 - A Part design holds only one component, so `build` switches it to Hybrid (`design.designIntent`).

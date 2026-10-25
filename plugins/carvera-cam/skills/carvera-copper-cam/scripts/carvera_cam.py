@@ -29,6 +29,7 @@ import json
 import math
 import os
 import re
+import runpy
 import time
 import tomllib
 import urllib.request
@@ -1466,15 +1467,24 @@ class Builder:
         if skip:
             oi.generationMode = skip[0]
         _feed_height(oi.parameters)
+        # The geometry, the selections and the heights taken from geometry (a
+        # list is a height's reference: its mode and offset go with it), is set
+        # on the operation once it is made: set on its input, Fusion 2706.1.14
+        # crashed with an access violation at a height's reference or at an open
+        # chain of sketch curves (2026-10-25)
+        later = {k[:-len('ref')] for k, v in params.items() if isinstance(v, list)}
         for k, v in params.items():
-            if not isinstance(v, list):
+            if not any(k.startswith(h) for h in later):
                 _set(oi.parameters, k, v)
-        for k, v in params.items():  # a list is a height's reference geometry
-            if isinstance(v, list):
-                oi.parameters.itemByName(k).value.value = v
-        if select:
-            select(oi.parameters)
         op = setup.operations.add(oi)
+        for k, v in params.items():
+            if any(k.startswith(h) for h in later) and not isinstance(v, list):
+                _set(op.parameters, k, v)
+        for k, v in params.items():
+            if isinstance(v, list):
+                op.parameters.itemByName(k).value.value = v
+        if select:
+            select(op.parameters)
         self.log.append('%s / %s [%s] T%s %s' % (setup.name, name, strategy,
                         tool.parameters.itemByName('tool_number').expression, desc))
         return op
@@ -4346,13 +4356,12 @@ def _patch(comp, occ, sk, name):
 
 def _at_tab(which, face, offset=0.0):
     """A top or bottom height at a tab face, `offset` mm along the setup's tool axis,
-    and the selector that sets the face. None without the tab bodies."""
+    and None, where a selector once set the face: Builder.make sets it, as a
+    list, once the operation is made. ({}, None) without the tab bodies."""
     if face is None:
         return {}, None
-
-    def f(params):
-        params.itemByName(which + 'Height_ref').value.value = [face]
-    return {which + 'Height_mode': "'from point'", which + 'Height_offset': '%gmm' % offset}, f
+    return {which + 'Height_mode': "'from point'", which + 'Height_offset': '%gmm' % offset,
+            which + 'Height_ref': [face]}, None
 
 
 def _direction(pc, a, b):
@@ -6541,18 +6550,18 @@ def _side_ops(b, setup, a, side, plan, warnings):
         def chamfer_tip(depth, what, faces=None):
             # the point's offset below a chamfer at `depth` mm below the face;
             # the tabs count only for `faces` with a falling edge near a tab.
-            # Floors whose edges fall away only round openings in them (holes,
-            # windows, deeper pockets) take the point as deep as there is room:
-            # the deeper the point, the farther in the bit's axis, and the
-            # nearer a wall beside the rim it reaches it (user, 2026-10-24: 0.5 mm
-            # left part of the rims of holes beside a pocket's walls). A through
-            # opening sets no depth; a hole's width does: the axis lies the point's
+            # Pocket floors take the point as deep as there is room: the deeper
+            # the point, the farther out over the drop the bit's axis, and the
+            # nearer a wall beside the edge it reaches it (user, 2026-10-24: 0.5 mm
+            # left part of the rims of holes beside a pocket's walls; 2026-10-25:
+            # at 0.5 mm Fusion found no toolpath at all along the side edges of
+            # sample-lid-with-tabs-v2's 3.4 mm slots, which open at the part's
+            # sides, and from 0.64 mm it does). A through opening or the part's
+            # side sets no depth; a hole's width does: the axis lies the point's
             # offset plus the chamfer's width in from the rim, and Fusion keeps
             # the bit its clearance off the hole's far side (it refused 0.9 mm in
             # a 2.2 mm hole, "the given lead parameters would cause a collision")
-            inner = faces is not None and all(
-                not lp.isOuter for g in faces for lp in g.loops for ce in lp.coEdges
-                if _falls_away(g, ce))
+            inner = faces is not None
             ids = {g.tempId for g in faces or []}
             rims = [h for h in holes if (lambda r: r is not None and r.face.tempId in ids)(
                 _hole_ends(h, top)[0])]
@@ -7157,6 +7166,60 @@ def _fit_thread_passes(cam, adjusted):
                 adjusted.append('%s: %s passes' % (o.name, p.expression))
 
 
+DEBURR_TIPS = (0.9, 0.7, 0.5, 0.3, CHAMFER_TIP_MIN)  # tried below build's, in mm
+
+
+def _fit_deburr(cam, adjusted):
+    """Give each pocket floor's deburr the tip offset that deburrs the most.
+
+    build sets the point as deep as there is room, which takes the bit's axis
+    farthest out over the drop, clear of the walls beside the edge (the side
+    edges of sample-lid-with-tabs-v2's slots had no toolpath at 0.5 mm, and do
+    from 0.64 mm). But over a narrow drop, such as a groove, the deeper the
+    point, the nearer the bit's far side comes to the groove's other wall, and
+    Fusion leaves that edge out: on copper-can-lid-6port's 0.1 mm floors, 0.8 mm
+    left out two edges on each side that 0.5 mm cut (user, 2026-10-25: adjust
+    the offset so that the deburr works). So each is generated again at the
+    offsets in DEBURR_TIPS below build's, and keeps the one whose G-code cuts the
+    most of the setup's deburr edges, by check_cam's DB1 test, the deepest of
+    those; generate() lists each change. The toolpath's length would not do: a
+    hole's rim is cut along a circle about the bit's axis, which is the smaller
+    the deeper the point. An attribute marks each one done, so that a resumed
+    generate() skips it.
+    """
+    todo = [o for s in cam.setups if s.name.endswith(SETUP_TAG) for o in s.allOperations
+            if o.strategy == 'chamfer2d' and o.name.startswith('Deburr pocket floors')
+            and not o.attributes.itemByName('carvera-cam', 'tip-fitted')
+            and (o.hasToolpath or o.hasWarning or o.hasError)]  # generated
+    if not todo:
+        return
+    check = runpy.run_path(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'check_cam.py'))
+    post = _post(_fetch_community([])['post'])
+    edges = {}
+    for o in todo:
+        s = o.parentSetup
+        if s.name not in edges:
+            edges[s.name] = check['_deburr_edges'](s)
+        p = o.parameters.itemByName('chamferTipOffset')
+        top = round(p.value.value * 10, 3)  # mm
+        tried = []
+        for t in [top] + [x for x in DEBURR_TIPS if x < top - 0.05]:
+            if t != top:
+                p.expression = '%gmm' % t
+                if not _wait(cam.generateToolpath(o), 30):
+                    break
+            hits = check['deburr_hits'](cam, o, post, edges[s.name]) if o.hasToolpath else 0
+            tried.append((t, hits))
+        most = max(h for _, h in tried)
+        best = next(t for t, h in tried if h == most) if most else top
+        if '%gmm' % best != p.expression:
+            p.expression = '%gmm' % best
+            _wait(cam.generateToolpath(o), 30)
+        if best != top:
+            adjusted.append('%s: tip offset %g mm, not %g mm, deburrs the most' % (o.name, best, top))
+        o.attributes.add('carvera-cam', 'tip-fitted', '%g' % best)
+
+
 def _fit_predrill(cam, adjusted):
     """Move a pocket's entry 0.01 mm when Fusion finds it unusable.
 
@@ -7217,6 +7280,7 @@ def generate(args=None):
             return
     _fit_thread_passes(cam, adjusted)
     _fit_predrill(cam, adjusted)
+    _fit_deburr(cam, adjusted)
     report = []
     pending = []
     for s in cam.setups:

@@ -940,6 +940,47 @@ def _raw_stock_edge(pts, box, top, tol=0.01):
                for x, y, z in pts)
 
 
+def _points_hit(pts, rising, cones, reach):
+    """How many of an edge's sample points a chamfering bit's cone passes
+    through, along the cuts in `cones`, (operation, cone, cuts) each; a point
+    within `reach` of a wall rising from the face counts, since the bit's body
+    meets the wall before its point reaches the edge."""
+    n = 0
+    for px, py, pz in pts:
+        if any(math.hypot(px - wx, py - wy) < reach for wx, wy, _ in rising):
+            n += 1
+            continue
+        hit = False
+        for o, (tip_r, k, rad), cuts in cones:
+            for m in cuts:
+                if min(m[1], m[4]) > px + rad or max(m[1], m[4]) < px - rad or \
+                        min(m[2], m[5]) > py + rad or max(m[2], m[5]) < py - rad:
+                    continue
+                d, z = _seg_dist(px, py, m)
+                h = pz - z
+                if h > 0 and d < min(rad, tip_r + h * k) - 0.02:
+                    hit = True
+                    break
+            if hit:
+                break
+        n += hit
+    return n
+
+
+def deburr_hits(cam, o, post, edges=None):
+    """How many sample points of its setup's deburr edges the chamfering
+    operation `o` cuts, by DB1's test on its own G-code; `edges` is
+    _deburr_edges' list for the setup, to reuse across calls. carvera_cam's
+    generate() calls it to pick each pocket floor deburr's tip offset."""
+    s = o.parentSetup
+    text = _post_setup(cam, s, [o], post, tempfile.mkdtemp(prefix='carvera-deburr-'))
+    cuts = [m for _, moves in parse_gcode(text) for m in moves
+            if m[0] != 0 and None not in m[1:]]
+    cone = _chamfer_cone(dict(_tool(o), params=o.parameters))
+    edges = edges if edges is not None else _deburr_edges(s)
+    return sum(_points_hit(pts, rising, [(o, cone, cuts)], cone[2]) for pts, rising in edges)
+
+
 def _check_chamfers(rep, setup, chamfers, to_world, box=None, top=None):
     """DB1: every edge _deburr_edges lists is chamfered: at each of its sample
     points, a chamfering bit's cone in this setup passes through it. Fusion
@@ -956,25 +997,7 @@ def _check_chamfers(rep, setup, chamfers, to_world, box=None, top=None):
     for pts, rising in _deburr_edges(setup):
         if _raw_stock_edge(pts, box, top):
             continue
-        bad = 0
-        for px, py, pz in pts:
-            if any(math.hypot(px - wx, py - wy) < reach for wx, wy, _ in rising):
-                continue
-            hit = False
-            for o, (tip_r, k, rad), cuts in cones:
-                for m in cuts:
-                    if min(m[1], m[4]) > px + rad or max(m[1], m[4]) < px - rad or \
-                            min(m[2], m[5]) > py + rad or max(m[2], m[5]) < py - rad:
-                        continue
-                    d, z = _seg_dist(px, py, m)
-                    h = pz - z
-                    if h > 0 and d < min(rad, tip_r + h * k) - 0.02:
-                        hit = True
-                        break
-                if hit:
-                    break
-            bad += not hit
-        if bad:
+        if _points_hit(pts, rising, cones, reach) < len(pts):
             missed.append(pts[len(pts) // 2])
     if missed:
         x, y, z = missed[0]
