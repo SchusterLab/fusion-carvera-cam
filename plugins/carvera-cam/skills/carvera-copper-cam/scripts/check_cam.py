@@ -318,7 +318,7 @@ def _check_op(rep, s, o, t, earlier, lab, threaded=frozenset()):
                     width=width)
     # a finishing pass: a single-depth pass after a multi-depth roughing pass of
     # the same kind by an end mill of the same size (as in D4); only the 3.175 mm
-    # end mill takes a finishing pass (user, 2026-10-24)
+    # end mill takes a finishing pass
     if strat in ('pocket2d', 'contour2d') and milling and t['type'] != 'chamfer mill' \
             and multi is False and not rest and d >= 3.175 - 1e-3:
         rough = [e for e in earlier if e['strategy'] == strat and e['multi']

@@ -341,7 +341,7 @@ def simulate(args):
     offsets differ and reports collisions with the fixture that the setups' own
     simulations do not have. Save the stock from all the setups together, which leaves
     the part they cut between them; ignore that simulation's issues, which only the
-    collision checks get wrong (user, 2026-10-25). With a simulation open, Fusion refuses
+    collision checks get wrong. With a simulation open, Fusion refuses
     this script (it is not read-only): stop() that one first, in a call of its own. The
     simulation opens after the script returns; sim_ui.ps1 then reads it.
     """

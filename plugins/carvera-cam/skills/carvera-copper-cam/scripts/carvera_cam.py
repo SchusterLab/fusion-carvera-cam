@@ -591,8 +591,7 @@ def _tab_height(a, band, overlap, requested=None, tab_points=None, lowest=False)
     of every opening still comes first: a pocket open to the side is entered
     from the outline cut beside it, which goes only down to the tab band, so a
     band clear of the openings only beside the tabs leaves the others' plunges
-    in uncut stock (the can lid's corner notches, once its tabs were spread
-    round it). With lowest (one side, where the tab cut comes from the top
+    in uncut stock. With lowest (one side, where the tab cut comes from the top
     too), the band sits on the part's bottom, or the lowest height above it
     clear of the openings."""
     if tab_points is not None and requested is None:
@@ -638,8 +637,7 @@ def _tab_height(a, band, overlap, requested=None, tab_points=None, lowest=False)
 def _join_floors(floors):
     """Pocket floors at one height that an opening the 3.175 end mill cannot
     enter separates, such as a groove a small end mill cuts: the end mill
-    cuts them as one floor, running over the opening ("patch" it, user,
-    2026-10-24). A closed floor joined so to one floor open to the side is
+    cuts them as one floor, running over the opening. A closed floor joined so to one floor open to the side is
     cut with that floor's passes, which start on the outline cut's path, so it
     needs no entry hole of its own; its loops along the opening, and the open
     floor's, are left out of the floor the passes cut (see _Joined). Sets
@@ -1470,7 +1468,7 @@ class Builder:
         # list is a height's reference: its mode and offset go with it), is set
         # on the operation once it is made: set on its input, Fusion 2706.1.14
         # crashed with an access violation at a height's reference or at an open
-        # chain of sketch curves (2026-10-25)
+        # chain of sketch curves
         later = {k[:-len('ref')] for k, v in params.items() if isinstance(v, list)}
         for k, v in params.items():
             if not any(k.startswith(h) for h in later):
@@ -1495,7 +1493,7 @@ class Builder:
 # order _side_ops made them in, as the conventions set it (a pocket's entry hole
 # before the pocket, the drills in a floor before its finishing pass, a rest
 # pass after the cuts it follows); the others may change places, so that each
-# tool cuts as much as it can before the next tool change (user, 2026-10-24).
+# tool cuts as much as it can before the next tool change.
 
 FOOT_H = 0.025  # cm
 _FOOT = {'outline': None}  # the part's outline (cm), for the outline cut's footprint
@@ -2238,6 +2236,16 @@ def _open_walls(face):
     return runs, reach
 
 
+def _bisect(test, lo, hi, n=40, first=None):
+    """(lo, hi) narrowed n times round where test(x) stops being what it is
+    at lo (`first`, when the caller knows it)."""
+    first = test(lo) if first is None else first
+    for _ in range(n):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if test(mid) == first else (lo, mid)
+    return lo, hi
+
+
 def _islands(face):
     """The islands in a pocket's floor: each inner loop with a wall rising from
     the floor along any of its edges, as its co-edges in loop order, such as a
@@ -2245,7 +2253,7 @@ def _islands(face):
     some of the loop's walls fall away instead, to a slot, a hole or a deeper
     pocket, as round a pad a slot cuts through, the island is the loop with
     each opening bridged by a line (see _patched_island): the passes run on
-    over the openings, as if they were patched (user, 2026-10-24). A
+    over the openings, as if they were patched. A
     floor with no wall rising from it anywhere, such as a ring between a
     groove and the outline, has every inner loop as an island, so that passes
     run out from them."""
@@ -2511,14 +2519,7 @@ def _island_passes(sk, walls, d, ring, face):
             return _outside_ring(ring, p.x, p.y) - TOOL_R <= 0 and not in_other(i, p.x, p.y)
 
         def cross(c, t0, t1):
-            s0 = ok_at(c, t0)
-            for _ in range(40):
-                tm = (t0 + t1) / 2
-                if ok_at(c, tm) == s0:
-                    t0 = tm
-                else:
-                    t1 = tm
-            return (t0 + t1) / 2
+            return sum(_bisect(lambda t: ok_at(c, t), t0, t1)) / 2
         flat = []
         for c, a_ in loop:
             b_ = pts(c)[1] if near(pts(c)[0], a_) else pts(c)[0]
@@ -2806,7 +2807,7 @@ def _crosses(a_, b_, polys):
 def _join_closed(sk, levels, step, rising, ring):
     """Join each closed pass round islands (see _island_passes) into a chain
     that starts on the outline cut's path, so that the end mill enters there
-    rather than down a hole drilled in the floor (user, 2026-10-21): the tool
+    rather than down a hole drilled in the floor: the tool
     cuts a pass farther out, then follows a line from it into the closed
     pass, which is opened where the line meets it, and goes round. Fusion
     orders the chains of a contour as it likes, so the pass farther out must
@@ -3253,9 +3254,7 @@ def _pass_path(sk, run, walls, d, ring, face, windows=()):
                 lo = L
             if hi is None:
                 continue
-            for _ in range(30):
-                mid = (lo + hi) / 2
-                lo, hi = (mid, hi) if g(mid) < 0 else (lo, mid)
+            lo, hi = _bisect(lambda L: g(L) < 0, lo, hi, 30, True)
             q = adsk.core.Point3D.create(x0 + hi * ux, y0 + hi * uy, 0)
             # an end into a window must not first cross the outline cut's path
             if g is in_window and any(f(hi * k / 50) >= 0 for k in range(51)):
@@ -3294,10 +3293,7 @@ def _pass_path(sk, run, walls, d, ring, face, windows=()):
                 chain.pop(0)
                 c.deleteMe()
                 continue
-            lo, hi = ts[k - 1], ts[k]
-            for _ in range(40):
-                mid = (lo + hi) / 2
-                lo, hi = (mid, hi) if g(mid) > 0 else (lo, mid)
+            lo, hi = _bisect(lambda tt: g(tt) > 0, ts[k - 1], ts[k], 40, True)
             ok, q = ev.getPointAtParameter(hi)
             # redraw the curve from its far end to q (SketchCurve.split leaves
             # some curves whole, without an error)
@@ -3385,11 +3381,7 @@ def _pass_path(sk, run, walls, d, ring, face, windows=()):
             i, tb = smp[b][0], smp[b][1]
             ta = smp[a][1] if smp[a][0] == i else walk[i][1]
             g = lambda t: (lambda q: outside(q.x, q.y) - TOOL_R)(at(i, t)) > 1e-4
-            ga = g(ta)
-            for _ in range(40):
-                mid = (ta + tb) / 2
-                ta, tb = (mid, tb) if g(mid) == ga else (ta, mid)
-            return i, (ta + tb) / 2
+            return i, sum(_bisect(g, ta, tb)) / 2
 
         def pull(x, y):  # (x, y) beyond the path, moved square onto it
             dd, nx, ny = nearest(x, y)
@@ -3616,9 +3608,8 @@ DRILL = {  # every drill op, entry holes included, pecks as threads.toml says
     'chipBreakDistance': '%gmm' % THREAD_COMMON['drill']['chip_break'],
 }
 # The most a rough bore takes off the wall: two 0.3 mm passes, as the lab bores
-# its 4.2 mm holes. A wider hole is pocketed, as the lab cuts its 7 mm holes
-# (hanger-for-chris, 2026-10-18): a 7 mm bore takes seven passes and four times
-# as long.
+# its 4.2 mm holes. A wider hole is pocketed, as the lab cuts its 7 mm holes: a
+# 7 mm bore takes seven passes and four times as long.
 BORE_MAX_RADIAL = 0.6
 BORE = {
     'tolerance': '0.01mm',
@@ -3647,7 +3638,7 @@ FACE_MARGIN = ENDMILL_D + 5 * POCKET_TOL
 # Every operation rapids down to this far above its top height and feeds from
 # there; the top height sits at the stock the operation starts on. Fusion's
 # default, 5 mm, fed each entry and each drilled hole through 5 mm of air at the
-# plunge or drill feed (user, 2026-10-17).
+# plunge or drill feed.
 FEED_HEIGHT = 1.0  # mm
 
 
@@ -3764,7 +3755,7 @@ def _small_fits(radius, depth):
 
 def _small_choice(plan, fits):
     """The small end mill (desc, d) for a cut any of `fits` can make, or (None,
-    None). The part uses as few small end mills as it can (user, 2026-10-21):
+    None). The part uses as few small end mills as it can:
     build's first dry run collects every cut's `fits` in plan['small_needs'],
     _small_set picks the fewest end mills that serve them all, and each cut
     then takes the largest of those that fits it."""
@@ -4205,14 +4196,9 @@ def _setup(cam, name, body, machine, stock, top, x_axis, vise=None, warnings=Non
 
 
 # ------------------------------------------------------- tabs and entries
-# The lab holds the part with four bridges ("tabs") at mid-thickness and enters
-# every cut through holes the T1 drill makes first, at points in a sketch:
-#   - one point just outside the outline at a tab edge, drilled through the
-#     stock: the entry of both facing pockets and both outline contours;
-#   - a point at the start of each other "corner chain" (the outline between
-#     two tabs), drilled through the tab band;
-#   - a point inside each pocket, drilled to the pocket floor.
-# build() redraws that sketch, named LAYOUT_SKETCH, every time it runs.
+# The tabs, the entry points and the corner chains, kept in a sketch that
+# build() redraws every time (LAYOUT_SKETCH); see conventions.md, "Entry
+# holes" and "Holding tabs".
 
 LAYOUT_SKETCH = 'carvera-cam'
 VISE_PREFIX = LAYOUT_SKETCH + ' vise '
@@ -4939,7 +4925,7 @@ def _make_layout(design, a, plan, warnings):
         he = None if f['opening'] else _hole_entry(f, a, angle)
         if he is not None:
             # at a hole in the floor, T1's point going on down the hole until its
-            # cone meets the hole's edge: no dimple (user, 2026-10-24)
+            # cone meets the hole's edge: no dimple
             (x, y), i, below = he
             pocket_entries[f['face'].tempId] = {
                 'point': sk.sketchPoints.add(adsk.core.Point3D.create(x, y, 0)),
@@ -5044,7 +5030,7 @@ def _make_layout(design, a, plan, warnings):
                       'end': line.endSketchPoint, 'fed': fed})
     # closed pockets with no room for the 3.175's entry hole and no slot into
     # them: a small end mill pockets each, entering down a hole drilled as wide
-    # as itself at the point farthest from the walls (user, 2026-10-21); which
+    # as itself at the point farthest from the walls; which
     # of the end mills that fit is chosen with the part's other small cuts (see
     # _small_choice)
     by_slot = {g['face'].tempId for sl in slots for g in [sl['floor']] + sl['fed']}
@@ -5064,14 +5050,9 @@ def _make_layout(design, a, plan, warnings):
             small_pockets[k] = {'point': sk.sketchPoints.add(adsk.core.Point3D.create(x, y, 0)),
                                 'side': f['side'], 'depth': f['depth'], 'tools': tools}
     # pockets open to the side, cut by contour passes along their walls, 0.6 x
-    # the end mill's diameter apart, as many as cover the floor. Each pass runs
-    # on at both ends to the outline cut's path, where the outline cut has
-    # cleared the stock for its plunge, or at one end into a through window.
-    # A pass never ends anywhere else: it would plunge into uncut copper; one
-    # it cannot make is left out with a warning. A pocket open on two sides
-    # that are not next to each other, such as a channel across the part, has
-    # two runs of walls, each with passes of its own. Rule E4 cannot see a floor
-    # left uncut, so _gap_levels adds a pass where the passes leave a strip.
+    # the end mill's diameter apart (conventions.md, "Entry holes"); a pass it
+    # cannot make is left out with a warning. Rule E4 cannot see a floor left
+    # uncut, so _gap_levels adds a pass where the passes leave a strip.
     # The shapes tested: walls meeting the outline steeply or at a shallow
     # angle, islands with or without walls beside them, ledges open to a
     # window, and ledges beside a deeper pocket; look at the toolpaths of
@@ -5465,53 +5446,41 @@ def _slot_order(needed):
 
 
 class _Side:
-    """Roughing, finishing, small-tool, hole, thread and chamfer ops for one side,
-    in the order the lab's conventions give (references/conventions.md,
-    "Operation order"); build then runs them in the order with the fewest tool
-    changes (_run_order). The bottom setup makes the same operations for its
-    side's features, but no Ends, Tab entry holes or Outline between tabs; no
-    main entry hole when the top one goes through the stock; an outline down to
-    the tab band's bottom; and no windows or through holes, which the top setup
-    cut through the part. The tab cut goes in the last setup, in its own
-    program.
-
-    Every height comes from the part's geometry (see at()), and every offset is
-    one of the lab's fixed numbers: the 0.2 mm the rough face and the rough
-    pockets leave (FACE_ALLOWANCE, POCKET_FLOOR_ALLOWANCE), the 0.5 mm a cut
-    breaks through past a face, and threads.toml's thread offsets. The one
-    exception is a cut deeper than T1 reaches, which goes down in stages
-    measured from the stock top (_stage_plan): each stage is drilled as deep as
-    T1 reaches and milled down to there, and its name gives its depths
-    ("Outline 0 to 6.9 mm"). The lab's parts are mostly thinner than that.
-
-    The setup's operations are made stage by stage, each a method, in the
-    order they run; the state they share is in attributes."""
+    """One setup's operations, made in the order conventions.md's "Operation
+    order" gives; build then runs them in the order with the fewest tool
+    changes (_run_order). Every height comes from the part's geometry (see
+    at()), and every offset is one of the lab's fixed numbers, but for cuts
+    deeper than T1 reaches, which go down in stages (_stage_plan). The stages
+    are methods, which _side_ops calls in order; the state they share is in
+    attributes."""
 
     def __init__(self, b, setup, a, side, plan, warnings):
-        self.b, self.setup, self.a, self.side, self.plan, self.warnings = b, setup, a, side, plan, warnings
-        self.body = self.a['body']
-        self.top = self.side == 'top'
-        is_side = lambda f: f['side'] == self.side
-        self.holes = [h for h in self.a['holes'] if is_side(h)]
-        self.floors = [f for f in self.a['floors'] if is_side(f)]
-        self.face = self.a['top_face'] if self.top else self.a['bottom_face']
-        self.thickness = self.a['ztop'] - self.a['zbot']
-        self.taps = self.plan['taps']
-        self.tab = self.plan['tab']
+        self.b, self.setup, self.a = b, setup, a
+        self.side, self.plan, self.warnings = side, plan, warnings
+        self.body = a['body']
+        self.top = side == 'top'
+        is_side = lambda f: f['side'] == side
+        self.holes = [h for h in a['holes'] if is_side(h)]
+        self.floors = [f for f in a['floors'] if is_side(f)]
+        self.face = a['top_face'] if self.top else a['bottom_face']
+        self.thickness = a['ztop'] - a['zbot']
+        self.taps = plan['taps']
+        self.tab = plan['tab']
         # stock above the part's face this setup machines: the top margin, or the bottom one
-        self.m = self.plan['margin_top'] if self.top else self.plan['margin_bottom']
+        self.m = plan['margin_top'] if self.top else plan['margin_bottom']
         self.ops = {'main': [], 'tabs': []}
         # faced only where the stock stands above the part's face
-        self.facing = [f for f in self.floors if f['role'] == 'face'] if self.plan['face'] and self.m > 1e-6 else []
+        self.facing = ([f for f in self.floors if f['role'] == 'face']
+                       if plan['face'] and self.m > 1e-6 else [])
         # the material the rough face leaves on the face, until the finishing face
         self.allow = FACE_ALLOWANCE if self.facing else 0.0
         # the stock's highest point in this setup, in mm above the part's face: the
         # stock top until the first face, then the top of what the latest face left.
         # face_op updates it; the operations are made in the order they run.
-        self.patch = (self.plan.get('face_patches') or {}).get(self.side)
+        self.patch = (plan.get('face_patches') or {}).get(side)
         self.high = [self.m if self.facing else 0.0]
         # the part's face on the far side, where windows and through holes come out
-        far_face = self.a['bottom_face'] if self.top else self.a['top_face']
+        far_face = a['bottom_face'] if self.top else a['top_face']
         def through_part(which):
             if far_face is None:
                 return (_bottom_below_part_top if which == 'bottom' else _top_below_part_top)(
@@ -5521,29 +5490,22 @@ class _Side:
 
     def _hole_plan(self):
         """Which tool cuts each hole: drill, bore, pocket or thread mill."""
-        # classify holes:
-        # - tapped: a thread from the Hole command, or taps[diameter]; drilled and
-        #   thread-milled as threads.toml gives (M4, with no matching drill, is
-        #   drilled by T1 and bored to size);
-        # - drilled: a library drill within -DRILL_UNDER to +DRILL_OVER of the hole
-        #   (-0.03 to +0.05 mm, so T1 drills a 3.2 mm clearance hole, as the lab does
-        #   kiutra-beam's) whose flute is 0.5 mm longer than the hole; the closest;
-        # - bored by the 3.175 mm end mill: wider than 3.275 mm, pocketed instead
-        #   (hole_pocket) when its rough bore would take more than two 0.3 mm passes;
-        # - bored by a small end mill: one at most the hole's radius less 0.05 mm
-        #   wide whose flute is 0.5 mm longer than the hole (_small_choice); with
-        #   none, the hole is skipped, with a warning
+        b, warnings, holes, thickness = self.b, self.warnings, self.holes, self.thickness
+        # classify each hole: tapped, drilled, bored by the 3.175 mm end mill (or
+        # pocketed, hole_pocket) or by a small end mill (_small_choice), as
+        # conventions.md says; one no tool fits is skipped, with a warning
         self.drilled, self.bored, self.tapped = [], [], []
-        self.drills = self.b.tools.drills()
-        for h in self.holes:
+        self.drills = b.tools.drills()
+        for h in holes:
             t = h['thread'] or self.taps.get('%g' % h['dia'])
             if t:
                 if t not in THREADS:
-                    self.warnings.append('unknown thread %r on %.2f mm hole; skipped' % (t, h['dia']))
+                    warnings.append('unknown thread %r on %.2f mm hole; skipped' % (t, h['dia']))
                     continue
                 self.tapped.append((h, t))
                 continue
-            match = [d for d in self.drills if h['dia'] - DRILL_UNDER - 1e-6 <= d[1] <= h['dia'] + DRILL_OVER
+            match = [d for d in self.drills
+                     if h['dia'] - DRILL_UNDER - 1e-6 <= d[1] <= h['dia'] + DRILL_OVER
                      and d[2] >= h['depth'] + 0.5]
             if match:
                 best = min(match, key=lambda d: abs(d[1] - h['dia']))  # the closest in diameter
@@ -5555,97 +5517,103 @@ class _Side:
                 if em:
                     self.bored.append((h, (em, None), None))
                 else:
-                    self.warnings.append('no tool for %.2f mm hole at (%g, %g); skipped'
+                    warnings.append('no tool for %.2f mm hole at (%g, %g); skipped'
                                     % (h['dia'], h['x'], h['y']))
         # taps with no matching drill (M4) are drilled, then bored to the modelled
         # diameter, as threads.toml says
         self.tap_bored = [(h, t) for h, t in self.tapped if THREADS[t][1] is None]
         # the holes the 3.175 mm end mill bores or pockets, which T1 pre-drills
-        self.by_endmill = lambda h: any(h is x for x, rough, _ in self.bored if rough[0] == ENDMILL) or \
-            any(h is x for x, _ in self.tap_bored)
-        self.blind_cone = lambda: (self.b.tools.tip_length(DRILL_3175) * ENTRY_CONE_D / DRILL_D)
-        sunk = [h for h in self.holes if not h['through'] and self.by_endmill(h) and self.hole_below(h) is None]
-        if sunk and not self.b.dry:
-            self.warnings.append('the %d blind hole%s the 3.175 mm end mill bores or pockets %s a cone-shaped '
-                            "dimple %g mm across and %.2f mm deep in %s, where T1's point goes "
-                            'below the floor so that the end mill plunges to the floor down a hole at least '
-                            'half its width; at x, y = %s mm'
-                            % (len(sunk), '' if len(sunk) == 1 else 's',
-                               'leaves' if len(sunk) == 1 else 'leave', ENTRY_CONE_D, self.blind_cone(),
-                               'its floor' if len(sunk) == 1 else 'their floors',
-                               ', '.join('(%g, %g)' % (h['x'], h['y']) for h in sunk)))
-            thin = [h['depth'] for h in sunk if self.thickness - h['depth'] < self.blind_cone() + 0.2]
+        self.by_endmill = lambda h: (
+            any(h is x for x, rough, _ in self.bored if rough[0] == ENDMILL)
+            or any(h is x for x, _ in self.tap_bored))
+        self.blind_cone = lambda: (b.tools.tip_length(DRILL_3175) * ENTRY_CONE_D / DRILL_D)
+        sunk = [h for h in holes
+                if not h['through'] and self.by_endmill(h) and self.hole_below(h) is None]
+        if sunk and not b.dry:
+            one = len(sunk) == 1
+            warnings.append(
+                'the %d blind hole%s the 3.175 mm end mill bores or pockets %s a cone-shaped '
+                "dimple %g mm across and %.2f mm deep in %s, where T1's point goes below the "
+                'floor so that the end mill plunges to the floor down a hole at least half its '
+                'width; at x, y = %s mm'
+                % (len(sunk), '' if one else 's', 'leaves' if one else 'leave', ENTRY_CONE_D,
+                   self.blind_cone(), 'its floor' if one else 'their floors',
+                   ', '.join('(%g, %g)' % (h['x'], h['y']) for h in sunk)))
+            thin = [h['depth'] for h in sunk if thickness - h['depth'] < self.blind_cone() + 0.2]
             if thin:
-                self.warnings.append("a blind hole's dimple comes within 0.2 mm of the part's other face, "
-                                'or through it, under a hole %g mm deep' % max(thin))
+                warnings.append("a blind hole's dimple comes within 0.2 mm of the part's other "
+                                'face, or through it, under a hole %g mm deep' % max(thin))
         # T1 drills at most its flute length less 0.5 mm into the material it starts
         # in; deeper holes go down in stages with the cut that uses them (_stage_plan)
         self.reach = next(d[2] for d in self.drills if d[0] == DRILL_3175) - 0.5
 
     def _entries(self):
         """The entry holes, the tab band's heights and the staged cuts."""
-        self.lay = self.plan['layout']
-        self.band_top, self.band_bot = self.tab['z'] + self.tab['band'] / 2, self.tab['z'] - self.tab['band'] / 2
+        a, b, setup, plan = self.a, self.b, self.setup, self.plan
+        top, side, floors = self.top, self.side, self.floors
+        warnings, m, tab = self.warnings, self.m, self.tab
+        self.lay = plan['layout']
+        self.band_top, self.band_bot = tab['z'] + tab['band'] / 2, tab['z'] - tab['band'] / 2
         # the cuts around the tabs take their heights from the modelled tabs' faces
-        tab_faces = self.plan.get('tab_faces') or {}
+        tab_faces = plan.get('tab_faces') or {}
         self.tab_top, self.tab_bottom = tab_faces.get('top'), tab_faces.get('bottom')
-        self.chain_bot = self.band_bot - self.tab['overlap']
-        stock_z = self.thickness + self.plan['margin_top'] + self.plan['margin_bottom']
+        self.chain_bot = self.band_bot - tab['overlap']
+        stock_z = self.thickness + plan['margin_top'] + plan['margin_bottom']
         self.points = lambda pts: _sel_faces('holePoints', pts)
         entry_ops = {'holeMode': "'selection-points'", 'topHeight_mode': "'from stock top'",
                      'topHeight_offset': '0mm'}
-        # T1 drills only the main entry before the end mill cuts: the facing and the
-        # outline enter there. Every other hole waits for the end mill to clear the
-        # stock above it (later_drills), so the drill cuts only what it must.
-        # The top setup drills the entry through the stock; where the stock is
-        # deeper than the drill reaches, it drills and cuts the outline in stages,
-        # and if the drill still cannot get through, the bottom setup drills the
-        # entry from its own side, staged with its outline.
-        # Stock of the part's own size has no outline cut: the facing enters beside
-        # the part, where there is no stock, so there is no entry hole to drill.
-        self.outline_depth = {True: self.plan['margin_top'] + self.a['ztop'] - self.band_top,  # from the stock top
-                         False: self.plan['margin_bottom'] + self.band_bot - self.a['zbot']}
+        # T1 drills the main entry first, through the stock or in stages with the
+        # outline, and every other hole once the end mill has cleared the stock above
+        # it (later_drills; conventions.md, "Entry holes"); stock of the part's own
+        # size has no outline cut, so no entry hole to drill
+        self.outline_depth = {  # from the stock top
+            True: plan['margin_top'] + a['ztop'] - self.band_top,
+            False: plan['margin_bottom'] + self.band_bot - a['zbot']}
         self.entry_seq, through = _stage_plan(0, stock_z, self.outline_depth[True], self.reach)
-        if not self.plan['outline']:
+        if not plan['outline']:
             self.entry_seq = []
-        elif not self.top:
+        elif not top:
             if through:
                 self.entry_seq = [('mill', 0, self.outline_depth[False])]
             else:
-                self.entry_seq, ok = _stage_plan(0, self.outline_depth[False], self.outline_depth[False], self.reach)
+                depth = self.outline_depth[False]
+                self.entry_seq, ok = _stage_plan(0, depth, depth, self.reach)
                 if not ok:
-                    self.warnings.append('the entry hole cannot be drilled to the outline depth')
-        elif not through and self.plan['sides'] == 1:
-            self.warnings.append('the entry hole cannot be drilled through the stock')
+                    warnings.append('the entry hole cannot be drilled to the outline depth')
+        elif not through and plan['sides'] == 1:
+            warnings.append('the entry hole cannot be drilled through the stock')
         self.staged_entry = sum(k == 'mill' for k, _, _ in self.entry_seq) > 1
         def entry_drill(s, e):
             params = dict(DRILL, **entry_ops, drillTipThroughBottom='true')
-            params.update(self.top_at(s - self.m))
-            if self.top and e >= stock_z - 1e-6:
+            params.update(self.top_at(s - m))
+            if top and e >= stock_z - 1e-6:
                 params.update(bottomHeight_mode="'from stock bottom'", bottomHeight_offset='0mm',
                               breakThroughDepth='0.5mm')
             else:
                 params.update(bottomHeight_mode="'from stock top'",
                               bottomHeight_offset='%.4fmm' % -e, breakThroughDepth='0mm')
-                face = self.tab_top if self.top else self.tab_bottom
-                if abs(e - self.outline_depth[self.top]) < 1e-6 and face is not None:  # to the tab band
+                face = self.tab_top if top else self.tab_bottom
+                if abs(e - self.outline_depth[top]) < 1e-6 and face is not None:  # to the tab band
                     params.update(self.at('bottom', face))
-            name = 'Entry hole %g to %g mm' % (round(s, 2), round(e, 2)) if self.staged_entry else 'Entry hole'
-            return self.b.op(self.setup, 'drill', DRILL_3175, name, params, self.points([self.lay['entry']] if self.lay else []))
+            name = ('Entry hole %g to %g mm' % (round(s, 2), round(e, 2)) if self.staged_entry
+                    else 'Entry hole')
+            return b.op(setup, 'drill', DRILL_3175, name, params,
+                        self.points([self.lay['entry']] if self.lay else []))
         self.entry_drill = entry_drill
         if self.entry_seq and self.entry_seq[0][0] == 'drill':
             self.ops['main'].append(self.entry_drill(*self.entry_seq[0][1:]))
-            if self.plan['face'] and self.m > self.entry_seq[0][2] + 1e-6:
-                self.warnings.append('the facing (%.1f mm) is deeper than the first stage of the entry hole'
-                                % self.m)
+            if plan['face'] and m > self.entry_seq[0][2] + 1e-6:
+                warnings.append('the facing (%.1f mm) is deeper than the first stage of the '
+                                'entry hole' % m)
             self.entry_seq = self.entry_seq[1:]
         self.side_entries = {}
         if self.lay:
-            self.side_entries = {k: e for k, e in self.lay['pocket_entries'].items() if e['side'] == self.side}
+            self.side_entries = {k: e for k, e in self.lay['pocket_entries'].items()
+                                 if e['side'] == side}
         else:  # dry run: the entries are not sketched yet
             self.side_entries = {f['face'].tempId: {'point': None, 'depth': f['depth'],
-                                               'drill': not f['side_open']}
-                            for f in self.floors if f['role'] == 'pocket' and not f.get('joined')}
+                                                    'drill': not f['side_open']}
+                                 for f in floors if f['role'] == 'pocket' and not f.get('joined')}
         # Pocket entries and pockets go down together in bands of the drill's
         # reach from the face: the entries are drilled as deep as the drill
         # reaches, the pockets cut down to there, and so on to the floors. A part
@@ -5661,18 +5629,20 @@ class _Side:
         # each entry hole's drill point goes below the pocket floor only until its
         # cone is half the end mill wide at the floor, as the end mill needs to
         # enter there (rule TH4); the rest of the cone is a dimple in the floor
-        cone = self.b.tools.tip_length(DRILL_3175) * ENTRY_CONE_D / DRILL_D
+        cone = b.tools.tip_length(DRILL_3175) * ENTRY_CONE_D / DRILL_D
         dimples = [(q, d) for q, d in holes_in if q is not None and id(q) not in below_at]
         if dimples:
-            where = ', '.join('(%.2f, %.2f)' % (mm(q.geometry.x), mm(q.geometry.y)) for q, _ in dimples)
-            self.warnings.append('the %d pocket entry hole%s on the %s leave%s a cone-shaped dimple %g mm '
-                            'across and %.2f mm deep in the pocket floor, so that the end mill '
-                            'enters a hole at least half its width; at x, y = %s mm'
-                            % (len(dimples), '' if len(dimples) == 1 else 's', self.side,
-                               's' if len(dimples) == 1 else '', ENTRY_CONE_D, cone, where))
+            where = ', '.join('(%.2f, %.2f)' % (mm(q.geometry.x), mm(q.geometry.y))
+                              for q, _ in dimples)
+            one = len(dimples) == 1
+            warnings.append('the %d pocket entry hole%s on the %s leave%s a cone-shaped dimple '
+                            '%g mm across and %.2f mm deep in the pocket floor, so that the end '
+                            'mill enters a hole at least half its width; at x, y = %s mm'
+                            % (len(dimples), '' if one else 's', side, 's' if one else '',
+                               ENTRY_CONE_D, cone, where))
             thin = [d for _, d in dimples if self.thickness - d < cone + 0.2]
             if thin:
-                self.warnings.append('a pocket entry hole\'s dimple comes within 0.2 mm of the part\'s '
+                warnings.append('a pocket entry hole\'s dimple comes within 0.2 mm of the part\'s '
                                 'other face, or through it, under a floor %g mm deep'
                                 % max(thin))
         self.pocket_bands = []  # (top, bottom or None for the floors, [(point, drill bottom)])
@@ -5681,12 +5651,12 @@ class _Side:
             bot = t + self.reach
             last = not any(d > bot + 1e-6 for _, d in holes_in)
             self.pocket_bands.append((t, None if last else bot,
-                                 [(p, min(bot, d)) for p, d in holes_in if d > t + 1e-6]))
+                                      [(p, min(bot, d)) for p, d in holes_in if d > t + 1e-6]))
             if last:
                 break
             t = bot
         self.staged_pockets = len(self.pocket_bands) > 1
-        floor_at = {round(f['depth'], 3): f['face'] for f in self.floors if f['role'] == 'pocket'}
+        floor_at = {round(f['depth'], 3): f['face'] for f in floors if f['role'] == 'pocket'}
         def entry_drills(band):
             t, bot, holes = band
             by_depth = {}
@@ -5708,10 +5678,11 @@ class _Side:
                     params.update(self.at('bottom', floor, -round(below, 3)),
                                   drillTipThroughBottom='false')
                 else:
-                    params.update(_bottom_below_part_top(depth, self.m))
+                    params.update(_bottom_below_part_top(depth, m))
                 name = ('Pocket entry holes %g to %g mm' % (round(max(t, 0), 2), depth)
                         if self.staged_pockets else 'Pocket entry holes %g mm' % depth)
-                out.append(self.b.op(self.setup, 'drill', self.drill_for(depth - t), name, params, self.points(pts)))
+                out.append(b.op(setup, 'drill', self.drill_for(depth - t), name, params,
+                                self.points(pts)))
             return out
         self.entry_drills = entry_drills
         # bores deeper than the drill reaches are pre-drilled in stages with their
@@ -5722,21 +5693,24 @@ class _Side:
 
     def _plan_cuts(self):
         """The pockets and windows to cut, and the end cut and rough face, which come first."""
+        b, setup, ops, warnings, floors = self.b, self.setup, self.ops, self.warnings, self.floors
+        top, lay, allow = self.top, self.lay, self.allow
         # holes whose rough bore would need more passes than the lab's are pocketed
         pocketed = lambda h: (h['dia'] - ENDMILL_D) / 2 > BORE_MAX_RADIAL + 1e-6
         self.floor_pre = []  # (hole, drill) pre-drilled after the rough pockets
-        self.pockets = sorted([f for f in self.floors if f['role'] == 'pocket'], key=lambda f: f['depth'])
-        self.narrow = [f for f in self.pockets if self.lay and f['face'].tempId in self.lay['narrow']
-                  and f['face'].tempId not in self.lay['shelves']]
-        self.windows = [w for w in self.a['windows']] if self.top else []
-        self.entry = [self.lay['entry']] if self.lay else []
-        if self.plan.get('ends') and self.top:
-            self.ops['main'].append(self.end_cut('rough', 'true', ''))
+        self.pockets = sorted([f for f in floors if f['role'] == 'pocket'],
+                              key=lambda f: f['depth'])
+        self.narrow = [f for f in self.pockets if lay and f['face'].tempId in lay['narrow']
+                       and f['face'].tempId not in lay['shelves']]
+        self.windows = [w for w in self.a['windows']] if top else []
+        self.entry = [lay['entry']] if lay else []
+        if self.plan.get('ends') and top:
+            ops['main'].append(self.end_cut('rough', 'true', ''))
         if self.facing:
-            self.ops['main'].append(self.face_op('rough', 'true', '', self.allow))
+            ops['main'].append(self.face_op('rough', 'true', '', allow))
         # floors the small end mills cut through slots (see below)
-        self.slot_floors = {g['face'].tempId for sl in (self.lay['slots'] if self.lay else [])
-                       if sl['side'] == self.side for g in [sl['floor']] + sl['fed']}
+        self.slot_floors = {g['face'].tempId for sl in (lay['slots'] if lay else [])
+                            if sl['side'] == self.side for g in [sl['floor']] + sl['fed']}
         self.passes = (('rough', 'true', ''), ('finish', 'false', ' (finish)'))
         def end_bores(which, multi, suffix):
             # the shallowest first, each rough cut just after its hole's pre-drill
@@ -5744,31 +5718,31 @@ class _Side:
             # one's floor, so that one is cut, and its floor made, before the drill
             # rapids down to it
             for hs in sorted(_group(self.end_bored),
-                             key=lambda hs: self.depth_of(hs[0]['z1'] if self.top else hs[0]['z0'])):
+                             key=lambda hs: self.depth_of(hs[0]['z1'] if top else hs[0]['z0'])):
                 h = hs[0]
                 if which == 'rough':
-                    self.ops['main'] += self.pre_drills([(x, d) for x, d in self.floor_pre
-                                               if any(x is y for y in hs)], ' in floors')
+                    ops['main'] += self.pre_drills([(x, d) for x, d in self.floor_pre
+                                                    if any(x is y for y in hs)], ' in floors')
                 radial = max(0.1, (h['dia'] - ENDMILL_D) / 2)
                 if pocketed(h):
                     cuts = self.hole_pocket(hs, multi, suffix, which)
-                    if cuts is not None or self.b.dry:
-                        self.ops['main'].extend(cuts or [])
+                    if cuts is not None or b.dry:
+                        ops['main'].extend(cuts or [])
                         continue
                 # the finishing bore is a single pass at the wall; in a blind hole the
                 # rough bore stops the floor allowance above the floor for it to take
-                # off (user, 2026-10-17); a bore has no axial stock to leave
+                # off; a bore has no axial stock to leave
                 params = dict(BORE, stepover='0.3mm',
                               numberOfStepovers=str(max(1, math.ceil(radial / 0.3))),
                               doMultiplePasses=multi)
                 bottom = -0.5 if h['through'] else (
                     POCKET_FLOOR_ALLOWANCE if which == 'rough' else 0.0)
                 self.staged_bore(hs, which, (ENDMILL, which), params,
-                            bottom, 'Bore %.2f%s' % (h['dia'], suffix))
+                                 bottom, 'Bore %.2f%s' % (h['dia'], suffix))
         self.end_bores = end_bores
         pocket_floors = {f['face'].tempId for f in self.pockets}
         def in_floor(h):
-            rim = _hole_ends(h, self.top)[0]
+            rim = _hole_ends(h, top)[0]
             return rim is not None and rim.face.tempId in pocket_floors
         def drill_ops(floor):
             """The drills (plain holes, then tap drills), grouped by tool, of the
@@ -5795,23 +5769,19 @@ class _Side:
                         # full diameter to the bottom: the drill's point goes below it
                         params['drillTipThroughBottom'] = 'true'
                         self.blind_tip_warning(desc, sub)
-                    out.append(self.b.op(
-                        self.setup, 'drill', desc,
+                    out.append(b.op(
+                        setup, 'drill', desc,
                         'Drill ' + desc.split('*')[0] + ('' if through else ' (blind)'),
                         params, _sel_faces('holeFaces', [h['face'] for h in sub])))
             return out
         self.drill_ops = drill_ops
         # closed pockets with no room for the 3.175's entry hole: a small end mill
-        # pockets each, in one operation with no finishing pass, since only the
-        # 3.175 end mill takes a finishing pass (user, 2026-10-24); after the drills
-        # in the floors, which leave burrs, and before the finishing pockets. It
-        # enters down a hole drilled as wide as itself, with the rough passes, whose
-        # point goes below the floor only until its cone is half the end mill wide
-        # there (rule TH4)
+        # pockets each, entering down a hole drilled as wide as itself
+        # (conventions.md, Operation order, steps 4 and 5)
         small = {}  # end mill: [(floor, entry point)]
         self.small_tool = {}  # floor's tempId: (end mill, diameter)
         for f in self.pockets:
-            sp = (self.lay or {}).get('small_pockets', {}).get(f['face'].tempId)
+            sp = (lay or {}).get('small_pockets', {}).get(f['face'].tempId)
             if sp is None or sp['side'] != self.side:
                 continue
             em, d = _small_choice(self.plan, sp['tools'])
@@ -5822,7 +5792,8 @@ class _Side:
             """The drill for a small end mill's entry hole: one the part drills its
         holes with already, if one is up to 0.1 mm narrower than the end mill,
         else the library drill closest to the end mill's width, not wider."""
-            fits = [x for x in self.drills if d - 0.1 - 1e-6 <= x[1] <= d + 1e-6 and x[2] >= depth + 0.5]
+            fits = [x for x in self.drills
+                    if d - 0.1 - 1e-6 <= x[1] <= d + 1e-6 and x[2] >= depth + 0.5]
             return min(fits, key=lambda x: (x[0] not in used_drills, d - x[1])) if fits else None
         def small_pockets(which):
             """The entry holes (which 'rough') or the pockets ('finish')."""
@@ -5835,62 +5806,67 @@ class _Side:
                     for f, p in group:
                         dr = small_entry_drill(d, f['depth'])
                         if dr is None:
-                            self.warnings.append('no drill as wide as the %g mm end mill reaches the pocket '
-                                            'floor at z=%g mm, so its entry hole is not drilled'
-                                            % (d, f['z']))
+                            warnings.append('no drill as wide as the %g mm end mill reaches the '
+                                            'pocket floor at z=%g mm, so its entry hole is not '
+                                            'drilled' % (d, f['z']))
                             continue
                         by_drill.setdefault((dr[0], dr[1], f['face'].tempId), (f, []))[1].append(p)
                     for (dr, dd, _), (f, ps) in by_drill.items():
-                        cone = self.b.tools.tip_length(dr) * d / 2 / dd
+                        cone = b.tools.tip_length(dr) * d / 2 / dd
                         params = dict(DRILL, holeMode="'selection-points'", breakThroughDepth='0mm',
-                                      drillTipThroughBottom='false', **self.top_at(-self.allow))
+                                      drillTipThroughBottom='false', **self.top_at(-allow))
                         params.update(self.at('bottom', f['face'], -round(cone, 3)))
-                        out.append(self.b.op(self.setup, 'drill', dr, 'Small pocket entry holes %g' % dd, params,
-                                        self.points(ps)))
-                    if not self.b.dry:
-                        where = ', '.join('(%.2f, %.2f)' % (mm(p.geometry.x), mm(p.geometry.y)) for p in pts)
-                        self.warnings.append('the %g mm end mill pockets %d pocket%s too narrow for the '
-                                        "3.175 mm end mill's entry hole, entering down holes drilled "
-                                        'as wide as itself, which leave a dimple %g mm across in the '
-                                        'floor; at x, y = %s mm'
-                                        % (d, len(group), '' if len(group) == 1 else 's', d / 2, where))
+                        out.append(b.op(setup, 'drill', dr, 'Small pocket entry holes %g' % dd,
+                                        params, self.points(ps)))
+                    if not b.dry:
+                        where = ', '.join('(%.2f, %.2f)' % (mm(p.geometry.x), mm(p.geometry.y))
+                                          for p in pts)
+                        warnings.append('the %g mm end mill pockets %d pocket%s too narrow for '
+                                        "the 3.175 mm end mill's entry hole, entering down holes "
+                                        'drilled as wide as itself, which leave a dimple %g mm '
+                                        'across in the floor; at x, y = %s mm'
+                                        % (d, len(group), '' if len(group) == 1 else 's', d / 2,
+                                           where))
                     continue
                 params = dict(POCKET, doMultipleDepths='true', bottomHeight_mode="'from contour'",
-                              **self.top_at(-self.allow))
-                out.append(self.b.op(self.setup, 'pocket2d', em, 'Small pockets %g' % d, params,
+                              **self.top_at(-allow))
+                out.append(b.op(setup, 'pocket2d', em, 'Small pockets %g' % d, params,
                                 _both(_sel_pocket(faces), _sel_faces('predrillPositions', pts))))
             return out
         self.small_pockets = small_pockets
 
     def _passes(self):
-        """The rough and finishing passes: the outline, pockets, windows and bores, and the drills between them."""
+        """The rough and finishing passes: the outline, pockets, windows and bores,
+        and the drills between them."""
+        a, b, setup, ops, warnings = self.a, self.b, self.setup, self.ops, self.warnings
+        plan, top, lay, m = self.plan, self.top, self.lay, self.m
         for which, multi, suffix in self.passes:
             tk = (ENDMILL, which)
             # outline: the top setup cuts down to the tab band, the bottom setup up to it
-            bands = self.entry_seq if which == 'rough' else [('mill', 0, self.outline_depth[self.top])]
-            if self.plan.get('ends') and self.top and which == 'finish':
-                self.ops['main'].append(self.end_cut(which, multi, suffix))
-            for kind, s, e in bands if self.plan['outline'] else []:
+            bands = self.entry_seq if which == 'rough' else [('mill', 0, self.outline_depth[top])]
+            if plan.get('ends') and top and which == 'finish':
+                ops['main'].append(self.end_cut(which, multi, suffix))
+            for kind, s, e in bands if plan['outline'] else []:
                 if kind == 'drill':
-                    self.ops['main'].append(self.entry_drill(s, e))
+                    ops['main'].append(self.entry_drill(s, e))
                     continue
                 params = dict(CONTOUR, doMultipleDepths=multi, bottomHeight_mode="'from stock top'",
-                              bottomHeight_offset='%.4fmm' % -e, **self.top_at(s - self.m))
+                              bottomHeight_offset='%.4fmm' % -e, **self.top_at(s - m))
                 name = ('Outline %g to %g mm' % (round(s, 2), round(e, 2))
                         if self.staged_entry and which == 'rough' else 'Outline' + suffix)
                 set_lo = None
-                if abs(e - self.outline_depth[self.top]) < 1e-6:  # down to the tab band: the tabs' face
-                    lo, set_lo = _at_tab('bottom', self.tab_top if self.top else self.tab_bottom)
+                if abs(e - self.outline_depth[top]) < 1e-6:  # down to the tab band: the tabs' face
+                    lo, set_lo = _at_tab('bottom', self.tab_top if top else self.tab_bottom)
                     params.update(lo)
-                self.ops['main'].append(self.b.op(self.setup, 'contour2d', tk, name, params, _both(
+                ops['main'].append(b.op(setup, 'contour2d', tk, name, params, _both(
                     _sel_silhouette(), _sel_faces('entryPositions', self.entry), set_lo)))
             if which == 'rough':
-                self.ops['main'] += self.later_drills()
+                ops['main'] += self.later_drills()
             if which == 'finish':
-                self.ops['main'] += self.drill_ops(True)
-                self.ops['main'] += self.small_pockets('finish')
+                ops['main'] += self.drill_ops(True)
+                ops['main'] += self.small_pockets('finish')
             if self.pockets:
-                shelves = self.lay['shelves'] if self.lay else {}
+                shelves = lay['shelves'] if lay else {}
                 # what a pocket op selects: the plain floors, and one chain per shelf
                 # region, though several shelves share it; each with its depth and entry
                 units = []  # (floor face or None, chain or None, depth, [entry points], side-open)
@@ -5900,27 +5876,30 @@ class _Side:
                     e = self.side_entries.get(f['face'].tempId)
                     c = shelves.get(f['face'].tempId)
                     if c is None and f['face'].tempId in self.slot_floors:
-                        continue  # the 3.175 can't get in; a small end mill cuts it through its slot
+                        continue  # too narrow for the 3.175: a small end mill cuts it, by its slot
                     if c is None:
                         units.append((f['face'], None, f['depth'],
                                       [e['point']] if e and e['point'] else [], f['side_open']))
                     elif all(c is not u[1] for u in units):
+                        ents = self.side_entries
                         units.append((None, c, f['depth'],
-                                      [self.side_entries[k]['point'] for k in c['keys']
-                                       if k in self.side_entries and self.side_entries[k]['point']], False))
+                                      [ents[k]['point'] for k in c['keys']
+                                       if k in ents and ents[k]['point']], False))
                 has_entries = any(f['face'].tempId in self.side_entries for f in self.pockets
                                   if f not in self.narrow)
-                if has_entries and self.lay:
+                if has_entries and lay:
                     # a closed pocket with no room anywhere for the end mill's entry
                     # hole: a predrill pocket refuses it, and it could not cut it anyway
                     for u in [u for u in units if not u[4] and not u[3]]:
                         units.remove(u)
-                        if which == 'rough' and (u[0] is None or u[0].tempId not in self.small_tool):
-                            self.warnings.append('the pocket at z=%g mm has no room for the %g mm end '
-                                            "mill's entry hole, nor for a small end mill's entry "
-                                            'hole and pocket (the %g mm end mill needs %g mm of '
-                                            'room round its entry), so no pocket cuts it; the small '
-                                            "end mills' corner passes cut what they reach"
+                        if which == 'rough' and (u[0] is None
+                                                 or u[0].tempId not in self.small_tool):
+                            warnings.append('the pocket at z=%g mm has no room for the %g mm '
+                                            "end mill's entry hole, nor for a small end mill's "
+                                            'entry hole and pocket (the %g mm end mill needs %g '
+                                            'mm of room round its entry), so no pocket cuts it; '
+                                            "the small end mills' corner passes cut what they "
+                                            'reach'
                                             % (mm(u[0].pointOnFace.z) if u[0] is not None else
                                                u[1]['z'], ENDMILL_D, SMALL_ENDMILLS[-1][1],
                                                SMALL_ENDMILLS[-1][1] / 2 + 5 * POCKET_TOL))
@@ -5929,12 +5908,13 @@ class _Side:
                 for k, band in enumerate(bands):
                     t, bot, _ = band
                     if k:
-                        self.ops['main'] += self.entry_drills(band)
+                        ops['main'] += self.entry_drills(band)
                     inside = [u for u in units if u[2] > t + 1e-6]
                     # the pockets this band reaches the floor of, then the deeper ones;
                     # the closed ones, entered at their holes, then those open to the side,
                     # which the end mill enters from the cut beside the opening
-                    for floor, side_open in ((True, False), (True, True), (False, False), (False, True)):
+                    for floor, side_open in ((True, False), (True, True),
+                                             (False, False), (False, True)):
                         us = [u for u in inside if (bot is None or u[2] <= bot + 1e-6) == floor
                               and u[4] == side_open]
                         if which == 'rough' and floor:
@@ -5954,7 +5934,7 @@ class _Side:
                                               stockToLeave='0mm',
                                               verticalStockToLeave='%gmm' % POCKET_FLOOR_ALLOWANCE)
                         else:
-                            params.update(_bottom_below_part_top(bot, self.m))
+                            params.update(_bottom_below_part_top(bot, m))
                         name = ('Open pockets' if side_open and has_open else 'Pockets') + suffix
                         if self.staged_pockets and which == 'rough':
                             name += (' %g mm to the floors' % round(max(t, 0), 2) if floor
@@ -5968,12 +5948,13 @@ class _Side:
                             for u in us:
                                 by_depth.setdefault(round(u[2], 3), []).append(u)
                             for dep, grp in sorted(by_depth.items()):
-                                if which == 'rough' and floor and dep <= POCKET_FLOOR_ALLOWANCE + 1e-6:
-                                    continue  # the rough pass, above the floor's allowance, mills air
+                                if which == 'rough' and floor and \
+                                        dep <= POCKET_FLOOR_ALLOWANCE + 1e-6:
+                                    continue  # above the floor's allowance it would mill air
                                 paths = [pth for u in grp
-                                         for pth in (self.lay['open_passes'].get(u[0].tempId, [])
-                                                     if self.lay else [])]
-                                if not paths and self.lay:
+                                         for pth in (lay['open_passes'].get(u[0].tempId, [])
+                                                     if lay else [])]
+                                if not paths and lay:
                                     continue
                                 cparams = dict(CONTOUR, doMultipleDepths=multi,
                                                compensationType="'off'", **self.top_at(t))
@@ -5986,16 +5967,12 @@ class _Side:
                                     cparams.update({k: v for k, v in params.items()
                                                     if k.startswith('bottomHeight')})
                                 nm = name if len(by_depth) == 1 else name + ' %g mm' % dep
-                                self.ops['main'].append(self.b.op(self.setup, 'contour2d', tk, nm, cparams,
+                                ops['main'].append(b.op(setup, 'contour2d', tk, nm, cparams,
                                                         _sel_paths(paths)))
                             continue
-                        # a region inside a shallower one (a shelf's opening holds the
-                        # deeper pockets) is roughed from that one's rough floor, since
-                        # the end mill has cleared it down to there; from the top it
-                        # would mill air. The finishing pass cuts a shelf region that
-                        # holds deeper ones on its own, with stock contours leaving
-                        # them out: they are roughed below its floor by then, so
-                        # sweeping them at that floor would mill air.
+                        # a region inside a shallower one is roughed from that one's rough
+                        # floor, and its finishing pass leaves the deeper regions inside it
+                        # out, with stock contours (conventions.md, "Entry holes")
                         groups = [(None, us, [])]  # (enclosing unit, units, units left out)
                         if which == 'rough' and floor:
                             groups = []
@@ -6021,22 +5998,24 @@ class _Side:
                                 gp = dict(params, useStockContours='true')
                                 nm = name + ' at %g mm' % round(parent[2], 2)
                                 sel = _sel_stock_contours([parent[1]], [w[1] for w in out if w[1]],
-                                                          [w[0] for w in out if not w[1]], self.top)
+                                                          [w[0] for w in out if not w[1]], top)
                             elif parent is not None:
-                                gp = dict(params, **self.at('top', parent[1]['face'], POCKET_FLOOR_ALLOWANCE))
+                                gp = dict(params, **self.at('top', parent[1]['face'],
+                                                            POCKET_FLOOR_ALLOWANCE))
                                 nm = name + ' from %g mm' % round(parent[2], 2)
                             pts = []
                             for u in gu:
                                 for p in u[3]:
                                     if all(p is not q for q in pts):
                                         pts.append(p)
-                            self.ops['main'].append(self.b.op(self.setup, 'pocket2d', tk, nm, gp, _both(
+                            ops['main'].append(b.op(setup, 'pocket2d', tk, nm, gp, _both(
                                 _sel_pocket_regions([u[0] for u in gu if u[0] is not None],
-                                                    [u[1] for u in gu if u[1] is not None], self.top),
+                                                    [u[1] for u in gu if u[1] is not None], top),
                                 _sel_faces('predrillPositions', pts), sel)))
             if which == 'rough':
-                self.ops['main'] += self.pre_drills([(h, d) for h, d in self.floor_pre
-                                           if all(h is not x for x in self.end_bored)], ' in floors')
+                ops['main'] += self.pre_drills(
+                    [(h, d) for h, d in self.floor_pre if all(h is not x for x in self.end_bored)],
+                    ' in floors')
                 self.end_bores(which, multi, suffix)
             # tap holes bored to size: one light pass, plus a finishing pass in blind holes
             for hs in _group([h for h, _ in self.tap_bored]):
@@ -6046,10 +6025,10 @@ class _Side:
                 if which == 'finish' and (h['through'] or not bore.get('blind_finish_pass')):
                     continue
                 self.staged_bore(hs, which, (bore['end_mill'], which),
-                            dict(BORE, stepover='%gmm' % bore['stepover'],
+                                 dict(BORE, stepover='%gmm' % bore['stepover'],
                                  numberOfStepovers=str(bore['passes']), doMultiplePasses=multi),
-                            bore['through_bottom_offset'] if h['through'] else 0.0,
-                            'Bore %s %.3f%s' % (t, h['dia'], suffix))
+                                 bore['through_bottom_offset'] if h['through'] else 0.0,
+                                 'Bore %s %.3f%s' % (t, h['dia'], suffix))
             # pockets too narrow for a pocket toolpath to enter: a contour along the
             # wall, entering through the pocket's entry hole
             for f in self.narrow:
@@ -6057,83 +6036,83 @@ class _Side:
                 params.update(self.top_at(0))
                 params.update(self.at('bottom', f['face']))
                 e = self.side_entries.get(f['face'].tempId)
-                self.ops['main'].append(self.b.op(self.setup, 'contour2d', tk, 'Narrow pocket' + suffix, params, _both(
-                    _sel_floor_outlines([f['face']]),
-                    _sel_faces('entryPositions', [e['point']] if e and e['point'] else []))))
+                ops['main'].append(b.op(
+                    setup, 'contour2d', tk, 'Narrow pocket' + suffix, params, _both(
+                        _sel_floor_outlines([f['face']]),
+                        _sel_faces('entryPositions', [e['point']] if e and e['point'] else []))))
             if which == 'rough':
-                self.ops['main'] += self.small_pockets('rough')
+                ops['main'] += self.small_pockets('rough')
             if self.windows:
                 for w in self.windows:
                     e = self.window_entry(w)
-                    below = self.lay['window_tops'][self.a['windows'].index(w)] if self.lay else None
+                    below = lay['window_tops'][a['windows'].index(w)] if lay else None
                     start = (self.at('top', below) if below is not None else
-                             self.top_at(0) if self.depth_of(w['z']) < 1e-6 else self.at('top', w['face']))
+                             self.top_at(0) if self.depth_of(w['z']) < 1e-6 else
+                             self.at('top', w['face']))
                     if which == 'rough' and (e is None or e['pocket']):
                         # a pocket from the through hole at the window's centre; the
                         # finishing pass, with the middle cleared, a contour
                         params = dict(POCKET, doMultipleDepths=multi)
                         params.update(start)
                         params.update(self.through_part('bottom'))
-                        self.ops['main'].append(self.b.op(self.setup, 'pocket2d', tk, 'Window' + suffix, params, _both(
-                            _sel_chains([w['loop']], 'pockets'),
-                            _sel_faces('predrillPositions', [e['point']] if e else []))))
+                        ops['main'].append(b.op(
+                            setup, 'pocket2d', tk, 'Window' + suffix, params, _both(
+                                _sel_chains([w['loop']], 'pockets'),
+                                _sel_faces('predrillPositions', [e['point']] if e else []))))
                     else:
                         params = dict(CONTOUR, doMultipleDepths=multi)
                         params.update(start)
                         params.update(self.through_part('bottom'))
-                        self.ops['main'].append(self.b.op(self.setup, 'contour2d', tk, 'Window' + suffix, params, _both(
-                            _sel_chains([w['loop']]),
-                            _sel_faces('entryPositions', [e['point']]) if e else None)))
+                        ops['main'].append(b.op(
+                            setup, 'contour2d', tk, 'Window' + suffix, params, _both(
+                                _sel_chains([w['loop']]),
+                                _sel_faces('entryPositions', [e['point']]) if e else None)))
             # top setup: the outline between the tabs, down through the tab band
-            if self.top and self.plan['outline']:
+            if top and plan['outline']:
                 params = dict(CONTOUR, doMultipleDepths=multi)
-                params.update(_top_below_part_top(self.a['ztop'] - self.band_top, self.m))
-                params.update(_bottom_below_part_top(self.a['ztop'] - self.chain_bot, self.m))
+                params.update(_top_below_part_top(a['ztop'] - self.band_top, m))
+                params.update(_bottom_below_part_top(a['ztop'] - self.chain_bot, m))
                 hi, set_hi = _at_tab('top', self.tab_top)
                 lo, set_lo = _at_tab('bottom', self.tab_bottom, -self.tab['overlap'])
                 params.update(hi, **lo)
-                self.ops['main'].append(self.b.op(self.setup, 'contour2d', tk, 'Outline between tabs' + suffix,
-                                        params, _both(_sel_layout_chains(self.lay['corner'] if self.lay else [],
-                                                                         True), set_hi, set_lo)))
+                corners = _sel_layout_chains(lay['corner'] if lay else [], True)
+                ops['main'].append(b.op(setup, 'contour2d', tk, 'Outline between tabs' + suffix,
+                                        params, _both(corners, set_hi, set_lo)))
 
     def _small_tool_ops(self):
         """The small end mills' slots, pocket and window corners, and bores."""
+        b, setup, ops, warnings, lay = self.b, self.setup, self.ops, self.warnings, self.lay
         # slots the 3.175 can't enter, cut along their centreline by an end mill as wide
         # as the slot from the open end, and the pockets they reach, entered at the
         # slot's closed end; one operation of each per tool
-        slots = [sl for sl in (self.lay['slots'] if self.lay else []) if sl['side'] == self.side]
+        slots = [sl for sl in (lay['slots'] if lay else []) if sl['side'] == self.side]
         by_tool = {}
         for sl in slots:
             by_tool.setdefault(sl['tool'], []).append(sl)
         slotted = set()
         for (em, d, _), sls in by_tool.items():
-            params = dict(CONTOUR, doMultipleDepths='true', compensationType="'off'", **self.top_at(0))
+            params = dict(CONTOUR, doMultipleDepths='true', compensationType="'off'",
+                          **self.top_at(0))
             params.update(self.at('bottom', sls[0]['floor']['face']))
             if any(abs(sl['floor']['depth'] - sls[0]['floor']['depth']) > 1e-6 for sl in sls):
-                self.warnings.append('slots of one width at different depths; check the slot cut')
-            self.ops['main'].append(self.b.op(self.setup, 'contour2d', em, 'Slots %g' % d, params,
+                warnings.append('slots of one width at different depths; check the slot cut')
+            ops['main'].append(b.op(setup, 'contour2d', em, 'Slots %g' % d, params,
                                     _sel_open_lines([sl['line'] for sl in sls])))
             fed = [g for sl in sls for g in sl['fed']]
             if fed:
-                self.ops['main'].append(self.b.op(self.setup, 'pocket2d', em, 'Pockets through slots %g' % d, dict(
-                    POCKET, doMultipleDepths='true', bottomHeight_mode="'from contour'", **self.top_at(0)),
+                ops['main'].append(b.op(setup, 'pocket2d', em, 'Pockets through slots %g' % d, dict(
+                    POCKET, doMultipleDepths='true', bottomHeight_mode="'from contour'",
+                    **self.top_at(0)),
                     _both(_sel_pocket([g['face'] for g in fed]),
                           _sel_faces('predrillPositions', [sl['end'] for sl in sls if sl['fed']]))))
             slotted |= {sl['floor']['face'].tempId for sl in sls}
             slotted |= {g['face'].tempId for g in fed}
-        # corners the 3.175 can't reach, in pockets and windows, with small end mills:
-        # rest machining, a pocket that cuts only the slivers the 3.175 left in
-        # corners tighter than its radius, entering by plunging into them. An end mill
-        # fits when its radius is no larger than the corner's and its flute 0.5 mm
-        # longer than the cut (a window's: the part's thickness and 0.5 mm); a corner
-        # tighter than the smallest end mill keeps that one's radius, with a
-        # warning; with no flute long enough, the corner keeps the 3.175's radius.
-        # One operation per end mill and start height, those starting highest
-        # first, then one per window.
-        # A floor inside a shelf region has walls only up to that region's floor:
-        # above it the region's pocket has cleared everything, its corners too, so
-        # its corner cut starts there
-        shelves = self.lay['shelves'] if self.lay else {}
+        # corners the 3.175 can't reach, by rest machining with small end mills
+        # (conventions.md, Operation order, step 6): one operation per end mill and
+        # start height, those starting highest first, then one per window; a corner
+        # tighter than the smallest end mill keeps its radius, with a warning, and a
+        # floor inside a shelf region has its corner cut start at that region's floor
+        shelves = lay['shelves'] if lay else {}
         regions = []
         for f in self.pockets:
             c = shelves.get(f['face'].tempId)
@@ -6155,11 +6134,11 @@ class _Side:
                 continue  # its own small end mill's pocket reaches the corners
             smallest = SMALL_ENDMILLS[-1][1] / 2
             if r < smallest:
-                self.warnings.append('pocket at z=%g mm has sharp or R%.2f inside corners; the %g mm '
+                warnings.append('pocket at z=%g mm has sharp or R%.2f inside corners; the %g mm '
                                 'end mill leaves R%g' % (f['z'], r, 2 * smallest, smallest))
             em, d = self.corner_tool(max(r, smallest), f['depth'])
             if not em:
-                self.warnings.append('pocket at z=%g mm: corner radius %.2f mm needs a smaller tool '
+                warnings.append('pocket at z=%g mm: corner radius %.2f mm needs a smaller tool '
                                 'than the library has, or is deeper than its flute' % (f['z'], r))
                 continue
             w, top_h = corner_top(f)
@@ -6168,7 +6147,7 @@ class _Side:
             name = 'Pocket corners %g' % d
             if w is not None:
                 name += ' from %g mm' % round(z, 2)
-            self.ops['main'].append(self.b.op(self.setup, 'pocket2d', em, name, dict(
+            ops['main'].append(b.op(setup, 'pocket2d', em, name, dict(
                 POCKET, doMultipleDepths='true', rampType="'plunge'", useRestMachining='true',
                 bottomHeight_mode="'from contour'", **top_h),
                 _sel_pocket(faces)))
@@ -6180,18 +6159,18 @@ class _Side:
                 continue
             smallest = SMALL_ENDMILLS[-1][1] / 2
             if r < smallest:
-                self.warnings.append('window has sharp or R%.2f inside corners; the %g mm end mill '
+                warnings.append('window has sharp or R%.2f inside corners; the %g mm end mill '
                                 'leaves R%g' % (r, 2 * smallest, smallest))
             em, d = self.corner_tool(max(r, smallest), self.thickness + 0.5)
             if not em:
-                self.warnings.append('window: corner radius %.2f mm needs a smaller tool than the '
+                warnings.append('window: corner radius %.2f mm needs a smaller tool than the '
                                 'library has, or is deeper than its flute; the 3.175 end mill '
                                 'leaves material in its corners' % r)
                 continue
             params = dict(POCKET, doMultipleDepths='true', rampType="'plunge'",
                           useRestMachining='true', **self.top_at(0))
             params.update(self.through_part('bottom'))
-            self.ops['main'].append(self.b.op(self.setup, 'pocket2d', em, 'Window corners %g' % d, params,
+            ops['main'].append(b.op(setup, 'pocket2d', em, 'Window corners %g' % d, params,
                                     _sel_chains([w['loop']], 'pockets')))
         small = {}
         for h, rough, _ in self.bored:
@@ -6199,15 +6178,17 @@ class _Side:
                 small.setdefault(rough[0], []).append(h)
         for em, group in small.items():
             for hs in _group(group):
-                params = dict(BORE, stepover='0.2mm', numberOfStepovers='2', **self.from_hole_top(hs))
+                params = dict(BORE, stepover='0.2mm', numberOfStepovers='2',
+                              **self.from_hole_top(hs))
                 params.update({'bottomHeight_offset': '-0.5mm' if hs[0]['through'] else '0mm'})
-                self.ops['main'].append(self.b.op(self.setup, 'bore', em, 'Bore %.2f' % hs[0]['dia'], params,
+                ops['main'].append(b.op(setup, 'bore', em, 'Bore %.2f' % hs[0]['dia'], params,
                                         _sel_faces('circularFaces', [x['face'] for x in hs])))
 
     def _finish_ops(self):
         """The drills, thread mills, finishing bores and finishing face."""
+        setup, ops = self.setup, self.ops
         # drills (plain holes, then tap drills) of the holes not in a pocket floor
-        self.ops['main'] += self.drill_ops(False)
+        ops['main'] += self.drill_ops(False)
         # thread mills
         by_thread = {}
         for h, t in self.tapped:
@@ -6216,37 +6197,41 @@ class _Side:
             for through in (True, False):
                 hs = [h for h in all_hs if h['through'] == through]
                 if hs:
-                    self.ops['main'].append(self.b.op(
-                        self.setup, 'thread', THREADS[t][2], 'Thread ' + t + ('' if through else ' (blind)'),
+                    ops['main'].append(self.b.op(
+                        setup, 'thread', THREADS[t][2],
+                        'Thread ' + t + ('' if through else ' (blind)'),
                         _thread_params(t, through, max(0.0, self.high[0]) + self.rise(hs)),
                         _sel_faces('circularFaces', [h['face'] for h in hs])))
         # the finishing bores after the drills and thread mills, to clean up the
-        # burrs they leave on the bores' floors and edges (user, 2026-10-17); tap holes
+        # burrs they leave on the bores' floors and edges; tap holes
         # bored to size keep theirs before the thread mill, which needs the final size
         self.end_bores('finish', 'false', ' (finish)')
         # the finishing face, after every cut that leaves burrs on the face
         if self.facing:
-            self.ops['main'].append(self.face_op('finish', 'false', ' (finish)', 0))
+            ops['main'].append(self.face_op('finish', 'false', ' (finish)', 0))
 
     def _chamfer_ops(self):
         """The modelled chamfers and the deburrs."""
+        a, b, setup = self.a, self.b, self.setup
+        ops, plan, warnings = self.ops, self.plan, self.warnings
+        top, side, holes, floors, face = self.top, self.side, self.holes, self.floors, self.face
         # the modelled 45-degree chamfers facing this setup (see _slopes), by the
         # chamfering bit with its cone on the chamfer (Fusion's 2D chamfer of the
         # chamfer faces, its width and clearance 0), the point below the chamfer's
         # lower edge by as much as the floors and tabs below and the bit's reach allow
         # the tabs start at the outline, so an edge of the part comes within the
         # chamfering bit's reach of one only within its radius of the tab's points
-        tab_near = _near_points([(q.x, q.y) for q in (_tab_points(self.a, self.plan['tab']['width'] / 10)
-                                                      if self.plan['outline'] else [])],
+        tab_near = _near_points([(q.x, q.y) for q in (_tab_points(a, plan['tab']['width'] / 10)
+                                                      if plan['outline'] else [])],
                                 3.175 / 20 + 0.02)
         def band_room(depth, edges=None):
             # mm from `depth` below the face down to the tab band, or None where the
             # band does not count: the chamfer lies past it, so the tabs are behind
             # it, or none of `edges` comes near a tab
-            if not self.plan['outline']:
+            if not plan['outline']:
                 return None
-            near = self.a['ztop'] - self.band_top if self.top else self.band_bot - self.a['zbot']
-            far = self.a['ztop'] - self.band_bot if self.top else self.band_top - self.a['zbot']
+            near = a['ztop'] - self.band_top if top else self.band_bot - a['zbot']
+            far = a['ztop'] - self.band_bot if top else self.band_top - a['zbot']
             if depth >= far - 1e-6:
                 return None
             if edges is not None and not any(tab_near(x, y) for e in edges
@@ -6255,9 +6240,9 @@ class _Side:
             return max(0.0, near - depth)
         def chamfer_room(depth, edges=None):
             # mm from `depth` below the face down to the next floor, hole bottom or tab
-            room = [f['depth'] - depth for f in self.floors
+            room = [f['depth'] - depth for f in floors
                     if f['role'] == 'pocket' and f['depth'] > depth + 1e-6]
-            room += [h['depth'] - depth for h in self.holes
+            room += [h['depth'] - depth for h in holes
                      if not h['through'] and h['depth'] > depth + 1e-6]
             r = band_room(depth, edges)
             if r is not None:
@@ -6265,17 +6250,17 @@ class _Side:
             return min(room + [CHAMFER_TIP_MAX + CHAMFER_CLEAR])
         # every chamfer's edges, cut or not, are left out of the deburr: a cut one
         # has no burr, and one too close above a floor is left square anyway
-        by_tip, chamfered = {}, _chamfer_edges(self.a, self.side)
-        for c in self.a['chamfers']:
-            if c['side'] != self.side:
+        by_tip, chamfered = {}, _chamfer_edges(a, side)
+        for c in a['chamfers']:
+            if c['side'] != side:
                 continue
-            depth = self.a['ztop'] - c['z0'] if self.top else c['z1'] - self.a['zbot']
+            depth = a['ztop'] - c['z0'] if top else c['z1'] - a['zbot']
             tip = min(CHAMFER_TIP_MAX, chamfer_room(depth, list(c['face'].edges)) - CHAMFER_CLEAR,
                       CHAMFER_REACH - c['width'])
             if tip < CHAMFER_TIP_MIN - 1e-6:
-                self.warnings.append('a %g mm chamfer on the %s with its lower edge %g mm deep has '
+                warnings.append('a %g mm chamfer on the %s with its lower edge %g mm deep has '
                                 "a floor or the tabs too close below for the chamfering bit's "
-                                'point: nothing cuts it' % (c['width'], self.side, round(depth, 3)))
+                                'point: nothing cuts it' % (c['width'], side, round(depth, 3)))
                 continue
             by_tip.setdefault(round(tip, 3), []).append(c)
         edges_of = (self.lay or {}).get('chamfer_edges') or []
@@ -6284,106 +6269,92 @@ class _Side:
             params = dict(CHAMFER_OP, chamferClearance='0mm', chamferTipOffset='%gmm' % tip)
             # the passes before the last, CHAMFER_STEPDOWN deeper each, along the sharp
             # edges sketched for them; a chamfer joins those narrower than itself
-            widths = sorted({round(CHAMFER_STEPDOWN * j, 4) for c in cs
-                             for j in range(1, int(math.ceil(c['width'] / CHAMFER_STEPDOWN - 1e-6)))})
+            widths = sorted({round(CHAMFER_STEPDOWN * j, 4) for c in cs for j in range(
+                1, int(math.ceil(c['width'] / CHAMFER_STEPDOWN - 1e-6)))})
             for w in widths:
-                es = [edges_of[self.a['chamfers'].index(c)] for c in cs
+                es = [edges_of[a['chamfers'].index(c)] for c in cs
                       if c['width'] > w + 1e-6 and edges_of]
                 if es:
-                    self.ops['main'].append(self.b.op(self.setup, 'chamfer2d', CHAMFER, '%s (%g mm)' % (name, w),
+                    ops['main'].append(b.op(setup, 'chamfer2d', CHAMFER, '%s (%g mm)' % (name, w),
                                             dict(params, chamferWidth='%gmm' % w),
                                             _sel_chamfer_edges(es)))
             # the last pass: the chamfer as modelled
-            self.ops['main'].append(self.b.op(self.setup, 'chamfer2d', CHAMFER, name,
+            ops['main'].append(b.op(setup, 'chamfer2d', CHAMFER, name,
                                     dict(params, chamferWidth='0mm'),
                                     _sel_face_contours([c['face'] for c in cs])))
-        # deburr the outer face's edges, the bit's point kept off the shallowest floor
-        # and blind hole bottom below the face, and off the tabs, which still stand in
-        # the outline cut; Fusion leaves out any edge where the point would go deeper.
-        # The other faces level with it, such as an island's top, go with it; each
-        # pocket floor whose edges fall away, where it meets the part's sides or a
-        # deeper pocket, or round a hole or window through it, gets the same below
-        # its own height
-        if self.face is not None and self.plan['chamfer']:
+        # the deburrs: the face's edges, with those of the faces level with it, then
+        # each pocket floor's falling edges (conventions.md, Operation order, step 11)
+        if face is not None and plan['chamfer']:
             width = float(CHAMFER_OP['chamferWidth'][:-2])
 
             def chamfer_tip(depth, what, faces=None):
-                # the point's offset below a chamfer at `depth` mm below the face;
-                # the tabs count only for `faces` with a falling edge near a tab.
-                # Pocket floors take the point as deep as there is room: the deeper
-                # the point, the farther out over the drop the bit's axis, and the
-                # nearer a wall beside the edge it reaches it (user, 2026-10-24: 0.5 mm
-                # left part of the rims of holes beside a pocket's walls; 2026-10-25:
-                # at 0.5 mm Fusion found no toolpath at all along the side edges of
-                # sample-lid-with-tabs-v2's 3.4 mm slots, which open at the part's
-                # sides, and from 0.64 mm it does). A through opening or the part's
-                # side sets no depth; a hole's width does: the axis lies the point's
-                # offset plus the chamfer's width in from the rim, and Fusion keeps
-                # the bit its clearance off the hole's far side (it refused 0.9 mm in
-                # a 2.2 mm hole, "the given lead parameters would cause a collision")
+                # the most the point may go below a chamfer `depth` mm below the
+                # face: room to the floors, blind hole bottoms and tabs below (the
+                # tabs only for `faces` with a falling edge near one); for a pocket
+                # floor's `faces`, as deep as the cone's top and, in a hole, Fusion's
+                # leads allow (it refused 0.9 mm in a 2.2 mm hole), the offset
+                # _deburr_tip then picks under it; for the face, CHAMFER_TIP_MAX
                 inner = faces is not None
                 ids = {g.tempId for g in faces or []}
-                rims = [h for h in self.holes if (lambda r: r is not None and r.face.tempId in ids)(
-                    _hole_ends(h, self.top)[0])]
-                room = [f['depth'] - depth for f in self.floors
+                rims = [h for h in holes if (lambda r: r is not None and r.face.tempId in ids)(
+                    _hole_ends(h, top)[0])]
+                room = [f['depth'] - depth for f in floors
                         if f['role'] == 'pocket' and f['depth'] > depth + 1e-6]
-                room += [h['depth'] - depth for h in self.holes
+                room += [h['depth'] - depth for h in holes
                          if not h['through'] and h['depth'] > depth + 1e-6]
                 r = band_room(depth, None if faces is None else [
                     ce.edge for g in faces for lp in g.loops for ce in lp.coEdges
                     if _falls_away(g, ce)])
                 if r is not None:
                     room.append(r)
-                # the cone's top, where the bit's 3.175 mm body starts, stays
-                # CHAMFER_CLEAR above the floor: the body reaches in over the floor,
-                # and at 1.437 mm it rubbed sample-lid-with-tabs-v2's slot floors
-                # (Fusion's simulation, Stock+Shoulder; rule DB3)
+                # the cone's top, where the bit's body starts, stays CHAMFER_CLEAR
+                # above the floor, which the body reaches in over (rule DB3)
                 most = CHAMFER_REACH - width - CHAMFER_CLEAR if inner else CHAMFER_TIP_MAX
                 if inner:
                     most = min([most] + [h['dia'] / 2 - width - CHAMFER_CLEAR - 0.01 for h in rims])
                 room.append(most + width + CHAMFER_CLEAR)
                 tip = max(CHAMFER_TIP_MIN, min(most, min(room) - width - CHAMFER_CLEAR))
                 if width + tip > min(room) - 0.02:
-                    self.warnings.append('a floor or the tabs lie %.2f mm below %s, too close for a '
+                    warnings.append('a floor or the tabs lie %.2f mm below %s, too close for a '
                                     '%g mm chamfer: the deburr leaves those edges out or cuts the '
                                     'tabs' % (min(room), what, width))
                 return tip
-            tip = chamfer_tip(0.0, 'the %s face' % self.side)
+            tip = chamfer_tip(0.0, 'the %s face' % side)
             # the stock's own sides, where it fits the part, are left as they are when
             # the face is not faced: no tool cuts them, so they have no burrs
-            axes = [] if self.plan['outline'] or self.facing else ['y'] if self.plan['ends'] else ['x', 'y']
-            raw = _raw_edges(self.face, self.body, axes) if axes else set()
-            level = [f['face'] for f in self.floors if f['role'] == 'face' and f['face'] != self.face
+            axes = [] if plan['outline'] or self.facing else ['y'] if plan['ends'] else ['x', 'y']
+            raw = _raw_edges(face, self.body, axes) if axes else set()
+            level = [f['face'] for f in floors if f['role'] == 'face' and f['face'] != face
                      and _has_falling_edges(f['face'], chamfered)]
             # the edges along modelled chamfers have no burr: the chamfer took it off
             if level or any(ce.edge.tempId not in raw and ce.edge.tempId not in chamfered
-                            for lp in self.face.loops for ce in lp.coEdges):
-                self.ops['main'].append(self.b.op(self.setup, 'chamfer2d', CHAMFER, 'Deburr', dict(
+                            for lp in face.loops for ce in lp.coEdges):
+                ops['main'].append(b.op(setup, 'chamfer2d', CHAMFER, 'Deburr', dict(
                     CHAMFER_OP, chamferTipOffset='%gmm' % round(tip, 3)),
-                    _sel_deburr_faces(level, self.face, raw, chamfered)))
+                    _sel_deburr_faces(level, face, raw, chamfered)))
             by_depth = {}
-            for f in self.floors:
+            for f in floors:
                 if f['role'] == 'pocket' and _has_falling_edges(f['face'], chamfered):
                     by_depth.setdefault(round(f['depth'], 3), []).append(f['face'])
             for dep, fs in sorted(by_depth.items()):
-                t, _, _ = _deburr_tip(fs, adsk.core.Vector3D.create(0, 0, 1 if self.top else -1), dep,
+                t, _, _ = _deburr_tip(fs, adsk.core.Vector3D.create(0, 0, 1 if top else -1), dep,
                                       chamfer_tip(dep, 'the pocket floor %g mm deep' % dep, fs),
                                       width, chamfered)
-                self.ops['main'].append(self.b.op(
-                    self.setup, 'chamfer2d', CHAMFER,
+                ops['main'].append(b.op(
+                    setup, 'chamfer2d', CHAMFER,
                     'Deburr pocket floors' + (' %g mm' % dep if len(by_depth) > 1 else ''),
                     dict(CHAMFER_OP, chamferTipOffset='%gmm' % round(t, 3)),
                     _sel_deburr_faces(fs, skip=chamfered)))
         # the edges of the holes under counterbores, at the counterbore's floor, which
         # the face's deburr does not reach; the point goes down the hole below
-        if self.plan['chamfer']:
+        if plan['chamfer']:
             width = float(CHAMFER_OP['chamferWidth'][:-2])
             by_tip = {}
-            for h in self.holes:
+            for h in holes:
                 g = self.hole_below(h)
                 if g is None:
                     continue
-                fz = (h['z0'] if self.top else h['z1']) / 10  # cm
+                fz = (h['z0'] if top else h['z1']) / 10  # cm
                 floor = next((f for e in h['face'].edges for f in e.faces
                               if f != h['face'] and isinstance(f.geometry, adsk.core.Plane)
                               and abs(f.pointOnFace.z - fz) < 1e-4), None)
@@ -6393,39 +6364,43 @@ class _Side:
                 tip = max(CHAMFER_TIP_MIN, min(CHAMFER_TIP_MAX, room - width - CHAMFER_CLEAR))
                 by_tip.setdefault(round(tip, 3), []).append(floor)
             for tip, fl in sorted(by_tip.items()):
-                self.ops['main'].append(self.b.op(self.setup, 'chamfer2d', CHAMFER, 'Deburr counterbores', dict(
+                ops['main'].append(b.op(setup, 'chamfer2d', CHAMFER, 'Deburr counterbores', dict(
                     CHAMFER_OP, chamferTipOffset='%gmm' % tip), _sel_inner_contours(fl)))
 
     def _tab_cut(self):
         """The tab cut, last and in its own NC program."""
+        a, b, setup, ops = self.a, self.b, self.setup, self.ops
+        top, lay, m, tab = self.top, self.lay, self.m, self.tab
         # the last setup: the tab cut, last and in its own NC program; from the
         # bottom with two sides, from the top with one
-        if self.plan['outline'] and self.top == (self.plan['sides'] == 1):
+        if self.plan['outline'] and top == (self.plan['sides'] == 1):
             params = dict(CONTOUR, doMultipleDepths='true', maximumStepdown='0.2mm')
-            if self.top:
-                params.update(_top_below_part_top(self.a['ztop'] - self.band_top, self.m))
-                params.update(_bottom_below_part_top(self.a['ztop'] - self.chain_bot, self.m))
+            if top:
+                params.update(_top_below_part_top(a['ztop'] - self.band_top, m))
+                params.update(_bottom_below_part_top(a['ztop'] - self.chain_bot, m))
             else:
-                params.update(_top_below_part_top(self.band_bot - self.a['zbot'], self.m))
-                params.update(_bottom_below_part_top(self.band_top + self.tab['overlap'] - self.a['zbot'], self.m))
-            hi, set_hi = _at_tab('top', self.tab_top if self.top else self.tab_bottom)
-            lo, set_lo = _at_tab('bottom', self.tab_bottom if self.top else self.tab_top, -self.tab['overlap'])
+                params.update(_top_below_part_top(self.band_bot - a['zbot'], m))
+                params.update(_bottom_below_part_top(self.band_top + tab['overlap'] - a['zbot'], m))
+            hi, set_hi = _at_tab('top', self.tab_top if top else self.tab_bottom)
+            lo, set_lo = _at_tab('bottom', self.tab_bottom if top else self.tab_top,
+                                 -tab['overlap'])
             params.update(hi, **lo)
-            self.ops['tabs'].append(self.b.op(self.setup, 'contour2d', (ENDMILL, 'rough'), 'Cut tabs', params,
-                                    _both(_sel_layout_chains(self.lay['tabs'] if self.lay else [], self.top),
+            ops['tabs'].append(b.op(setup, 'contour2d', (ENDMILL, 'rough'), 'Cut tabs', params,
+                                    _both(_sel_layout_chains(lay['tabs'] if lay else [], top),
                                           set_hi, set_lo)))
 
     def top_at(self, depth):
         """The top height of an operation starting `depth` mm below the part's
         face. One starting at the face or above it starts at the stock's highest
         point: after a face, that face's patch plus what the face left on it."""
+        m = self.m
         if depth > 1e-6:  # a stage of a cut deeper than the drill reaches
-            return _top_below_part_top(depth, self.m)
-        if self.facing and self.high[0] >= self.m - 1e-6:  # not faced yet
+            return _top_below_part_top(depth, m)
+        if self.facing and self.high[0] >= m - 1e-6:  # not faced yet
             return {'topHeight_mode': "'from stock top'", 'topHeight_offset': '0mm'}
         ref = self.patch if self.patch is not None else self.face
         if ref is None:
-            return _top_below_part_top(-self.high[0], self.m)
+            return _top_below_part_top(-self.high[0], m)
         return self.at('top', ref, self.high[0])
 
     def at(self, which, face, offset=0.0):
@@ -6458,17 +6433,10 @@ class _Side:
         return max(below, key=lambda g: g['dia']) if below else None
 
     def pre_drill_ends(self, h):
-        """A bore pre-drill's ends. Where a narrower hole goes on below a blind
-        hole (a counterbore), the drill's point goes on down until its cone meets
-        the floor at that hole's edge, or the hole's own bottom if that comes
-        first and it is blind: as wide as it can be without marking the floor. A
-        hole below as wide as the drill takes the tip through. In a blind hole
-        the 3.175 mm end mill bores or pockets, with no hole below, T1's point
-        goes on below the floor until its cone is half the end mill wide there,
-        as a pocket's entry hole does: the end mill plunges to the floor, and
-        enters copper only down a hole at least half its width (rule TH4; user,
-        2026-10-25), at the cost of a dimple in the floor. A pre-drill for a
-        small end mill's bore stops at the hole's bottom."""
+        """A bore pre-drill's ends, as conventions.md's Drill row gives them: over
+        a narrower hole below (a counterbore), on until the cone meets that hole's
+        edge; in a blind hole the 3.175 mm end mill cuts, blind_cone() below the
+        floor (rule TH4); for a small end mill's bore, at the hole's bottom."""
         ends = _drill_ends(h['through'])
         g = self.hole_below(h)
         if g is None:
@@ -6486,21 +6454,24 @@ class _Side:
     def drill_for(self, depth):
         if depth > self.reach + 1e-6:
             self.warnings.append('a %.1f mm hole is deeper than the %s reaches (%.1f mm)'
-                            % (depth, DRILL_3175, self.reach))
+                                 % (depth, DRILL_3175, self.reach))
         return DRILL_3175
 
     def small_pre_drill(self, h):
         """The widest library drill no wider than the hole less DRILL_UNDER that
         reaches its depth, or None."""
-        fits = [d for d in self.drills if d[1] <= h['dia'] - DRILL_UNDER + 1e-6 and d[2] >= h['depth'] + 0.5]
+        fits = [d for d in self.drills
+                if d[1] <= h['dia'] - DRILL_UNDER + 1e-6 and d[2] >= h['depth'] + 0.5]
         return max(fits, key=lambda d: d[1])[0] if fits else None
 
     def later_drills(self):
         """T1 after the rough face and outline: tab entries from the tab band's
         top, which the outline has cut down to there, and pocket entries and
         bore pre-drills from the face, on the material left for its finish."""
+        b, setup, warnings = self.b, self.setup, self.warnings
+        lay, thickness = self.lay, self.thickness
         out = []
-        if self.top and self.plan['outline'] and (self.lay is None or len(self.lay['corner']) > 1):
+        if self.top and self.plan['outline'] and (lay is None or len(lay['corner']) > 1):
             depth = self.a['ztop'] - self.chain_bot
             params = dict(DRILL, holeMode="'selection-points'", breakThroughDepth='0mm',
                           drillTipThroughBottom='true')
@@ -6513,26 +6484,27 @@ class _Side:
             # slot from above the stock, since at rapid it would rub the slot's
             # walls (Fusion's simulation flags that as a rapid move into stock)
             params.update(feedHeight_mode="'from stock top'", feedHeight_offset='1mm')
-            out.append(self.b.op(self.setup, 'drill', self.drill_for(self.band_top - self.chain_bot), 'Tab entry holes',
-                            params, _both(self.points([c['entry'] for c in self.lay['corner'][1:]]
-                                                 if self.lay else []), set_hi, set_lo)))
+            entries = self.points([c['entry'] for c in lay['corner'][1:]] if lay else [])
+            out.append(b.op(setup, 'drill', self.drill_for(self.band_top - self.chain_bot),
+                            'Tab entry holes', params, _both(entries, set_hi, set_lo)))
         out += self.entry_drills(self.pocket_bands[0])
         # window entries, through the part, where the window contours enter
         pts = [e['point'] for e in (self.window_entry(w) for w in self.windows) if e is not None]
-        if pts or (self.lay is None and self.windows):
+        if pts or (lay is None and self.windows):
             params = dict(DRILL, holeMode="'selection-points'", breakThroughDepth='0mm',
                           drillTipThroughBottom='true', **self.top_at(0))
             params.update(self.through_part('bottom'))
-            out.append(self.b.op(self.setup, 'drill', self.drill_for(self.thickness + 0.5), 'Window entry holes',
+            out.append(b.op(setup, 'drill', self.drill_for(thickness + 0.5), 'Window entry holes',
                             params, self.points(pts)))
         # pre-drill every bore: T1 for those the 3.175 end mill bores, and for those
         # a small end mill bores, the widest drill that fits the hole, so that no
         # end mill enters solid copper (rule TH4)
-        pre = [(h, DRILL_3175) for h in self.end_bored + [h for h, _ in self.tap_bored] if not self.deep_bore(h)]
+        pre = [(h, DRILL_3175) for h in self.end_bored + [h for h, _ in self.tap_bored]
+               if not self.deep_bore(h)]
         for h in self.small_bored:
             d = self.small_pre_drill(h)
             if d is None:
-                self.warnings.append('no drill fits the %.2f mm hole at (%g, %g) and reaches its depth: '
+                warnings.append('no drill fits the %.2f mm hole at (%g, %g) and reaches its depth: '
                                 'its bore enters solid copper' % (h['dia'], h['x'], h['y']))
             else:
                 pre.append((h, d))
@@ -6544,26 +6516,28 @@ class _Side:
         return out + self.pre_drills([(h, d) for h, d in pre if not in_floor(h)])
 
     def pre_drills(self, pre, suffix=''):
+        top, side = self.top, self.side
         groups = {}
         for h, d in pre:
             ends = self.pre_drill_ends(h)
-            groups.setdefault((d, h['through'], tuple(sorted(ends.items())), h['rise'][self.side]),
+            groups.setdefault((d, h['through'], tuple(sorted(ends.items())), h['rise'][side]),
                               (ends, []))[1].append(h)
         out = []
         # those starting nearest the face first: a hole under a counterbore starts
         # at the counterbore's floor, and its drill rapids down to there, through
         # the hole the counterbore's own pre-drill has drilled by then
-        top_of = lambda hs: min(self.depth_of(h['z1'] if self.top else h['z0']) - h['rise'][self.side]
+        top_of = lambda hs: min(self.depth_of(h['z1'] if top else h['z0']) - h['rise'][side]
                                 for h in hs)
         order = lambda kv: (kv[0][0] != DRILL_3175, kv[0][0], round(top_of(kv[1][1]), 3),
                             not kv[0][1])
         for (d, through, _, _), (ends, hs) in sorted(groups.items(), key=order):
             name = 'Pre-drill bores' if d == DRILL_3175 else 'Pre-drill bores %s' % d.split('*')[0]
             out.append(self.b.op(self.setup, 'drill',
-                            self.drill_for(max(h['depth'] for h in hs)) if d == DRILL_3175 else d,
-                            name + suffix + ('' if through else ' (blind)'),
-                            dict(DRILL, **ends, **self.from_hole_top(hs)),
-                            _sel_faces('holeFaces', [h['face'] for h in hs])))
+                                 (self.drill_for(max(h['depth'] for h in hs))
+                                  if d == DRILL_3175 else d),
+                                 name + suffix + ('' if through else ' (blind)'),
+                                 dict(DRILL, **ends, **self.from_hole_top(hs)),
+                                 _sel_faces('holeFaces', [h['face'] for h in hs])))
         return out
 
     def window_entry(self, w):
@@ -6588,7 +6562,7 @@ class _Side:
         else:
             sel = _sel_pocket([f['face'] for f in self.facing])
         op = self.b.op(self.setup, 'pocket2d', (ENDMILL, which), 'Face' + suffix, params,
-                  _both(sel, _sel_faces('predrillPositions', self.entry)), barrier=True)
+                       _both(sel, _sel_faces('predrillPositions', self.entry)), barrier=True)
         self.high[0] = leave  # the face is now the stock's highest point
         return op
 
@@ -6600,8 +6574,9 @@ class _Side:
         params = dict(CONTOUR, doMultipleDepths=multi, topHeight_mode="'from stock top'",
                       topHeight_offset='0mm', bottomHeight_mode="'from stock bottom'",
                       bottomHeight_offset='-0.5mm')
+        ends = _sel_layout_chains(self.lay['ends'] if self.lay else [], True)
         return self.b.op(self.setup, 'contour2d', (ENDMILL, which), 'Ends' + suffix, params,
-                    _sel_layout_chains(self.lay['ends'] if self.lay else [], True), barrier=True)
+                         ends, barrier=True)
 
     def staged_bore(self, hs, which, tool, params, bottom_offset, name):
         """A bore op for the holes `hs`; a rough bore deeper than the drill
@@ -6631,7 +6606,7 @@ class _Side:
                              drillTipThroughBottom='true')
                 self.ops['main'].append(self.b.op(self.setup, 'drill', DRILL_3175,
                                         'Pre-drill ' + name[0].lower() + name[1:] + stage, p,
-                                        _sel_faces('holeFaces', faces)))
+                                                  _sel_faces('holeFaces', faces)))
                 continue
             p = dict(params, **top_h)
             if last:
@@ -6645,13 +6620,14 @@ class _Side:
         """The cuts of holes too wide for the lab's bore, a pocket entered down
         the hole T1 pre-drilled at its centre, as the lab cuts its 7 mm holes:
         rough, leaving the floor allowance in a blind hole, then a finishing
-        pocket (user, 2026-10-21: big holes are pocketed, not bored). A rough
+        pocket. A rough
         cut deeper than the drill reaches is drilled and pocketed in stages
         (_stage_plan), as a deep bore is. None where the hole has no flat face
         round its rim or at its bottom for the pocket to select: it is bored."""
+        b, setup, top = self.b, self.setup, self.top
         h = hs[0]
-        t0 = self.depth_of(h['z1'] if self.top else h['z0'])
-        rims, bottoms = zip(*(_hole_ends(x, self.top) for x in hs))
+        t0 = self.depth_of(h['z1'] if top else h['z0'])
+        rims, bottoms = zip(*(_hole_ends(x, top) for x in hs))
         centres = [(self.lay or {}).get('hole_centres', {}).get(x['face'].tempId) for x in hs]
         if None in rims or None in centres or (not h['through'] and None in bottoms):
             return None
@@ -6678,7 +6654,8 @@ class _Side:
                 else:
                     p.update(_bottom_below_part_top(t0 + e, self.m), breakThroughDepth='0mm',
                              drillTipThroughBottom='true')
-                out.append(self.b.op(self.setup, 'drill', DRILL_3175, 'Pre-drill ' + name[0].lower() + name[1:],
+                out.append(b.op(setup, 'drill', DRILL_3175,
+                                'Pre-drill ' + name[0].lower() + name[1:],
                                 p, _sel_faces('holeFaces', [x['face'] for x in hs])))
                 continue
             params = dict(POCKET, doMultipleDepths=multi, **top_h)
@@ -6688,26 +6665,28 @@ class _Side:
                 params.update(self.through_part('bottom'))
             else:
                 params.update(self.at('bottom', bottoms[0], allow))
-            out.append(self.b.op(self.setup, 'pocket2d', (ENDMILL, which), name, params,
-                            _both(_sel_chains(list(rims), 'pockets', not self.top),
+            out.append(b.op(setup, 'pocket2d', (ENDMILL, which), name, params,
+                            _both(_sel_chains(list(rims), 'pockets', not top),
                                   _sel_faces('predrillPositions', centres))))
         return out
 
     def blind_tip_warning(self, desc, hs):
-        if self.b.dry:
+        b, warnings = self.b, self.warnings
+        if b.dry:
             return
-        angle = self.b.tools.tip_angle(desc)
+        angle = b.tools.tip_angle(desc)
         # a hole whose modelled point matches the drill's is cut as modelled
         hs = [h for h in hs if h['point_angle'] is None or abs(h['point_angle'] - angle) > 0.5]
         if not hs:
             return
-        tip = self.b.tools.tip_length(desc)
+        tip = b.tools.tip_length(desc)
         name = desc.split('*')[0]
-        model = 'Model the point in the design (in the Hole command, a %g° drill point) so '                 'the design shows what is cut' % round(angle, 1)
+        model = ('Model the point in the design (in the Hole command, a %g° drill point) so '
+                 'the design shows what is cut' % round(angle, 1))
         plain = [h for h in hs if h['point_angle'] is None]
         if plain:
             where = ', '.join('(%g, %g)' % (h['x'], h['y']) for h in plain)
-            self.warnings.append('the %d blind %s mm hole%s drilled by the %s mm drill %s no modelled '
+            warnings.append('the %d blind %s mm hole%s drilled by the %s mm drill %s no modelled '
                             "point: drilled full diameter to the bottom, the drill's %g° point "
                             "goes %.2f mm deeper than the hole's bottom and leaves a cone there. "
                             '%s; at x, y = %s mm'
@@ -6724,14 +6703,15 @@ class _Side:
             else:
                 what = 'stops %.2f mm short of the modelled tip and leaves material there' % (
                     modelled - tip)
-            self.warnings.append("the blind %s mm hole at x, y = (%g, %g) mm has a %g° point modelled, "
+            warnings.append("the blind %s mm hole at x, y = (%g, %g) mm has a %g° point modelled, "
                             "but the %s mm drill's point is %g°: it %s. %s"
                             % (name, h['x'], h['y'], round(h['point_angle'], 1), name,
                                round(angle, 1), what, model))
         thin = [h['depth'] for h in hs if self.thickness - h['depth'] < tip + 0.2]
         if thin:
-            self.warnings.append("a blind %s mm hole's drill point comes within 0.2 mm of the part's "
-                            'other face, or through it, under a hole %g mm deep' % (name, max(thin)))
+            warnings.append("a blind %s mm hole's drill point comes within 0.2 mm of the "
+                            "part's other face, or through it, under a hole %g mm deep"
+                            % (name, max(thin)))
 
     # small end mills: rest machining in pockets whose corners the 3.175 can't reach,
     # one operation per tool
