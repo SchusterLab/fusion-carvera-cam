@@ -5462,14 +5462,22 @@ def _side_ops(b, setup, a, side, plan, warnings):
         return max(below, key=lambda g: g['dia']) if below else None
 
     def pre_drill_ends(h):
-        """A bore pre-drill's ends. A blind hole stops at its bottom, but where a
-        narrower hole goes on below it (a counterbore), the drill's point goes on
-        down until its cone meets the floor at that hole's edge, or the hole's
-        own bottom if that comes first and it is blind: as wide as it can be without marking the
-        floor. A hole below as wide as the drill takes the tip through."""
+        """A bore pre-drill's ends. Where a narrower hole goes on below a blind
+        hole (a counterbore), the drill's point goes on down until its cone meets
+        the floor at that hole's edge, or the hole's own bottom if that comes
+        first and it is blind: as wide as it can be without marking the floor. A
+        hole below as wide as the drill takes the tip through. In a blind hole
+        the 3.175 mm end mill bores or pockets, with no hole below, T1's point
+        goes on below the floor until its cone is half the end mill wide there,
+        as a pocket's entry hole does: the end mill plunges to the floor, and
+        enters copper only down a hole at least half its width (rule TH4; user,
+        2026-10-25), at the cost of a dimple in the floor. A pre-drill for a
+        small end mill's bore stops at the hole's bottom."""
         ends = _drill_ends(h['through'])
         g = hole_below(h)
         if g is None:
+            if not h['through'] and by_endmill(h):
+                return dict(ends, bottomHeight_offset='%gmm' % -round(blind_cone(), 3))
             return ends
         if g['dia'] >= ENDMILL_D - 1e-3:
             return dict(ends, drillTipThroughBottom='true')
@@ -5518,6 +5526,24 @@ def _side_ops(b, setup, a, side, plan, warnings):
     # taps with no matching drill (M4) are drilled, then bored to the modelled
     # diameter, as threads.toml says
     tap_bored = [(h, t) for h, t in tapped if THREADS[t][1] is None]
+    # the holes the 3.175 mm end mill bores or pockets, which T1 pre-drills
+    by_endmill = lambda h: any(h is x for x, rough, _ in bored if rough[0] == ENDMILL) or \
+        any(h is x for x, _ in tap_bored)
+    blind_cone = lambda: (b.tools.tip_length(DRILL_3175) * ENTRY_CONE_D / DRILL_D)
+    sunk = [h for h in holes if not h['through'] and by_endmill(h) and hole_below(h) is None]
+    if sunk and not b.dry:
+        warnings.append('the %d blind hole%s the 3.175 mm end mill bores or pockets %s a cone-shaped '
+                        "dimple %g mm across and %.2f mm deep in %s, where T1's point goes "
+                        'below the floor so that the end mill plunges to the floor down a hole at least '
+                        'half its width; at x, y = %s mm'
+                        % (len(sunk), '' if len(sunk) == 1 else 's',
+                           'leaves' if len(sunk) == 1 else 'leave', ENTRY_CONE_D, blind_cone(),
+                           'its floor' if len(sunk) == 1 else 'their floors',
+                           ', '.join('(%g, %g)' % (h['x'], h['y']) for h in sunk)))
+        thin = [h['depth'] for h in sunk if thickness - h['depth'] < blind_cone() + 0.2]
+        if thin:
+            warnings.append("a blind hole's dimple comes within 0.2 mm of the part's other face, "
+                            'or through it, under a hole %g mm deep' % max(thin))
 
     # T1 drills at most its flute length less 0.5 mm into the material it starts
     # in; deeper holes go down in stages with the cut that uses them (_stage_plan)

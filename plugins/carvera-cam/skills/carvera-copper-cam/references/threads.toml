@@ -34,8 +34,9 @@ accumulated_peck = 1.0    # accumulated pecking depth, after which the drill ret
 chip_break = 0.1          # retract between pecks
 # Through holes: the tip goes 0.5 mm past the bottom. Blind holes are drilled
 # with the tip through the bottom, so they are full diameter to it and the point
-# goes deeper; a bore's pre-drill stops at the hole bottom.
-# (A blind bore over a narrower hole goes deeper: see conventions.md, Drill.)
+# goes deeper. A blind hole's pre-drill for the 3.175 mm end mill goes on below
+# its bottom until the cone is half the end mill wide there, and one over a
+# narrower hole until the cone meets that hole's edge (see conventions.md, Drill).
 through_breakthrough = 0.5
 blind_breakthrough = 0.0
 
