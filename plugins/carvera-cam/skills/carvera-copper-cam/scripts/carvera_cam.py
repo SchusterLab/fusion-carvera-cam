@@ -1541,7 +1541,8 @@ def _save_layout(design, a, plan, name, setups, threads):
         'tabs': [chain(c) for c in lay['tabs']],
         'ends': [chain(c) for c in lay['ends']],
         'pocket_entries': {str(floor_of[k]): {'point': tok(e['point']), 'drill': e['drill'],
-                                              'depth_mm': e['depth']}
+                                              'depth_mm': e['depth'], 'hole': e.get('hole'),
+                                              'below_mm': e.get('below')}
                            for k, e in lay['pocket_entries'].items() if k in floor_of},
         'narrow': sorted(floor_of[k] for k in lay['narrow'] if k in floor_of),
         'small_pockets': {str(floor_of[k]): {'point': tok(e['point']),
@@ -1621,7 +1622,10 @@ def features(args=None):
         e = L['pocket_entries'].get(str(i))
         floors.append(dict(_strip(f), floor=i, **{
             'entry': None if e is None else {'point': 'pocket:%d' % i, 'drilled': e['drill'],
-                                             'hole_depth_mm': e['depth_mm']},
+                                             'hole_depth_mm': e['depth_mm'],
+                                             'hole': e.get('hole'),
+                                             'below_floor_mm': None if e.get('below_mm') is None
+                                             else round(e['below_mm'], 4)},
             'narrow': i in L['narrow'],
             'small_entry': None if str(i) not in L.get('small_pockets', {}) else {
                 'point': 'small_pocket:%d' % i,
@@ -5754,9 +5758,20 @@ def _make_layout(design, a, plan, warnings):
 
     pocket_entries = {}
     narrow = set()  # closed pockets the end mill fits, too narrow for a pocket toolpath's entry
+    angle = Tools().tip_angle(DRILL_3175)
     for f in a['floors']:
         if f['role'] != 'pocket' or f.get('joined'):
             continue  # a floor joined to one open to the side is cut from that one's passes
+        he = None if f['opening'] else _hole_entry(f, a, angle)
+        if he is not None:
+            # at a hole in the floor, T1's point going on down the hole until its
+            # cone meets the hole's edge: no dimple (user, 2026-10-24)
+            (x, y), i, below = he
+            pocket_entries[f['face'].tempId] = {
+                'point': sk.sketchPoints.add(adsk.core.Point3D.create(x, y, 0)),
+                'side': f['side'], 'depth': f['depth'], 'drill': True, 'hole': i,
+                'below': below}
+            continue
         if f['opening']:
             # enter sideways, from the outline cut beside the opening; no drilling
             x, y, dx, dy = f['opening']
@@ -6171,6 +6186,45 @@ def _enclosing(u, units, top, bottom):
     return best
 
 
+def _hole_entry(f, a, angle):
+    """A hole in closed pocket floor f to drill the pocket's entry hole at, so that
+    it leaves no dimple: T1, as wide as the end mill, drilled at the hole's centre
+    from the face to the floor and on down the hole until its cone, `angle`
+    degrees, meets the hole's edge (or to a blind hole's bottom, if that comes
+    first; all the way down a hole as wide as T1). The hole must be at least
+    half the end mill wide (rule TH4: there the cone is the hole's width), with
+    room for the pocket's entry round its centre (ENTRY_R from the walls rising
+    from the floor) all the way up; of several, the one with the most room.
+    Its centre (x, y, cm), its index in a['holes'] and how far below the floor
+    T1's point goes (mm, or None to take the tip through the hole), or None."""
+    top = f['side'] == 'top'
+    face = f['face']
+    walls = _rising_edges(face)
+    mm_ = adsk.core.Application.get().measureManager
+    best = None
+    for i, h in enumerate(a['holes']):
+        if h['side'] != f['side'] or h['dia'] < ENTRY_CONE_D - 1e-6:
+            continue
+        rim = _hole_ends(h, top)[0]
+        if rim is None or rim.face.tempId != face.tempId:
+            continue
+        x, y = h['x'] / 10, h['y'] / 10
+        p = adsk.core.Point3D.create(x, y, face.pointOnFace.z)
+        room = min((mm_.measureMinimumDistance(p, e).value for e in walls), default=9.0)
+        if room < ENTRY_R or not _column_clear(face.body, x, y, face.pointOnFace.z, top,
+                                               TOOL_R - 0.0005):
+            continue
+        if h['dia'] >= DRILL_D - 1e-3:
+            below = None if h['through'] else h['depth']
+        else:
+            below = h['dia'] / 2 / math.tan(math.radians(angle / 2))
+            if not h['through']:
+                below = min(below, h['depth'])
+        if best is None or room > best[0]:
+            best = (room, (x, y), i, below)
+    return None if best is None else best[1:]
+
+
 def _merge_entries(entries):
     """Entries within 0.5 mm of each other share one hole, drilled to the deepest floor."""
     clusters = []
@@ -6439,11 +6493,15 @@ def _side_ops(b, setup, a, side, plan, warnings):
     for e in side_entries.values():
         if e['drill'] and (e['point'] is None or all(e['point'] is not q for q, _ in holes_in)):
             holes_in.append((e['point'], e['depth']))
+    # entries at a hole in the floor (see _hole_entry): how far below the floor
+    # T1's point goes there, None to take the tip through
+    below_at = {id(e['point']): e['below'] for e in side_entries.values()
+                if e['drill'] and e.get('hole') is not None}
     # each entry hole's drill point goes below the pocket floor only until its
     # cone is half the end mill wide at the floor, as the end mill needs to
     # enter there (rule TH4); the rest of the cone is a dimple in the floor
     cone = b.tools.tip_length(DRILL_3175) * ENTRY_CONE_D / DRILL_D
-    dimples = [(q, d) for q, d in holes_in if q is not None]
+    dimples = [(q, d) for q, d in holes_in if q is not None and id(q) not in below_at]
     if dimples:
         where = ', '.join('(%.2f, %.2f)' % (mm(q.geometry.x), mm(q.geometry.y)) for q, _ in dimples)
         warnings.append('the %d pocket entry hole%s on the %s leave%s a cone-shaped dimple %g mm '
@@ -6473,16 +6531,21 @@ def _side_ops(b, setup, a, side, plan, warnings):
         t, bot, holes = band
         by_depth = {}
         for p, d in holes:
-            by_depth.setdefault(round(d, 3), []).append(p)
+            below = below_at.get(id(p), cone) if bot is None or d <= bot + 1e-6 else cone
+            by_depth.setdefault((round(d, 3), below), []).append(p)
         out = []
-        for depth, pts in sorted(by_depth.items()):
-            # at a floor, the point goes only `cone` below it (see above); a stage
-            # of the drill's reach above the floor takes the tip through
+        for (depth, below), pts in sorted(by_depth.items(), key=lambda kv: (
+                kv[0][0], -1 if kv[0][1] is None else kv[0][1])):
+            # at a floor, the point goes only `cone` below it (see above), or at a
+            # hole in the floor as far as the hole lets it; a stage of the drill's
+            # reach above the floor takes the tip through
             params = dict(DRILL, holeMode="'selection-points'", breakThroughDepth='0mm',
                           drillTipThroughBottom='true', **top_at(t))
             floor = floor_at.get(depth)
-            if floor is not None:
-                params.update(at('bottom', floor, -round(cone, 3)),
+            if floor is not None and below is None:
+                params.update(at('bottom', floor))
+            elif floor is not None:
+                params.update(at('bottom', floor, -round(below, 3)),
                               drillTipThroughBottom='false')
             else:
                 params.update(_bottom_below_part_top(depth, m))
