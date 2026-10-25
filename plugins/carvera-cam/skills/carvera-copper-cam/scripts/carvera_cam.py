@@ -1632,6 +1632,10 @@ def features(args=None):
                 'end_mills': L['small_pockets'][str(i)]['end_mills']},
             'falls_away': _has_falling_edges(f['face'], _chamfer_edges(a)),
             'near_tab': near_tab(f),
+            # every edge that falls away from it is the rim of an opening in it
+            'rims_only': _has_falling_edges(f['face']) and all(
+                not lp.isOuter for lp in f['face'].loops for ce in lp.coEdges
+                if _falls_away(f['face'], ce)),
             'region': region_of.get(i),
             'joined_to': a['floors'].index(f['joined']) if f.get('joined') else None,
             'inside_region': L['inside_region'].get(str(i)), 'slot': slot_of.get(i),
@@ -2893,6 +2897,19 @@ def _add_deburr(sels, face, raw):
     _add_edge_runs(sels, face, lambda ce: ce.edge.tempId not in raw)
 
 
+def _into_face(face, pt, v):
+    """The direction from pt, on an edge of the face, into the face: v (the face
+    lies left of its co-edges, seen from its normal), or -v where a point just
+    along v is off the face, as on a part turned over, whose faces' co-edges
+    can run the other way round."""
+    q = adsk.core.Point3D.create(pt.x + v.x * 0.001, pt.y + v.y * 0.001, pt.z + v.z * 0.001)
+    ok, uv = face.evaluator.getParameterAtPoint(q)
+    if ok and not face.evaluator.isParameterOnFace(uv):
+        v = v.copy()
+        v.scaleBy(-1)
+    return v
+
+
 def _falls_away(face, ce):
     """Does the wall at co-edge `ce` of the up-facing `face` fall away below it,
     making a convex edge with a burr to take off? A wall that rises from the
@@ -2908,7 +2925,7 @@ def _falls_away(face, ce):
     if ce.isOpposedToEdge:
         tan.scaleBy(-1)
     ok, n = face.evaluator.getNormalAtPoint(pt)
-    into = n.crossProduct(tan)  # the face lies left of its co-edges, seen from its normal
+    into = _into_face(face, pt, n.crossProduct(tan))
     ok, nw = other[0].evaluator.getNormalAtPoint(pt)
     if not ok or abs(nw.dotProduct(n)) > 0.999:
         return False
@@ -7398,7 +7415,17 @@ def _side_ops(b, setup, a, side, plan, warnings):
 
         def chamfer_tip(depth, what, faces=None):
             # the point's offset below a chamfer at `depth` mm below the face;
-            # the tabs count only for `faces` with a falling edge near a tab
+            # the tabs count only for `faces` with a falling edge near a tab.
+            # Floors whose edges fall away only round openings in them (holes,
+            # windows, deeper pockets) take the point as deep as the room below
+            # allows, down to 0.1 mm above the part's far face and as deep as the
+            # bit's cone reaches: the deeper the point, the farther in the bit's
+            # axis, and the nearer a wall beside the rim it reaches it (user,
+            # 2026-10-24: 0.5 mm left part of the rims of holes beside a
+            # pocket's walls)
+            inner = faces is not None and all(
+                not lp.isOuter for g in faces for lp in g.loops for ce in lp.coEdges
+                if _falls_away(g, ce))
             room = [f['depth'] - depth for f in floors
                     if f['role'] == 'pocket' and f['depth'] > depth + 1e-6]
             room += [h['depth'] - depth for h in holes
@@ -7408,8 +7435,9 @@ def _side_ops(b, setup, a, side, plan, warnings):
                 if _falls_away(g, ce)])
             if r is not None:
                 room.append(r)
-            room.append(CHAMFER_TIP_MAX + width + CHAMFER_CLEAR)
-            tip = max(CHAMFER_TIP_MIN, min(CHAMFER_TIP_MAX, min(room) - width - CHAMFER_CLEAR))
+            most = CHAMFER_REACH - width if inner else CHAMFER_TIP_MAX
+            room.append(thickness - depth if inner else most + width + CHAMFER_CLEAR)
+            tip = max(CHAMFER_TIP_MIN, min(most, min(room) - width - CHAMFER_CLEAR))
             if width + tip > min(room) - 0.02:
                 warnings.append('a floor or the tabs lie %.2f mm below %s, too close for a '
                                 '%g mm chamfer: the deburr leaves those edges out or cuts the '

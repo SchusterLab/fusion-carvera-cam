@@ -888,8 +888,15 @@ def _deburr_edges(setup):
                     ok, tan = ev.getFirstDerivative(mid)
                     if ce.isOpposedToEdge:
                         tan.scaleBy(-1)
-                    # into the face: the face lies left of its co-edges, seen from its normal
+                    # into the face: the face lies left of its co-edges, seen from
+                    # its normal, but on a part turned over they can run the other
+                    # way round: a point just along it must lie on the face
                     into = n.crossProduct(tan)
+                    q = adsk.core.Point3D.create(pt.x + into.x * 0.001, pt.y + into.y * 0.001,
+                                                 pt.z + into.z * 0.001)
+                    ok, uv = face.evaluator.getParameterAtPoint(q)
+                    if ok and not face.evaluator.isParameterOnFace(uv):
+                        into.scaleBy(-1)
                     ok, nw = other[0].evaluator.getNormalAtPoint(pt)
                     if not ok or abs(nw.dotProduct(zx)) > 0.999:
                         continue  # a face beside it in the same plane
