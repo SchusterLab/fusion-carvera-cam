@@ -30,6 +30,8 @@ renumber_tools.
 Lengths in args are millimetres. Fusion's internal unit is the centimetre.
 """
 
+import contextlib
+import io
 import itertools
 import json
 import math
@@ -118,8 +120,9 @@ def _normal(face):
 
 
 def _other_face(edge, face):
+    ids = getattr(face, 'ids', None) or {face.tempId}  # a _Joined floor: any of its faces
     for f in edge.faces:
-        if f.tempId != face.tempId:
+        if f.tempId not in ids:
             return f
     return None
 
@@ -641,6 +644,93 @@ def _tab_height(a, band, overlap, requested=None, tab_points=None, lowest=False)
     return mid, False, openings
 
 
+def _join_floors(floors):
+    """Pocket floors at one height that an opening the 3.175 end mill cannot
+    enter separates, such as a groove a small end mill cuts: the end mill
+    cuts them as one floor, running over the opening ("patch" it, user,
+    2026-10-24). A closed floor joined so to one floor open to the side is
+    cut with that floor's passes, which start on the outline cut's path, so it
+    needs no entry hole of its own; its loops along the opening, and the open
+    floor's, are left out of the floor the passes cut (see _Joined). Sets
+    'group' on the open floor ({'members': the closed floors, 'patched':
+    (face tempId, loop index) of the loops left out}) and 'joined' (the open
+    floor) on each closed one."""
+    pockets = [f for f in floors if f['role'] == 'pocket']
+    root = {id(f): f for f in pockets}
+
+    def find(f):
+        while root[id(f)] is not f:
+            f = root[id(f)]
+        return f
+    patched = set()
+    for g in pockets:
+        if g['side_open']:
+            continue
+        walls = {w.tempId for e in g['face'].edges for w in [_other_face(e, g['face'])]
+                 if w is not None}
+        # the floors with a loop all of whose walls go down into g
+        touch = {}
+        for f in pockets:
+            if f is g or f['side'] != g['side'] or f['depth'] >= g['depth'] - 1e-6:
+                continue
+            for i, lp in enumerate(f['face'].loops):
+                ws = [_other_face(e, f['face']) for e in lp.edges]
+                if ws and all(w is not None and w.tempId in walls for w in ws):
+                    touch.setdefault(round(f['depth'], 4), []).append((f, i))
+        touch = [fl for fl in touch.values() if len({id(f) for f, _ in fl}) > 1]
+        if not touch or _pocket_entry(g['face'])[0] >= TOOL_R:
+            continue  # nothing to join, or the end mill cuts the opening itself
+        for fl in touch:
+            for f, i in fl:
+                patched.add((f['face'].tempId, i))
+                root[id(find(f))] = find(fl[0][0])
+    groups = {}
+    for f in pockets:
+        groups.setdefault(id(find(f)), []).append(f)
+    for grp in groups.values():
+        opens = [f for f in grp if f['side_open']]
+        if len(grp) < 2 or len(opens) != 1:
+            continue
+        members = [f for f in grp if f is not opens[0]]
+        if not all((f['face'].tempId, i) in patched
+                   for f in members for i, lp in enumerate(f['face'].loops) if lp.isOuter):
+            continue
+        ids = {f['face'].tempId for f in grp}
+        opens[0]['group'] = {'members': members, 'patched': {k for k in patched if k[0] in ids}}
+        for f in members:
+            f['joined'] = opens[0]
+
+
+class _Joined:
+    """An open floor and the closed floors joined to it (see _join_floors), as
+    one floor face to the functions that find a floor's walls and islands and
+    sketch its passes: the faces' loops but those along the openings, the
+    open floor's outer loop the floor's outer loop."""
+
+    def __init__(self, f):
+        faces = [f['face']] + [g['face'] for g in f['group']['members']]
+        patched = f['group']['patched']
+        self.face = faces[0]
+        self.ids = {g.tempId for g in faces}
+        self.key = tuple(sorted(self.ids))
+        self.loops = [lp for g in faces for i, lp in enumerate(g.loops)
+                      if (g.tempId, i) not in patched]
+        self.edges = [e for lp in self.loops for e in lp.edges]
+        self.body = faces[0].body
+        self.pointOnFace = faces[0].pointOnFace
+        self.evaluator = faces[0].evaluator
+        self.geometry = faces[0].geometry
+        self.tempId = faces[0].tempId
+        self.boundingBox = faces[0].boundingBox
+        self.area = sum(g.area for g in faces)
+
+
+def _floor_face(f):
+    """What the floor's passes cut: its face, or with closed floors joined to
+    it, a _Joined of them."""
+    return _Joined(f) if f.get('group') else f['face']
+
+
 def analyze_body(body, design=None, threads=None):
     design = design or _design()
     if threads is None:
@@ -757,6 +847,7 @@ def analyze_body(body, design=None, threads=None):
             _steps_down(fl['face'], fl['side'] == 'top', hole_ids)
 
     chamfers, sloped = _slopes(body)
+    _join_floors(floors)
     return {
         'body': body,
         'size': [mm(bb.maxPoint.x - bb.minPoint.x), mm(bb.maxPoint.y - bb.minPoint.y),
@@ -884,7 +975,8 @@ def _tap_candidate(dia):
 
 
 def _strip(feat):
-    return {k: v for k, v in feat.items() if k not in ('face', 'loop', 'body', 'opening', 'walls')}
+    return {k: v for k, v in feat.items()
+            if k not in ('face', 'loop', 'body', 'opening', 'walls', 'group', 'joined')}
 
 
 def _feature_counts(a):
@@ -1133,10 +1225,12 @@ def walls(args):
     reaches from its walls."""
     design, body, a = _built(args)
     f = a['floors'][args['floor']]
-    runs, reach = _open_walls(f['face'])
+    fc = _floor_face(f)
+    runs, reach = _open_walls(fc)
     out = {'floor': _strip(f), 'reach_mm': round(mm(reach), 3),
            'runs': [_wall_list(run) for run in runs],
-           'islands': [_wall_list(run) for run in _islands(f['face'])]}
+           'islands': [_wall_list(run) for run in _islands(fc)],
+           'joined': [a['floors'].index(g) for g in f.get('group', {}).get('members', [])]}
     print(json.dumps(out, indent=1))
     return out
 
@@ -1167,14 +1261,15 @@ def pass_path(args):
     f = a['floors'][args['floor']]
     sk, ring = _sketch_for(design, a)
     d = args['offset_mm'] / 10
-    run = _open_walls(f['face'])[0][args.get('run', 0)]
+    fc = _floor_face(f)
+    run = _open_walls(fc)[0][args.get('run', 0)]
     walls = _draw_walls(sk, run)
-    path = _pass_path(sk, run, walls, d, ring, f['face'],
+    path = _pass_path(sk, run, walls, d, ring, fc,
                       [_loop_ring(w['loop']) for w in a['windows']])
     for c in walls:
         if c.isValid:
             c.deleteMe()
-    if path is not None and _too_near([path], _walls_over(f['face']), TOOL_R - 0.002):
+    if path is not None and _too_near([path], _walls_over(fc), TOOL_R - 0.002):
         for c in path:
             if c.isValid:
                 c.deleteMe()
@@ -1206,15 +1301,16 @@ def island_passes(args):
     out, with why."""
     design, body, a = _built(args)
     f = a['floors'][args['floor']]
-    if not _islands(f['face']) and not _open_walls(f['face'])[0]:
+    fc = _floor_face(f)
+    if not _islands(fc) and not _open_walls(fc)[0]:
         raise RuntimeError('floor %d has neither islands nor walls' % args['floor'])
     sk, ring = _sketch_for(design, a)
-    reach = _open_walls(f['face'])[1]
+    reach = _open_walls(fc)[1]
     step = 0.6 * ENDMILL_D / 10
     n = args.get('n') or max(1, math.ceil((reach + 0.01 - 2 * TOOL_R) / step) + 1)
     left_out = []
     made = []
-    for path, e in _island_chains(sk, f['face'], n, ring, left_out):
+    for path, e in _island_chains(sk, fc, n, ring, left_out):
         pid = _mark_path(design, args['floor'], path)
         item = {'path': pid, 'length_mm': round(mm(sum(c.length for c in path)), 3),
                 'entry': None}
@@ -1248,9 +1344,10 @@ def coverage(args):
     their extent and the uncut point farthest from any path."""
     design, body, a = _built(args)
     f = a['floors'][args['floor']]
-    rings = [_loop_ring(lp) for lp in f['face'].loops]
-    outer = [r for r, lp in zip(rings, f['face'].loops) if lp.isOuter][0]
-    inner = [r for r, lp in zip(rings, f['face'].loops) if not lp.isOuter]
+    fc = _floor_face(f)
+    rings = [_loop_ring(lp) for lp in fc.loops]
+    outer = [r for r, lp in zip(rings, fc.loops) if lp.isOuter][0]
+    inner = [r for r, lp in zip(rings, fc.loops) if not lp.isOuter]
     ids = args.get('paths')
     if not ids:  # every pass sketched for this floor, by build or pass_path
         ids = sorted({at_.value.rsplit(':', 1)[0] for at_ in design.findAttributes(*PATH_ATTR)
@@ -1268,7 +1365,7 @@ def coverage(args):
         raise RuntimeError('coverage: no sketched paths for floor %d' % args['floor'])
     # the walls rising from the floor: an uncut point within a tool radius of
     # one lies in an inside corner the end mill's radius cannot reach
-    walls = [q for e in _rising_edges(f['face']) for q in _edge_points(e)]
+    walls = [q for e in _rising_edges(fc) for q in _edge_points(e)]
     xs, ys = [x for x, _ in outer], [y for _, y in outer]
     step, r = 0.01, TOOL_R + 0.002  # 0.02 mm for the sampling
 
@@ -1524,6 +1621,7 @@ def features(args=None):
                 'end_mills': L['small_pockets'][str(i)]['end_mills']},
             'falls_away': _has_falling_edges(f['face'], _chamfer_edges(a)),
             'region': region_of.get(i),
+            'joined_to': a['floors'].index(f['joined']) if f.get('joined') else None,
             'inside_region': L['inside_region'].get(str(i)), 'slot': slot_of.get(i),
             'fed_by_slot': next((k for k, sl in enumerate(L['slots']) if i in sl['fed']), None)}))
     holes = []
@@ -1861,26 +1959,7 @@ def add_operation(args):
         _set(oi.parameters, 'bottomHeight_mode', "'from point'")
         _set(oi.parameters, 'bottomHeight_offset', '0mm')
         oi.parameters.itemByName('bottomHeight_ref').value.value = [face]
-    picked = False
-    for key, param in (('pockets', 'pockets'), ('contours', 'contours'),
-                       ('stock_contours', 'stockContours')):
-        if key in sel:
-            _sel_items(design, a, L, param, sel[key], top)(oi.parameters)
-            picked = True
-    if 'holes' in sel:
-        _sel_faces('holeFaces' if strategy == 'drill' else 'circularFaces',
-                   [a['holes'][i]['face'] for i in sel['holes']])(oi.parameters)
-        picked = True
-    for key, param in (('points', 'holePoints'), ('predrill', 'predrillPositions'),
-                       ('entries', 'entryPositions')):
-        if sel.get(key):
-            _sel_faces(param, [_point(design, L, n) for n in sel[key]])(oi.parameters)
-            picked = picked or key == 'points'
-    if 'paths' in sel:
-        _sel_paths(_path_curves(design, sel['paths']))(oi.parameters)
-        picked = True
-    if not picked:
-        raise RuntimeError('select: give what the operation cuts')
+    _recipe_select(design, a, L, sel, strategy, top)(oi.parameters)
     op = setup.operations.add(oi)
     programs, warnings = [], []
     if args.get('program'):
@@ -1896,6 +1975,79 @@ def add_operation(args):
         out['warnings'] = warnings
     print(json.dumps(out, indent=1))
     return out
+
+
+def _recipe_select(design, a, L, sel, strategy, top):
+    """The selector for add_operation's `select`."""
+    parts = []
+    for key, param in (('pockets', 'pockets'), ('contours', 'contours'),
+                       ('stock_contours', 'stockContours')):
+        if key in sel:
+            parts.append(_sel_items(design, a, L, param, sel[key], top))
+    if 'holes' in sel:
+        parts.append(_sel_faces('holeFaces' if strategy == 'drill' else 'circularFaces',
+                                [a['holes'][i]['face'] for i in sel['holes']]))
+    for key, param in (('points', 'holePoints'), ('predrill', 'predrillPositions'),
+                       ('entries', 'entryPositions')):
+        if sel.get(key):
+            parts.append(_sel_faces(param, [_point(design, L, n) for n in sel[key]]))
+    if 'paths' in sel:
+        parts.append(_sel_paths(_path_curves(design, sel['paths'])))
+    if not any(k in sel for k in ('pockets', 'contours', 'stock_contours', 'holes', 'paths'))             and not sel.get('points'):
+        raise RuntimeError('select: give what the operation cuts')
+    return _both(*parts)
+
+
+def add_operations(args):
+    """Add a setup's operations, each as add_operation takes it, in the order
+    they run: `operations` lists them in the order the conventions give
+    (references/recipes/part.md), and they are added in the order _run_order
+    picks, as build orders its own, so that each tool cuts as much as it can
+    before the next tool change while each operation stays after every one
+    before it that cuts where it does. A face (a name starting "Face") and an
+    end cut ("Ends") keep their places among all the others, as do chamfers.
+
+    setup:      the setup's name, or "top" / "bottom"
+    operations: [add_operation's arguments but setup, ...]
+    order_only: true to add nothing and return the order alone, for a setup
+                with more operations than one MCP call has time to add: then
+                add them with add_operation, in that order
+    body:       as build takes it
+    Returns the operations' names in the order added (`order`), with what
+    add_operation returned for each; with order_only, the names and their
+    places in `operations` (`index`)."""
+    design, body, a = _built(args)
+    L = _layout(design) if design.attributes.itemByName(*LAYOUT_ATTR) is not None else None
+    sname = args['setup']
+    top = not (L['setups'].get(sname, sname) if L else sname).startswith('Bottom')
+    _FOOT['outline'] = _outline_polygon([f for f in (a['top_face'], a['bottom_face'])
+                                         if f is not None])
+    pend = []
+    for o in args['operations']:
+        strategy = o.get('strategy', 'contour2d')
+        params = dict(o.get('params', {}))
+        if 'paths' in o.get('select', {}):
+            params['compensationType'] = "'off'"
+        p = _Pending(None, strategy, (o['tool'], o.get('T')), o['name'], params,
+                     _recipe_select(design, a, L, o.get('select', {}), strategy, top),
+                     o['name'].startswith(('Face', 'Ends')))
+        p.args = o
+        pend.append(p)
+    order = _run_order(pend)
+    if args.get('order_only'):
+        res = {'order': [p.name for p in order],
+               'index': [next(i for i, q in enumerate(pend) if q is p) for p in order]}
+        print(json.dumps(res, indent=1))
+        return res
+    out = []
+    for p in order:
+        with contextlib.redirect_stdout(io.StringIO()):
+            r = add_operation(dict(p.args, setup=args['setup'],
+                                   **({'body': args['body']} if args.get('body') else {})))
+        out.append(r)
+    res = {'order': [r['operation'] for r in out], 'operations': out}
+    print(json.dumps(res, indent=1))
+    return res
 
 
 def add_contour(args):
@@ -2183,22 +2335,46 @@ def _post(path):
 
 # ------------------------------------------------------------ operations
 
-class Builder:
-    """Creates operations; with dry=True it only records which tools they need."""
+class _Pending:
+    """An operation _side_ops asked for, made later, in the order _run_order
+    picks: what Builder.op takes, and where it cuts (see _footprint)."""
 
-    def __init__(self, cam, tools, log, dry=False):
+    def __init__(self, setup, strategy, tool_key, name, params, select, barrier):
+        self.setup, self.strategy, self.tool_key = setup, strategy, tool_key
+        self.name, self.params, self.select = name, params, select
+        self.barrier = barrier or strategy == 'chamfer2d'
+        self.area = None if self.barrier else _footprint(select, params)
+
+
+class Builder:
+    """Creates operations; with dry=True it only records which tools they need.
+    With defer, op returns a _Pending, which make() creates."""
+
+    def __init__(self, cam, tools, log, dry=False, outline=None):
         self.cam = cam
         self.tools = tools
         self.log = log
         self.dry = dry
+        self.defer = False
         self.needed = []
+        _FOOT['outline'] = outline
 
-    def op(self, setup, strategy, tool_key, name, params, select=None):
+    def op(self, setup, strategy, tool_key, name, params, select=None, barrier=False):
+        """barrier: the operation keeps its place among all the others, as a
+        face, which sets the height the next ones start at, does."""
         desc, key = tool_key if isinstance(tool_key, tuple) else (tool_key, None)
         if self.dry:
             if (desc, key) not in self.needed:
                 self.needed.append((desc, key))
             return None
+        if self.defer:
+            return _Pending(setup, strategy, (desc, key), name, params, select, barrier)
+        return self.make(_Pending(setup, strategy, (desc, key), name, params, select, True))
+
+    def make(self, p):
+        """Create the operation p (a _Pending), last in its setup."""
+        setup, strategy, (desc, key), name, params, select = (
+            p.setup, p.strategy, p.tool_key, p.name, p.params, p.select)
         tool, preset = self.tools.get(desc, key)
         oi = setup.operations.createInput(strategy)
         oi.tool = tool
@@ -2222,6 +2398,368 @@ class Builder:
         self.log.append('%s / %s [%s] T%s %s' % (setup.name, name, strategy,
                         tool.parameters.itemByName('tool_number').expression, desc))
         return op
+
+
+# ------------------------------------------------------------ operation order
+# Each operation's footprint: the cells of a grid in XY (FOOT_H cm rows, spans
+# of x in each) where it cuts. Two operations whose footprints overlap keep the
+# order _side_ops made them in, as the conventions set it (a pocket's entry hole
+# before the pocket, the drills in a floor before its finishing pass, a rest
+# pass after the cuts it follows); the others may change places, so that each
+# tool cuts as much as it can before the next tool change (user, 2026-10-24).
+
+FOOT_H = 0.025  # cm
+_FOOT = {'outline': None}  # the part's outline (cm), for the outline cut's footprint
+
+
+class _Rec:
+    """Stands in for an operation's parameters, to record what a selector
+    (see _sel_faces and the other _sel_ functions) selects: (parameter,
+    entities) for each value set, and (parameter, kind, selection) for each
+    curve selection made."""
+
+    def __init__(self):
+        self.values, self.curves = [], []
+
+    def itemByName(self, name):
+        rec = self
+
+        class Sel:
+            def __init__(self, kind):
+                self.kind, self.inputGeometry = kind, []
+                self.isOpen = False
+                self.isSetupModelSelected = False
+
+        class Sels:
+            def __getattr__(self, attr):
+                if attr.startswith('createNew'):
+                    def make():
+                        s = Sel(attr[len('createNew'):-len('Selection')])
+                        rec.curves.append((name, s))
+                        return s
+                    return make
+                raise AttributeError(attr)
+
+        class Value:
+            def getCurveSelections(self):
+                return Sels()
+
+            def applyCurveSelections(self, sels):
+                pass
+
+            def __setattr__(self, attr, v):
+                if attr == 'value':
+                    rec.values.append((name, list(v)))
+
+        class Param:
+            value = Value()
+        return Param()
+
+
+class _Area:
+    """A footprint: {row: [(x0, x1), ...]}, rows FOOT_H cm apart."""
+
+    def __init__(self):
+        self.rows = {}
+
+    def span(self, j, x0, x1):
+        if x1 > x0:
+            self.rows.setdefault(j, []).append((x0, x1))
+
+    def disk(self, x, y, r):
+        for j in range(int(math.floor((y - r) / FOOT_H)), int(math.ceil((y + r) / FOOT_H)) + 1):
+            dy = j * FOOT_H - y
+            if abs(dy) <= r:
+                w = math.sqrt(r * r - dy * dy)
+                self.span(j, x - w, x + w)
+
+    def band(self, pts, r):
+        """Within r of the polyline through pts."""
+        for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[-1:]):
+            n = max(1, int(math.hypot(x1 - x0, y1 - y0) / (2 * FOOT_H)))
+            for k in range(n):
+                self.disk(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n, r)
+
+    def fill(self, rings):
+        """Inside the rings, by the even-odd rule."""
+        ys = [y for rg in rings for _, y in rg]
+        if not ys:
+            return
+        for j in range(int(math.floor(min(ys) / FOOT_H)), int(math.ceil(max(ys) / FOOT_H)) + 1):
+            y = j * FOOT_H
+            xs = sorted(x1 + (y - y1) * (x2 - x1) / (y2 - y1)
+                        for rg in rings for (x1, y1), (x2, y2) in zip(rg, rg[1:] + rg[:1])
+                        if (y1 <= y < y2) or (y2 <= y < y1))
+            for a_, b_ in zip(xs[::2], xs[1::2]):
+                self.span(j, a_, b_)
+
+    def merged(self):
+        for j, sp in self.rows.items():
+            sp.sort()
+            out = [list(sp[0])]
+            for a_, b_ in sp[1:]:
+                if a_ <= out[-1][1]:
+                    out[-1][1] = max(out[-1][1], b_)
+                else:
+                    out.append([a_, b_])
+            self.rows[j] = [tuple(s) for s in out]
+        return self
+
+    def minus(self, other):
+        for j, sp in list(self.rows.items()):
+            for c0, c1 in other.rows.get(j, []):
+                cut = []
+                for a_, b_ in sp:
+                    if b_ <= c0 or a_ >= c1:
+                        cut.append((a_, b_))
+                        continue
+                    if a_ < c0:
+                        cut.append((a_, c0))
+                    if b_ > c1:
+                        cut.append((c1, b_))
+                sp = cut
+            self.rows[j] = sp
+        return self
+
+    def meets(self, other):
+        for j, sp in self.rows.items():
+            for a_, b_ in other.rows.get(j, ()):
+                for c0, c1 in sp:
+                    if a_ < c1 - 1e-6 and c0 < b_ - 1e-6:
+                        return True
+        return False
+
+
+def _curve_points(c):
+    """(x, y) points (cm) along a sketch curve or B-rep edge, from its start."""
+    if isinstance(c, adsk.fusion.BRepEdge):
+        return _edge_points(c)
+    ev = c.worldGeometry.evaluator
+    ok, t0, t1 = ev.getParameterExtents()
+    n = max(2, int(c.length / 0.02))
+    return [(q.x, q.y) for q in (ev.getPointAtParameter(t0 + (t1 - t0) * k / n)[1]
+                                 for k in range(n + 1))]
+
+
+def _chain_rings(curves):
+    """The closed rings (cm) the curves make, joined end to end; None where
+    they do not close."""
+    left = [_curve_points(c) for c in curves]
+    left = [p for p in left if len(p) > 1]
+    rings = []
+    near = lambda p, q: math.hypot(p[0] - q[0], p[1] - q[1]) < 2e-4
+    while left:
+        ring = left.pop(0)
+        while not near(ring[0], ring[-1]):
+            k = next((k for k, p in enumerate(left) if near(p[0], ring[-1]) or near(p[-1], ring[-1])),
+                     None)
+            if k is None:
+                return None
+            p = left.pop(k)
+            ring += p if near(p[0], ring[-1]) else p[::-1]
+        rings.append(ring)
+    return rings
+
+
+def _footprint(select, params):
+    """Where the operation cuts, as an _Area, from what its selector selects;
+    None (it keeps its place among all the others) when that cannot be told."""
+    rec = _Rec()
+    try:
+        if select is not None:
+            select(rec)
+    except Exception:
+        return None
+    area = _Area()
+    off = params.get('compensationType') == "'off'"
+    try:
+        for name, ents in rec.values:
+            if name.endswith('Height_ref'):
+                continue  # where a height is measured, not what is cut
+            for e in ents:
+                if isinstance(e, adsk.fusion.SketchPoint):
+                    g = e.worldGeometry
+                    area.disk(g.x, g.y, 0.9 * TOOL_R)
+                elif isinstance(e, adsk.fusion.BRepFace):
+                    bb = e.boundingBox  # a hole's wall: the hole
+                    r = max(bb.maxPoint.x - bb.minPoint.x, bb.maxPoint.y - bb.minPoint.y) / 2
+                    area.disk((bb.minPoint.x + bb.maxPoint.x) / 2,
+                              (bb.minPoint.y + bb.maxPoint.y) / 2, r)
+                else:
+                    return None
+        for name, s in rec.curves:
+            if name == 'stockContours':
+                continue  # bounds the stock the pocket cuts, inside its pockets
+            ents = list(s.inputGeometry)
+            if s.kind == 'Silhouette':
+                # the outline cut: the tool outside the outline
+                ring = _FOOT['outline']
+                if ring is None:
+                    return None
+                band = _Area()
+                band.band(ring + ring[:1], 2 * TOOL_R)
+                inner = _Area()
+                inner.fill([ring])
+                for j, sp in band.merged().minus(inner.merged()).rows.items():
+                    for x0, x1 in sp:
+                        area.span(j, x0, x1)
+                continue
+            if s.kind == 'Pocket' or (s.kind == 'FaceContour' and name == 'pockets'):
+                # a floor: inside its outer loop, holes and islands too, so that a
+                # drill in the floor counts as cutting where the floor's pocket does
+                for f in ents:
+                    area.fill([_loop_ring(lp) for lp in f.loops if lp.isOuter])
+                continue
+            if s.kind == 'FaceContour':
+                for f in ents:
+                    for lp in f.loops:
+                        area.band(_loop_ring(lp), 2 * TOOL_R)
+                continue
+            if s.kind == 'Chain' and name == 'pockets' and not s.isOpen:
+                rings = _chain_rings(ents)
+                if rings is None:
+                    return None
+                area.fill(rings)
+                continue
+            if s.kind == 'Chain':
+                # the tool centre on the chain, or a radius to one side of it
+                for c in ents:
+                    area.band(_curve_points(c), TOOL_R if off else 2 * TOOL_R)
+                continue
+            return None
+    except Exception:
+        return None
+    return area.merged() if area.rows else None
+
+
+def _run_order(ops):
+    """The _Pending ops (in the order the conventions give) in the order they
+    run: each after every op before it whose footprint overlaps its own, and
+    as few tool changes as that allows. While an op for the tool in the spindle
+    can run, the next one does (that never costs a change); which tool comes
+    next is searched for every way (_fewest_changes), ties going to the order
+    that keeps ops nearest the conventions' order; a setup with too many ways
+    to search falls back to a look-ahead of one tool."""
+    n = len(ops)
+    before = [0] * n  # bitmask of the ops each waits for
+    for j in range(n):
+        for i in range(j):
+            a_, b_ = ops[i], ops[j]
+            if a_.area is None or b_.area is None or a_.area.meets(b_.area):
+                before[j] |= 1 << i
+    order = _fewest_changes(before, [o.tool_key for o in ops])
+    if order is not None:
+        return [ops[j] for j in order]
+    return _lookahead_order(ops)
+
+
+def _fewest_changes(before, tool, budget=200000):
+    """The order of ops 0..n-1 (op j after the ops in bitmask before[j]) with
+    the fewest changes of `tool`, or None past `budget` states searched. Each
+    step runs one tool for as long as it has ops that can run."""
+    n = len(tool)
+    full = (1 << n) - 1
+    memo, count = {}, [0]
+
+    def ready(done):
+        return [j for j in range(n) if not done >> j & 1 and before[j] & ~done == 0]
+
+    def run_tool(done, t):
+        seq = []
+        while True:
+            js = [j for j in ready(done) if tool[j] == t]
+            if not js:
+                return done, seq
+            done |= 1 << js[0]
+            seq.append(js[0])
+
+    def best(done, cur):
+        if done == full:
+            return 0, ()
+        key = (done, cur)
+        if key in memo:
+            return memo[key]
+        count[0] += 1
+        if count[0] > budget:
+            raise OverflowError
+        out = None
+        for t in dict.fromkeys(tool[j] for j in ready(done)):
+            nd, seq = run_tool(done, t)
+            c, rest = best(nd, t)
+            cand = (c + (t != cur), tuple(seq) + rest)
+            if out is None or cand < out:
+                out = cand
+        memo[key] = out
+        return out
+    try:
+        return list(best(0, None)[1])
+    except (OverflowError, RecursionError):
+        return None
+
+
+def _lookahead_order(ops):
+    """_run_order's fallback: the next tool is the one that, run as far as it
+    goes and then the rest ordered greedily, leaves the fewest changes."""
+    n = len(ops)
+    after = [[] for _ in range(n)]  # the ops that wait for each
+    waits = [0] * n  # how many ops each still waits for
+    for j in range(n):
+        for i in range(j):
+            a_, b_ = ops[i], ops[j]
+            if a_.area is None or b_.area is None or a_.area.meets(b_.area):
+                after[i].append(j)
+                waits[j] += 1
+    tool = [o.tool_key for o in ops]
+
+    def run(state, j):
+        ready, waits_ = state
+        ready.remove(j)
+        for k in after[j]:
+            waits_[k] -= 1
+            if not waits_[k]:
+                ready.append(k)
+        ready.sort()
+
+    def pick(ready, cur, first=None, waiting=None):
+        same = [j for j in ready if tool[j] == cur]
+        if same:
+            return same[0]
+        if first is not None:
+            return next(j for j in ready if tool[j] == first)
+        # a tool all of whose ops left can run now, so that it is done with
+        # for good, before one that will be back
+        done_with = [j for j in ready if not any(tool[k] == tool[j] and waiting[k]
+                                                 for k in range(n))]
+        return (done_with or ready)[0]
+
+    def rollout(state, cur, first):
+        """The tool changes left, running `first` next and then greedily."""
+        state = (list(state[0]), list(state[1]))
+        k = 0
+        while state[0]:
+            j = pick(state[0], cur, first, state[1])
+            first = None
+            k += tool[j] != cur
+            cur = tool[j]
+            run(state, j)
+        return k
+    state = ([j for j in range(n) if not waits[j]], list(waits))
+    cur, order = None, []
+    while state[0]:
+        ready = state[0]
+        if any(tool[j] == cur for j in ready):
+            j = pick(ready, cur)
+        else:
+            best = None
+            for t in dict.fromkeys(tool[j] for j in ready):
+                score = (rollout(state, cur, t), min(j for j in ready if tool[j] == t))
+                if best is None or score < best[0]:
+                    best = (score, t)
+            j = pick(ready, cur, best[1])
+        order.append(j)
+        cur = tool[j]
+        run(state, j)
+    return [ops[j] for j in order]
 
 
 def _sel_pocket(faces):
@@ -2515,16 +3053,74 @@ def _open_walls(face):
 def _islands(face):
     """The islands in a pocket's floor: each inner loop with a wall rising from
     the floor along any of its edges, as its co-edges in loop order, such as a
-    boss, or a pad that a slot cuts through. The passes round an island keep
-    the tool off the whole loop, which where the loop falls away to a deeper
-    pocket or a slot leaves that to the deeper cut. A floor with no wall
-    rising from it anywhere, such as a ring between a groove and the outline,
-    has every inner loop as an island, so that passes run out from them."""
+    boss. The passes round an island keep the tool off the whole loop. Where
+    some of the loop's walls fall away instead, to a slot, a hole or a deeper
+    pocket, as round a pad a slot cuts through, the island is the loop with
+    each opening bridged by a line (see _patched_island): the passes run on
+    over the openings, as if they were patched (user, 2026-10-24). A
+    floor with no wall rising from it anywhere, such as a ring between a
+    groove and the outline, has every inner loop as an island, so that passes
+    run out from them."""
     rising = {e.tempId for e in _rising_edges(face)}
     inner = [lp for lp in face.loops if not lp.isOuter]
     if not rising:
         return [list(lp.coEdges) for lp in inner]
-    return [list(lp.coEdges) for lp in inner if any(e.tempId in rising for e in lp.edges)]
+    out = []
+    for lp in inner:
+        up = [e.tempId in rising for e in lp.edges]
+        if all(up):
+            out.append(list(lp.coEdges))
+        elif any(up):
+            out.append(_patched_island(lp, rising) or list(lp.coEdges))
+    return out
+
+
+class _WireCoEdge:
+    """A line across an opening in an island's loop (see _patched_island), as a
+    co-edge to _draw_walls and _open_walls."""
+    isOpposedToEdge = False
+
+    def __init__(self, edge):
+        self.edge = edge
+
+
+def _patched_island(lp, rising):
+    """An island loop lp, some of whose walls fall away, patched: its co-edges
+    along walls rising from the floor (`rising`, tempIds), in loop order, with
+    each run of the others between them, along the openings, replaced by a
+    straight line across it, so that the island is the copper standing on the
+    floor and the passes round it run on over the openings. None where such
+    a line would leave the loop, over the floor."""
+    ces = list(lp.coEdges)
+    up = [ce.edge.tempId in rising for ce in ces]
+    k0 = next(k for k in range(len(ces)) if up[k] and not up[k - 1])
+    ces, up = ces[k0:] + ces[:k0], up[k0:] + up[:k0]
+
+    def ends(ce):
+        a_, b_ = ce.edge.startVertex.geometry, ce.edge.endVertex.geometry
+        return (b_, a_) if ce.isOpposedToEdge else (a_, b_)
+    ring = _loop_ring(lp)
+    tbm = adsk.fusion.TemporaryBRepManager.get()
+    out, i = [], 0
+    while i < len(ces):
+        if up[i]:
+            out.append(ces[i])
+            i += 1
+            continue
+        j = i
+        while j < len(ces) and not up[j]:
+            j += 1
+        p, q = ends(ces[i - 1])[1], ends(ces[j % len(ces)])[0]
+        if p.distanceTo(q) < 1e-6:
+            i = j
+            continue
+        if not all(_inside(ring, p.x + (q.x - p.x) * t, p.y + (q.y - p.y) * t)
+                   for t in (0.02 * k for k in range(1, 50))):
+            return None
+        wire, _ = tbm.createWireFromCurves([adsk.core.Line3D.create(p, q)])
+        out.append(_WireCoEdge(wire.edges.item(0)))
+        i = j
+    return out
 
 
 def _draw_walls(sk, run, closed=False):
@@ -3053,21 +3649,38 @@ def _join_closed(sk, levels, step, rising, ring):
     # last from one nearer the islands or of the same offset, as for an
     # island beside a run of walls, or a pass pinched off inside the walls
     while closed:
-        polys = [_samples(ch['curves'], 0.02) for ch in chains] +             [_samples(q, 0.02) for _, q, _ in closed]
+        # each curve on its own: a chain's curves run either way, and their
+        # samples strung together would jump from one curve's end to the next's
+        polys = [_samples([c], 0.02) for ch in chains for c in ch['curves']] +             [_samples([c], 0.02) for _, q, _ in closed for c in q]
         options = []
+
+        def nearest(cands):
+            # the shortest leads, ends at least 1 mm apart on the closed pass, so
+            # that where the shortest crosses a pass, as where the leads into
+            # passes round one round island all lie on one line, one beside it
+            # may not
+            out = []
+            for c in sorted(cands):
+                if c[0] > 2 * step + 1e-3 or len(out) == 6:
+                    break
+                if all(math.hypot(c[2][0] - o[2][0], c[2][1] - o[2][1]) > 0.1 for o in out):
+                    out.append(c)
+            return out
         for i_, (k, p, e) in enumerate(closed):
             pts = _samples(p)
             for ch in chains:
                 if ch['tail'] is not None:
                     t = ch['tail'][0].geometry
-                    d, x, y = min((math.hypot(x - t.x, y - t.y), x, y) for x, y in pts)
-                    options.append((ch['tail'][1] <= k, d, i_, ch, t,
-                                    adsk.core.Point3D.create(x, y, 0)))
+                    for d, _, (x, y) in nearest((math.hypot(x - t.x, y - t.y), (t.x, t.y), (x, y))
+                                                for x, y in pts):
+                        options.append((ch['tail'][1] <= k, d, i_, ch, t,
+                                        adsk.core.Point3D.create(x, y, 0)))
                 elif ch['open'] and k - 2 <= ch['k'] <= k + 2:
-                    d, a_, b_ = min((math.hypot(x - u, y - v), (u, v), (x, y))
-                                    for u, v in _samples(ch['curves'], 0.05) for x, y in pts)
-                    options.append((ch['k'] <= k, d, i_, ch, adsk.core.Point3D.create(*a_, 0),
-                                    adsk.core.Point3D.create(*b_, 0)))
+                    near_ = _samples(ch['curves'], 0.05)
+                    for d, a_, b_ in nearest(min((math.hypot(x - u, y - v), (u, v), (x, y))
+                                                 for u, v in near_) for x, y in pts):
+                        options.append((ch['k'] <= k, d, i_, ch, adsk.core.Point3D.create(*a_, 0),
+                                        adsk.core.Point3D.create(*b_, 0)))
         joined = None
         for _, d, i_, ch, a_, b_ in sorted(options, key=lambda o: o[:2]):
             if d > 2 * step + 1e-3:
@@ -3220,6 +3833,20 @@ def _island_chains(sk, face, n, ring, left_out):
             got = None
         if got:
             levels.append((k + 0.5, got))
+    # where every pass closes round the islands short of the outline cut's
+    # path, passes farther out until one reaches it, so that the chain enters
+    # from there, not down a hole drilled in the floor
+    k = n
+    while levels and k < n + 4 and all(e is not None for _, got in levels for _, e in got):
+        got = _island_passes(sk, walls, TOOL_R + k * step, ring, face)
+        if got and _too_near([p for p, _ in got], over, TOOL_R - 0.002):
+            for c in [c for p, _ in got for c in p]:
+                if c.isValid:
+                    c.deleteMe()
+            got = None
+        if got:
+            levels.append((k, got))
+        k += 1
     levels.sort(key=lambda kg: kg[0])
     for c in [c for ws in walls for c in ws]:
         if c.isValid:
@@ -4776,7 +5403,7 @@ def _walls_over(face):
     (below, for a floor facing down). A pass that runs on past the floor, such
     as over a deeper pocket beside it, meets walls that do not stand on the
     floor itself, such as that pocket's walls where they rise past the floor."""
-    key = face.tempId
+    key = getattr(face, 'key', face.tempId)
     if key in _WALLS_OVER:
         return _WALLS_OVER[key]
     up = _normal(face).z > 0
@@ -5117,8 +5744,8 @@ def _make_layout(design, a, plan, warnings):
     pocket_entries = {}
     narrow = set()  # closed pockets the end mill fits, too narrow for a pocket toolpath's entry
     for f in a['floors']:
-        if f['role'] != 'pocket':
-            continue
+        if f['role'] != 'pocket' or f.get('joined'):
+            continue  # a floor joined to one open to the side is cut from that one's passes
         if f['opening']:
             # enter sideways, from the outline cut beside the opening; no drilling
             x, y, dx, dy = f['opening']
@@ -5204,7 +5831,7 @@ def _make_layout(design, a, plan, warnings):
                 continue
             # a pocket the 3.175 enters by itself, or one open to the side, which
             # its passes cut, is not one the slot has to reach
-            if g['side_open'] or g['face'].tempId in pocket_entries:
+            if g['side_open'] or g.get('joined') or g['face'].tempId in pocket_entries:
                 continue
             gb = [lp for lp in g['face'].loops if lp.isOuter][0].boundingBox
             if not (gb.minPoint.x < ex < gb.maxPoint.x and gb.minPoint.y < ey < gb.maxPoint.y):
@@ -5225,7 +5852,7 @@ def _make_layout(design, a, plan, warnings):
     for f in a['floors']:
         k = f['face'].tempId
         if f['role'] != 'pocket' or f['opening'] or k in pocket_entries or k in narrow \
-                or k in by_slot or k in shelves:
+                or k in by_slot or k in shelves or f.get('joined'):
             continue
         c, x, y, q = _pocket_entry(f['face'])
         up = _normal(f['face']).z > 0
@@ -5251,15 +5878,16 @@ def _make_layout(design, a, plan, warnings):
     for f in a_floors:
         if f['role'] != 'pocket' or not f['side_open']:
             continue
-        runs, reach = _open_walls(f['face'])
+        fc = _floor_face(f)
+        runs, reach = _open_walls(fc)
         n = max(1, math.ceil((reach + 0.01 - 2 * TOOL_R) / step) + 1)
         # a pass must keep a tool radius off every wall above the floor, not
         # only its own (see _walls_over). A floor with islands is cut by passes round the
         # islands (see _island_chains), and round its runs of walls too, if
         # it has any, each pass that closes on itself entered from one
         # farther out. The passes run from the walls out.
-        over = _walls_over(f['face'])
-        islands = _islands(f['face'])
+        over = _walls_over(fc)
+        islands = _islands(fc)
         passes = []  # (k, path)
         # a floor whose passes along its walls cannot all be made, such as
         # where a wall meets the outline at a shallow angle with a sliver of
@@ -5272,7 +5900,7 @@ def _make_layout(design, a, plan, warnings):
                 walls = _draw_walls(sk, run)
                 for k in range(n):
                     d = TOOL_R + k * step
-                    pth = _pass_path(sk, run, walls, d, ring, f['face'], window_rings)
+                    pth = _pass_path(sk, run, walls, d, ring, fc, window_rings)
                     if pth is not None and _too_near([pth], over, TOOL_R - 0.002):
                         for c in pth:
                             if c.isValid:
@@ -5303,7 +5931,7 @@ def _make_layout(design, a, plan, warnings):
                 passes = []
         if islands or missed:
             left_out = []
-            joined = _island_chains(sk, f['face'], n, ring, left_out)
+            joined = _island_chains(sk, fc, n, ring, left_out)
             for d, why in left_out:
                 warnings.append('the pass %g mm round the islands of the pocket open to the '
                                 'side at z=%g mm is left out (%s), so check that pocket'
@@ -5450,7 +6078,7 @@ def _shelf_regions(root, a, sk, pocket_entries):
     out = {}
     by_level = {}
     for f in a['floors']:
-        if f.get('shelf'):
+        if f.get('shelf') and not f.get('joined'):
             by_level.setdefault((f['side'], f['z']), []).append(f)
     for (side, z), floors in by_level.items():
         dz = 0.0001 if side == 'top' else -0.0001  # 1 um into the opening
@@ -5790,7 +6418,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
     else:  # dry run: the entries are not sketched yet
         side_entries = {f['face'].tempId: {'point': None, 'depth': f['depth'],
                                            'drill': not f['side_open']}
-                        for f in floors if f['role'] == 'pocket'}
+                        for f in floors if f['role'] == 'pocket' and not f.get('joined')}
 
     # Pocket entries and pockets go down together in bands of the drill's
     # reach from the face: the entries are drilled as deep as the drill
@@ -5967,7 +6595,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
         else:
             sel = _sel_pocket([f['face'] for f in facing])
         op = b.op(setup, 'pocket2d', (ENDMILL, which), 'Face' + suffix, params,
-                  _both(sel, _sel_faces('predrillPositions', entry)))
+                  _both(sel, _sel_faces('predrillPositions', entry)), barrier=True)
         high[0] = leave  # the face is now the stock's highest point
         return op
 
@@ -5980,7 +6608,7 @@ def _side_ops(b, setup, a, side, plan, warnings):
                       topHeight_offset='0mm', bottomHeight_mode="'from stock bottom'",
                       bottomHeight_offset='-0.5mm')
         return b.op(setup, 'contour2d', (ENDMILL, which), 'Ends' + suffix, params,
-                    _sel_layout_chains(lay['ends'] if lay else [], True))
+                    _sel_layout_chains(lay['ends'] if lay else [], True), barrier=True)
 
     if plan.get('ends') and top:
         ops['main'].append(end_cut('rough', 'true', ''))
@@ -6083,8 +6711,16 @@ def _side_ops(b, setup, a, side, plan, warnings):
         return out
 
     def end_bores(which, multi, suffix):
-        for hs in _group(end_bored):
+        # the shallowest first, each rough cut just after its hole's pre-drill
+        # when the hole opens in a floor: a hole under another one starts at that
+        # one's floor, so that one is cut, and its floor made, before the drill
+        # rapids down to it
+        for hs in sorted(_group(end_bored),
+                         key=lambda hs: depth_of(hs[0]['z1'] if top else hs[0]['z0'])):
             h = hs[0]
+            if which == 'rough':
+                ops['main'] += pre_drills([(x, d) for x, d in floor_pre
+                                           if any(x is y for y in hs)], ' in floors')
             radial = max(0.1, (h['dia'] - ENDMILL_D) / 2)
             if pocketed(h):
                 cuts = hole_pocket(hs, multi, suffix, which)
@@ -6180,10 +6816,12 @@ def _side_ops(b, setup, a, side, plan, warnings):
         return out
 
     # closed pockets with no room for the 3.175's entry hole: a small end mill
-    # pockets each, rough and then finish, as separate operations so that the
-    # finishing pass comes after the drills that leave burrs on the floor; it
-    # enters down a hole drilled as wide as itself, whose point goes below the
-    # floor only until its cone is half the end mill wide there (rule TH4)
+    # pockets each, in one operation with no finishing pass, since only the
+    # 3.175 end mill takes a finishing pass (user, 2026-10-24); after the drills
+    # in the floors, which leave burrs, and before the finishing pockets. It
+    # enters down a hole drilled as wide as itself, with the rough passes, whose
+    # point goes below the floor only until its cone is half the end mill wide
+    # there (rule TH4)
     small = {}  # end mill: [(floor, entry point)]
     small_tool = {}  # floor's tempId: (end mill, diameter)
     for f in pockets:
@@ -6202,7 +6840,8 @@ def _side_ops(b, setup, a, side, plan, warnings):
         fits = [x for x in drills if d - 0.1 - 1e-6 <= x[1] <= d + 1e-6 and x[2] >= depth + 0.5]
         return min(fits, key=lambda x: (x[0] not in used_drills, d - x[1])) if fits else None
 
-    def small_pockets(which, multi, suffix):
+    def small_pockets(which):
+        """The entry holes (which 'rough') or the pockets ('finish')."""
         out = []
         for (em, d), group in sorted(small.items(), key=lambda kv: -kv[0][1]):
             faces = [f['face'] for f, _ in group]
@@ -6231,12 +6870,10 @@ def _side_ops(b, setup, a, side, plan, warnings):
                                     'as wide as itself, which leave a dimple %g mm across in the '
                                     'floor; at x, y = %s mm'
                                     % (d, len(group), '' if len(group) == 1 else 's', d / 2, where))
-            params = dict(POCKET, doMultipleDepths=multi, bottomHeight_mode="'from contour'",
-                          **top_at(-allow if which == 'rough' else 0))
-            if which == 'rough':
-                params.update(useStockToLeave='true', simpleStockToLeave='false',
-                              stockToLeave='0mm', verticalStockToLeave='%gmm' % POCKET_FLOOR_ALLOWANCE)
-            out.append(b.op(setup, 'pocket2d', em, 'Small pockets %g%s' % (d, suffix), params,
+                continue
+            params = dict(POCKET, doMultipleDepths='true', bottomHeight_mode="'from contour'",
+                          **top_at(-allow))
+            out.append(b.op(setup, 'pocket2d', em, 'Small pockets %g' % d, params,
                             _both(_sel_pocket(faces), _sel_faces('predrillPositions', pts))))
         return out
 
@@ -6264,14 +6901,15 @@ def _side_ops(b, setup, a, side, plan, warnings):
             ops['main'] += later_drills()
         if which == 'finish':
             ops['main'] += drill_ops(True)
+            ops['main'] += small_pockets('finish')
         if pockets:
             shelves = lay['shelves'] if lay else {}
             # what a pocket op selects: the plain floors, and one chain per shelf
             # region, though several shelves share it; each with its depth and entry
             units = []  # (floor face or None, chain or None, depth, [entry points], side-open)
             for f in pockets:
-                if f in narrow:
-                    continue
+                if f in narrow or f.get('joined'):
+                    continue  # a joined floor: the open floor's passes cut it
                 e = side_entries.get(f['face'].tempId)
                 c = shelves.get(f['face'].tempId)
                 if c is None and f['face'].tempId in slot_floors:
@@ -6312,6 +6950,10 @@ def _side_ops(b, setup, a, side, plan, warnings):
                 for floor, side_open in ((True, False), (True, True), (False, False), (False, True)):
                     us = [u for u in inside if (bot is None or u[2] <= bot + 1e-6) == floor
                           and u[4] == side_open]
+                    if which == 'rough' and floor:
+                        # a floor no deeper than the rough pass leaves on it: the
+                        # rough pass would mill air
+                        us = [u for u in us if u[2] > POCKET_FLOOR_ALLOWANCE + 1e-6]
                     if not us:
                         continue
                     params = dict(POCKET, doMultipleDepths=multi,
@@ -6406,7 +7048,8 @@ def _side_ops(b, setup, a, side, plan, warnings):
                                                 [u[1] for u in gu if u[1] is not None], top),
                             _sel_faces('predrillPositions', pts), sel)))
         if which == 'rough':
-            ops['main'] += pre_drills(floor_pre, ' in floors')
+            ops['main'] += pre_drills([(h, d) for h, d in floor_pre
+                                       if all(h is not x for x in end_bored)], ' in floors')
             end_bores(which, multi, suffix)
         # tap holes bored to size: one light pass, plus a finishing pass in blind holes
         for hs in _group([h for h, _ in tap_bored]):
@@ -6430,7 +7073,8 @@ def _side_ops(b, setup, a, side, plan, warnings):
             ops['main'].append(b.op(setup, 'contour2d', tk, 'Narrow pocket' + suffix, params, _both(
                 _sel_floor_outlines([f['face']]),
                 _sel_faces('entryPositions', [e['point']] if e and e['point'] else []))))
-        ops['main'] += small_pockets(which, multi, suffix)
+        if which == 'rough':
+            ops['main'] += small_pockets('rough')
         if windows:
             for w in windows:
                 e = window_entry(w)
@@ -7155,7 +7799,9 @@ def build(args):
             _side_ops(dry, None, a, side, plan, [])
         for desc, key in _slot_order(dry.needed):
             tools.get(desc, key)
-    b = Builder(cam, tools, log)
+    b = Builder(cam, tools, log, outline=_outline_polygon(
+        [f for f in (a['top_face'], a['bottom_face']) if f is not None]))
+    b.defer = True
     community = _fetch_community(warnings)
     machine = _machine(community, log, warnings)
     post = _post(community['post'])
@@ -7204,13 +7850,16 @@ def build(args):
             'setups': setups, 'operations': log, 'next': 'features({}), then references/recipes/part.md',
             'warnings': warnings, 'seconds': round(time.time() - t0, 1)}, indent=1))
         return
-    top_ops = _side_ops(b, top, a, 'top', plan, warnings)
+    def made(ops):  # each setup's operations, in the order they run (see _run_order)
+        return {k: [b.make(p) for p in (_run_order(v) if k == 'main' else v)]
+                for k, v in ops.items()}
+    top_ops = made(_side_ops(b, top, a, 'top', plan, warnings))
     programs = [(name + '_top', top_ops['main'])]
     tab_ops = top_ops['tabs']
     if sides == 2:
         bottom = _setup(cam, 'Bottom ' + SETUP_TAG, body, machine, stock, False, x_axis,
                         vises[1], warnings)
-        bottom_ops = _side_ops(b, bottom, a, 'bottom', plan, warnings)
+        bottom_ops = made(_side_ops(b, bottom, a, 'bottom', plan, warnings))
         programs.append((name + '_bottom', bottom_ops['main']))
         tab_ops = bottom_ops['tabs']
     if outline:

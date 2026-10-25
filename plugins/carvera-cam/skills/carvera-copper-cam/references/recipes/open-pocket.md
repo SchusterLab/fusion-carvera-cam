@@ -62,12 +62,17 @@ A floor that runs out to every side of the part, such as the floor round a boss,
 A floor that has runs has each run drawn as one more island, closed round the outside of the part, far enough out that the passes round it are cut back before they get there.
 The passes round a run then follow its walls and turn out to the outline cut's path, and where they meet an island's they join it rather than cross.
 
+Openings in the floor that other tools cut are patched (user, 2026-10-24); `walls` and `island_passes` do it themselves:
+- An island some of whose walls fall away, to a slot, a hole or a deeper pocket, such as a pad a slot cuts through, is its loop's walls that rise from the floor, with a straight line across each opening between them. Its passes run over the openings instead of round them.
+- A closed floor joined to this one (its `joined_to` in `features` is this floor; `walls` lists it under `joined`) is cut with it, as one floor: it lies at the same height, separated only by an opening the 3.175 mm end mill cannot enter, such as a groove a small end mill cuts. Its islands are this floor's too, and the passes run over the opening into it. It gets no pocket and no entry hole of its own.
+
 1. **Sketch the passes.**
    `island_passes({"floor": i})` sketches all n passes at once, as `build` cuts them.
    Each pass offsets every island's walls and is cut back to the outline cut's path, and to where it goes inside another island's loop.
    Where a pass vanishes because the floor is too narrow for it there, the pass before it can leave a strip uncut; `island_passes` then adds a pass one tool radius beyond that one, which reaches the strip.
    Where two islands' loops cross, the pieces join there into one, so no two passes cross: Fusion splits a contour wherever any of its curves cross, even curves of different chains, and plunges again at each piece, into copper nothing has cut.
    A pass that never reaches the outline cut's path, such as one island's whole loop, closes on itself.
+   When every pass of the n closes so, `island_passes` adds passes farther out, up to four, until one reaches the outline cut's path.
    `island_passes` joins it to a pass farther out, so that the end mill enters on the outline cut's path, not down a hole drilled in the floor (user, 2026-10-21): the tool cuts the pass farther out, follows a line from it into the closed pass, goes round, and leads on into the next closed pass in.
    Where no pass farther out reaches, it joins one of the same offset or one nearer the islands: so it does for an island beside a run of walls, and for a pass pinched off inside a run's walls, which lies farther from the run than the pass it joins.
    Each such run, from the outline cut's path in to the islands, is one chain, because Fusion orders the chains of a contour as it likes, so a pass can rely only on what its own chain has cut before it.
