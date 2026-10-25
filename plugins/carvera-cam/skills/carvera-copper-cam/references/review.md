@@ -15,7 +15,7 @@ The simulation ([simulation.md](simulation.md)) comes after both.
 
 1. **Is each finding real?**
    For every finding the checker reports, look at the geometry or the G-code it names and decide whether the part would come out wrong.
-   A rule can misfire on a shape its author did not test: on parts turned over for machining, DB1 once flagged 145 inside corners as edges with no deburr, because it took the floor's side of an edge from the order of the face's edges (2026-10-24).
+   A rule can misfire on a shape its author did not test: on parts turned over for machining, DB1 once flagged 145 inside corners as edges with no deburr, because it took the floor's side of an edge from the order of the face's edges.
    A finding that is wrong is a bug in the rule: fix it in `check_cam.py`.
 2. **The order makes sense.**
    `build` orders each setup's operations for the fewest tool changes, keeping each one after the operations it depends on (conventions.md, "Run order"), and no rule checks the order as a whole.

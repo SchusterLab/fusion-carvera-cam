@@ -12,7 +12,7 @@ The menu also opens only where Fusion's canvas shows on screen: with another win
 
 ## Running it
 
-Read the issues from each setup on its own, in run order, and save the stock from all the setups simulated together (user, 2026-10-25).
+Read the issues from each setup on its own, in run order, and save the stock from all the setups simulated together.
 With several setups selected, Fusion warns that their work offsets differ, and reports collisions with the vise that each setup's own simulation does not have (on the 30 × 20 × 4 mm test part: 103 errors in the bottom setup together, none alone); those errors touch only the collision checks, so the stock it leaves is right, and its issues are ignored.
 A setup simulated on its own starts from the whole stock, not from what the setups before it left, so its stock has only its own cuts in it; the setups together leave the part as they cut it between them, in one save.
 

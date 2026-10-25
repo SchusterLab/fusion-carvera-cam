@@ -29,7 +29,6 @@ import json
 import math
 import os
 import re
-import runpy
 import time
 import tomllib
 import urllib.request
@@ -2004,6 +2003,92 @@ def _falls_away(face, ce):
     return nw.dotProduct(into) < -1e-6
 
 
+# Where the chamfering bit's point goes, worked out from the part round each
+# edge: a ray cast from points along the edge, at heights above and below the
+# floor and in RAY_DIRS directions, finds the nearest copper. The bit's axis
+# lies the point's offset plus its tip's radius out from the edge, over the drop
+# (the cone meets the edge at the chamfer's foot), and the bit is a cone from its
+# 0.1 mm point to its 3.175 mm body CHAMFER_REACH above it. The deeper the point,
+# the farther out the axis and the lower the cone's top: the bit clears walls
+# rising beside the edge better, and comes nearer the far side of a narrow drop.
+# Each cut starts and ends with a lead (CHAMFER_OP's, perpendicular and a tenth
+# of the bit's diameter long), which takes the axis that much farther out.
+TIP_STEP = 0.02                                     # mm between the offsets tried
+CHAMFER_LEAD = 3.175 * 0.1                          # mm
+RAY_DIRS = 12
+RAY_UP = (0.05, 0.3, 0.6, 0.9, 1.2, 1.5, 2.0, 3.0)  # mm above the floor
+RAY_DOWN = (0.15, 0.4, 0.7, 1.0, 1.3, 1.6)          # mm below it
+RAY_REACH = 3.5                                     # mm: copper farther off is clear
+
+
+def _deburr_tip(faces, up, depth, hi, width, skip=frozenset()):
+    """The tip offset, in mm, for deburring the falling edges of `faces`, a pocket
+    floor `depth` mm below the face, seen along `up` (the tool axis, away from
+    the part): of the offsets from CHAMFER_TIP_MIN to `hi` (the most the floors,
+    holes and tabs below allow), the deepest at which the bit keeps
+    CHAMFER_CLEAR off the part at the most sample points, three along each edge;
+    and how many of them it clears there, of how many."""
+    root = adsk.fusion.Design.cast(adsk.core.Application.get().activeDocument.products.itemByProductType(
+        'DesignProductType')).rootComponent
+    tips = [hi - TIP_STEP * k for k in range(int((hi - CHAMFER_TIP_MIN) / TIP_STEP + 1e-9) + 1)]
+    score = [0] * len(tips)
+    n = 0
+    ux, uy, uz = up.x, up.y, up.z
+    for face in faces:
+        for lp in face.loops:
+            for ce in lp.coEdges:
+                e = ce.edge
+                if e.tempId in skip or not _falls_away(face, ce):
+                    continue
+                own = {g.tempId for g in e.faces}
+                ev = e.evaluator
+                ok, p0, p1 = ev.getParameterExtents()
+                for k in (1, 2, 3):
+                    ok, pt = ev.getPointAtParameter(p0 + (p1 - p0) * k / 4)
+                    ok, tan = ev.getFirstDerivative(p0 + (p1 - p0) * k / 4)
+                    out = _into_face(face, pt, up.crossProduct(tan))
+                    out.scaleBy(-1)
+                    out.normalize()
+                    side = up.crossProduct(out)
+                    # the copper round the edge: (along out, along side, height) in mm
+                    near = []
+                    for h in [z for z in RAY_UP if z <= depth] + [-z for z in RAY_DOWN]:
+                        o = adsk.core.Point3D.create(pt.x + out.x * 0.001 + ux * h / 10,
+                                                     pt.y + out.y * 0.001 + uy * h / 10,
+                                                     pt.z + out.z * 0.001 + uz * h / 10)
+                        for j in range(RAY_DIRS):
+                            a = 2 * math.pi * j / RAY_DIRS
+                            d = adsk.core.Vector3D.create(
+                                out.x * math.cos(a) + side.x * math.sin(a),
+                                out.y * math.cos(a) + side.y * math.sin(a),
+                                out.z * math.cos(a) + side.z * math.sin(a))
+                            hits = adsk.core.ObjectCollection.create()
+                            found = root.findBRepUsingRay(
+                                o, d, adsk.fusion.BRepEntityTypes.BRepFaceEntityType, -1, True, hits)
+                            if not found.count or found.item(0).tempId in own:
+                                continue  # nothing, or the edge's own wall, which the cone clears
+                            q = hits.item(0)
+                            r = q.distanceTo(o) * 10
+                            if r < RAY_REACH:
+                                near.append((r * math.cos(a), r * math.sin(a), h))
+                    n += 1
+                    for i, t in enumerate(tips):
+                        # the axis, along out from the edge, in the cut and its leads
+                        axes = [CHAMFER_TIP_R + t + CHAMFER_LEAD * f for f in (0, 0.5, 1)]
+                        clear = True
+                        for x, y, h in near:
+                            z = h + t + width  # above the point
+                            if z > 0 and any(math.hypot(x - ax, y) < min(CHAMFER_TIP_R + z, CHAMFER_R)
+                                             + CHAMFER_CLEAR for ax in axes):
+                                clear = False
+                                break
+                        score[i] += clear
+    if not n:
+        return hi, 0, 0
+    best = max(score)
+    return tips[score.index(best)], best, n
+
+
 def _add_falling_edges(sels, face, skip=frozenset()):
     """Add to `sels` the edges where walls fall away from `face` (see
     _falls_away), but those in `skip` (tempIds), as _add_edge_runs adds them."""
@@ -3618,6 +3703,7 @@ CHAMFER_CLEAR = 0.1     # the point kept this far above floors and the tabs
 # at least CHAMFER_TIP_MIN below the chamfer, so the widest chamfer it cuts is
 # 1.4375 mm; a slope within CHAMFER_ANGLE_TOL degrees of 45 counts.
 CHAMFER_REACH = (3.175 - 0.1) / 2
+CHAMFER_R, CHAMFER_TIP_R = 3.175 / 2, 0.1 / 2  # the bit's radius and its point's
 CHAMFER_ANGLE_TOL = 0.5
 # A modelled chamfer is cut this much deeper at each pass, the last pass the full
 # chamfer: one pass the full width loads the bit's whole cone at once.
@@ -6574,7 +6660,11 @@ def _side_ops(b, setup, a, side, plan, warnings):
                 if _falls_away(g, ce)])
             if r is not None:
                 room.append(r)
-            most = CHAMFER_REACH - width if inner else CHAMFER_TIP_MAX
+            # the cone's top, where the bit's 3.175 mm body starts, stays
+            # CHAMFER_CLEAR above the floor: the body reaches in over the floor,
+            # and at 1.437 mm it rubbed sample-lid-with-tabs-v2's slot floors
+            # (Fusion's simulation, Stock+Shoulder; rule DB3)
+            most = CHAMFER_REACH - width - CHAMFER_CLEAR if inner else CHAMFER_TIP_MAX
             if inner:
                 most = min([most] + [h['dia'] / 2 - width - CHAMFER_CLEAR - 0.01 for h in rims])
             room.append(most + width + CHAMFER_CLEAR)
@@ -6602,7 +6692,9 @@ def _side_ops(b, setup, a, side, plan, warnings):
             if f['role'] == 'pocket' and _has_falling_edges(f['face'], chamfered):
                 by_depth.setdefault(round(f['depth'], 3), []).append(f['face'])
         for dep, fs in sorted(by_depth.items()):
-            t = chamfer_tip(dep, 'the pocket floor %g mm deep' % dep, fs)
+            t, _, _ = _deburr_tip(fs, adsk.core.Vector3D.create(0, 0, 1 if top else -1), dep,
+                                  chamfer_tip(dep, 'the pocket floor %g mm deep' % dep, fs),
+                                  width, chamfered)
             ops['main'].append(b.op(
                 setup, 'chamfer2d', CHAMFER,
                 'Deburr pocket floors' + (' %g mm' % dep if len(by_depth) > 1 else ''),
@@ -7166,60 +7258,6 @@ def _fit_thread_passes(cam, adjusted):
                 adjusted.append('%s: %s passes' % (o.name, p.expression))
 
 
-DEBURR_TIPS = (0.9, 0.7, 0.5, 0.3, CHAMFER_TIP_MIN)  # tried below build's, in mm
-
-
-def _fit_deburr(cam, adjusted):
-    """Give each pocket floor's deburr the tip offset that deburrs the most.
-
-    build sets the point as deep as there is room, which takes the bit's axis
-    farthest out over the drop, clear of the walls beside the edge (the side
-    edges of sample-lid-with-tabs-v2's slots had no toolpath at 0.5 mm, and do
-    from 0.64 mm). But over a narrow drop, such as a groove, the deeper the
-    point, the nearer the bit's far side comes to the groove's other wall, and
-    Fusion leaves that edge out: on copper-can-lid-6port's 0.1 mm floors, 0.8 mm
-    left out two edges on each side that 0.5 mm cut (user, 2026-10-25: adjust
-    the offset so that the deburr works). So each is generated again at the
-    offsets in DEBURR_TIPS below build's, and keeps the one whose G-code cuts the
-    most of the setup's deburr edges, by check_cam's DB1 test, the deepest of
-    those; generate() lists each change. The toolpath's length would not do: a
-    hole's rim is cut along a circle about the bit's axis, which is the smaller
-    the deeper the point. An attribute marks each one done, so that a resumed
-    generate() skips it.
-    """
-    todo = [o for s in cam.setups if s.name.endswith(SETUP_TAG) for o in s.allOperations
-            if o.strategy == 'chamfer2d' and o.name.startswith('Deburr pocket floors')
-            and not o.attributes.itemByName('carvera-cam', 'tip-fitted')
-            and (o.hasToolpath or o.hasWarning or o.hasError)]  # generated
-    if not todo:
-        return
-    check = runpy.run_path(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'check_cam.py'))
-    post = _post(_fetch_community([])['post'])
-    edges = {}
-    for o in todo:
-        s = o.parentSetup
-        if s.name not in edges:
-            edges[s.name] = check['_deburr_edges'](s)
-        p = o.parameters.itemByName('chamferTipOffset')
-        top = round(p.value.value * 10, 3)  # mm
-        tried = []
-        for t in [top] + [x for x in DEBURR_TIPS if x < top - 0.05]:
-            if t != top:
-                p.expression = '%gmm' % t
-                if not _wait(cam.generateToolpath(o), 30):
-                    break
-            hits = check['deburr_hits'](cam, o, post, edges[s.name]) if o.hasToolpath else 0
-            tried.append((t, hits))
-        most = max(h for _, h in tried)
-        best = next(t for t, h in tried if h == most) if most else top
-        if '%gmm' % best != p.expression:
-            p.expression = '%gmm' % best
-            _wait(cam.generateToolpath(o), 30)
-        if best != top:
-            adjusted.append('%s: tip offset %g mm, not %g mm, deburrs the most' % (o.name, best, top))
-        o.attributes.add('carvera-cam', 'tip-fitted', '%g' % best)
-
-
 def _fit_predrill(cam, adjusted):
     """Move a pocket's entry 0.01 mm when Fusion finds it unusable.
 
@@ -7280,7 +7318,6 @@ def generate(args=None):
             return
     _fit_thread_passes(cam, adjusted)
     _fit_predrill(cam, adjusted)
-    _fit_deburr(cam, adjusted)
     report = []
     pending = []
     for s in cam.setups:

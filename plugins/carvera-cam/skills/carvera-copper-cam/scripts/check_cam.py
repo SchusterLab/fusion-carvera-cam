@@ -967,20 +967,6 @@ def _points_hit(pts, rising, cones, reach):
     return n
 
 
-def deburr_hits(cam, o, post, edges=None):
-    """How many sample points of its setup's deburr edges the chamfering
-    operation `o` cuts, by DB1's test on its own G-code; `edges` is
-    _deburr_edges' list for the setup, to reuse across calls. carvera_cam's
-    generate() calls it to pick each pocket floor deburr's tip offset."""
-    s = o.parentSetup
-    text = _post_setup(cam, s, [o], post, tempfile.mkdtemp(prefix='carvera-deburr-'))
-    cuts = [m for _, moves in parse_gcode(text) for m in moves
-            if m[0] != 0 and None not in m[1:]]
-    cone = _chamfer_cone(dict(_tool(o), params=o.parameters))
-    edges = edges if edges is not None else _deburr_edges(s)
-    return sum(_points_hit(pts, rising, [(o, cone, cuts)], cone[2]) for pts, rising in edges)
-
-
 def _check_chamfers(rep, setup, chamfers, to_world, box=None, top=None):
     """DB1: every edge _deburr_edges lists is chamfered: at each of its sample
     points, a chamfering bit's cone in this setup passes through it. Fusion
@@ -1126,7 +1112,7 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
                 _check_plunges(rep, 'E4', 'warning', sn, o, moves, t, holes, milled, to_world, top,
                                other=other, box=box)
             milled.append((cuts, t['d'] / 2))
-        if surf is not None and t['type'] != 'chamfer mill' and t['d']:
+        if surf is not None and t['d']:
             _add_cuts(surf, s, o, t, cuts, to_world, top, o.operationId in tab_ids)
         if t['type'] in MILLING and t['type'] != 'chamfer mill':
             # what this cut clears, for the setups after this one: the column
@@ -1251,6 +1237,9 @@ def _check_gcode(rep, cam, s, ops, tools, sections, deadline, holes=None, swept=
 
 GOUGE_TOL = 0.02             # a tool this far into the part is a gouge (a drill: 0.03)
 UNCUT_TOL = 0.03             # stock this thin left on a face counts as cut
+# A chamfering bit's body above its cone keeps this far off the part's faces:
+# Fusion's simulation counts a shoulder touching copper as a collision
+SHOULDER_CLEAR = 0.05
 FACE_POINTS = 4000           # sample points per face, at most, 0.5 mm apart at least
 EDGE_MARGINS = (0.1, 0.3, 0.55)  # sample points kept this far off a face's edges
 
@@ -1260,16 +1249,23 @@ def _add_cuts(surf, setup, o, t, cuts, to_world, top, in_tabs):
     as (ax, ay, az, bx, by, bz, cz, tool radius, operation index): the tool's
     tip ran from a to b, and its body rises from there towards cz, the stock top.
     A drill's tip is raised to where its point reaches full width."""
-    kind = 'drill' if t['type'] == 'drill' else 'thread' if o.strategy == 'thread' else 'mill'
+    kind = 'drill' if t['type'] == 'drill' else 'thread' if o.strategy == 'thread' else         'chamfer' if t['type'] == 'chamfer mill' else 'mill'
     lift = 0.0
     if kind == 'drill' and t['tip_angle']:
         lift = t['d'] / 2 / math.tan(math.radians(t['tip_angle']) / 2)
+    if kind == 'chamfer':
+        # only its body above the cone, which cuts like an end mill of its
+        # diameter; the cone cuts the chamfer (DB1)
+        tip_r, k_, rad = _chamfer_cone(dict(t, params=o.parameters))
+        lift = (rad - tip_r) / k_
     surf['ops'].append([setup.name, o.name, kind, bool(in_tabs)])
     k = len(surf['ops']) - 1
     for m in cuts:
         a = to_world.coords(m[1], m[2], m[3] + lift)
         b = to_world.coords(m[4], m[5], m[6] + lift)
-        c = to_world.coords(m[1], m[2], top)
+        # where the tool's body ends: the stock top, but a chamfering bit's body,
+        # which starts above its cone, rises on above it, as high as need be
+        c = to_world.coords(m[1], m[2], top if kind != 'chamfer' else max(m[3], m[6]) + lift + 50)
         surf['cuts'].append([round(v * 10, 4) for v in a + b + (c[2],)] + [t['d'] / 2, k])
 
 
@@ -1384,9 +1380,14 @@ def _probe(px, py, pz, cands, ops):
         h = (pz - tip) * s  # how far the point is above the tool's tip, along the tool
         if (cz - pz) * s < -UNCUT_TOL:
             continue  # above the stock
+        kind = ops[k][2]
+        if kind == 'chamfer':
+            # the chamfering bit's body: it covers nothing, but may not touch
+            if r - d > GOUGE_TOL and h > -SHOULDER_CLEAR:
+                gouges.append((min(r - d, h + SHOULDER_CLEAR), k))
+            continue
         if h >= -UNCUT_TOL:
             covered = True
-        kind = ops[k][2]
         if kind == 'thread':
             continue  # it cuts the thread into the wall
         # a drill may be a little wider than its hole (carvera_cam's DRILL_OVER)
@@ -1494,6 +1495,14 @@ def _check_surfaces(rep, cam, surf, threaded, deadline):
     # pass 0.2 mm above it, a through cut 0.5 mm past the far face
     for k, (depth, p, n) in sorted(gouged.items()):
         sn, on, kind = ops[k][:3]
+        if kind == 'chamfer':
+            # DB3: what Fusion's simulation flags as Stock+Shoulder
+            rep.add('DB3', 'error', sn, on, "the chamfering bit's body above its cone comes "
+                    'within %g mm of the part, or into it, at X%.3f Y%.3f Z%.3f (design frame)%s'
+                    % ((SHOULDER_CLEAR,) + tuple(p) + (', and at %d more points' % (n - 1)
+                                                       if n > 1 else '',)),
+                    at=[round(v, 3) for v in p])
+            continue
         if depth is None:
             rep.add('G1', 'error', sn, on, "the tool's tip runs inside the part at X%.3f Y%.3f "
                     'Z%.3f (design frame)' % p, at=[round(v, 3) for v in p])
