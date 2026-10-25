@@ -1609,6 +1609,13 @@ def features(args=None):
     thickness = a['ztop'] - a['zbot']
     region_of = {i: k for k, r in enumerate(L['regions']) for i in r['floors']}
     slot_of = {sl['floor']: k for k, sl in enumerate(L['slots'])}
+    # as _side_ops' band_room: a floor's deburr counts the tabs only where one of
+    # its falling edges comes within the chamfering bit's reach of a tab
+    tab_near = _near_points([(q.x, q.y) for q in (_tab_points(a, L['tab']['width'] / 10)
+                                                  if L['strategy']['outline'] else [])],
+                            3.175 / 20 + 0.02)
+    near_tab = lambda f: any(tab_near(x, y) for lp in f['face'].loops for ce in lp.coEdges
+                             if _falls_away(f['face'], ce) for x, y in _edge_points(ce.edge))
     floors = []
     for i, f in enumerate(a['floors']):
         e = L['pocket_entries'].get(str(i))
@@ -1620,6 +1627,7 @@ def features(args=None):
                 'point': 'small_pocket:%d' % i,
                 'end_mills': L['small_pockets'][str(i)]['end_mills']},
             'falls_away': _has_falling_edges(f['face'], _chamfer_edges(a)),
+            'near_tab': near_tab(f),
             'region': region_of.get(i),
             'joined_to': a['floors'].index(f['joined']) if f.get('joined') else None,
             'inside_region': L['inside_region'].get(str(i)), 'slot': slot_of.get(i),
@@ -2033,7 +2041,9 @@ def add_operations(args):
                      o['name'].startswith(('Face', 'Ends')))
         p.args = o
         pend.append(p)
-    order = _run_order(pend)
+    # the tab program's operations last, in their own order: they cut the part free
+    order = _run_order([p for p in pend if p.args.get('program') != 'tabs']) + \
+        [p for p in pend if p.args.get('program') == 'tabs']
     if args.get('order_only'):
         res = {'order': [p.name for p in order],
                'index': [next(i for i, q in enumerate(pend) if q is p) for p in order]}
@@ -3651,7 +3661,8 @@ def _join_closed(sk, levels, step, rising, ring):
     while closed:
         # each curve on its own: a chain's curves run either way, and their
         # samples strung together would jump from one curve's end to the next's
-        polys = [_samples([c], 0.02) for ch in chains for c in ch['curves']] +             [_samples([c], 0.02) for _, q, _ in closed for c in q]
+        polys = [_samples([c], 0.02) for ch in chains for c in ch['curves']] + \
+            [_samples([c], 0.02) for _, q, _ in closed for c in q]
         options = []
 
         def nearest(cands):

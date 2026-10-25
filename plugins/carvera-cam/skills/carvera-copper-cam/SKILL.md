@@ -135,6 +135,7 @@ Before building, confirm with the user, briefly and in one message:
 
 ### 4. Build both ways
 
+Always do this step, and steps 7 and 8, without asking, unless the user asks to skip them: every run of the skill builds the part both ways, checks both builds both ways, and compares the simulated stock with the part (user, 2026-10-24).
 Build the part twice: the script's way in the user's document, and the recipes' way in a fresh copy of the part.
 
 ```python
@@ -223,7 +224,7 @@ Any operation with `"toolpath": false`, `hasError` or `hasWarning` needs attenti
 
 ### 7. Check both ways and compare
 
-In each document:
+Always do this step, without asking, unless the user asks to skip it. In each document:
 
 1. Read the toolpaths as [references/review.md](references/review.md) describes, and write down what you find, before you run the checker.
 2. Run the toolpath check (see "Checking existing toolpaths").
