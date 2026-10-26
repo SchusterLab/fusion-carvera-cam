@@ -5917,6 +5917,7 @@ class _Side:
             if which == 'rough':
                 ops['main'] += self.later_drills()
             if which == 'finish':
+                self._slot_ops()
                 ops['main'] += self.drill_ops(True)
                 ops['main'] += self.small_pockets('finish')
             if self.pockets:
@@ -6133,12 +6134,12 @@ class _Side:
                 ops['main'].append(b.op(setup, 'contour2d', tk, 'Outline between tabs' + suffix,
                                         params, _both(corners, set_hi, set_lo)))
 
-    def _small_tool_ops(self):
-        """The small end mills' slots, pocket and window corners, and bores."""
+    def _slot_ops(self):
+        """Slots the 3.175 can't enter, cut along their centreline by an end mill as
+        wide as the slot from the open end, and the pockets they reach, entered at
+        the slot's closed end; one operation of each per tool. They come before the
+        finishing pockets, which clean up their burrs (conventions.md, step 5)."""
         b, setup, ops, warnings, lay = self.b, self.setup, self.ops, self.warnings, self.lay
-        # slots the 3.175 can't enter, cut along their centreline by an end mill as wide
-        # as the slot from the open end, and the pockets they reach, entered at the
-        # slot's closed end; one operation of each per tool
         slots = [sl for sl in (lay['slots'] if lay else []) if sl['side'] == self.side]
         by_tool = {}
         for sl in slots:
@@ -6161,6 +6162,12 @@ class _Side:
                           _sel_faces('predrillPositions', [sl['end'] for sl in sls if sl['fed']]))))
             slotted |= {sl['floor']['face'].tempId for sl in sls}
             slotted |= {g['face'].tempId for g in fed}
+        self.slotted = slotted
+
+    def _small_tool_ops(self):
+        """The small end mills' pocket and window corners, and bores."""
+        b, setup, ops, warnings, lay = self.b, self.setup, self.ops, self.warnings, self.lay
+        slotted = self.slotted
         # corners the 3.175 can't reach, by rest machining with small end mills
         # (conventions.md, Operation order, step 6): one operation per end mill and
         # start height, those starting highest first, then one per window; a corner

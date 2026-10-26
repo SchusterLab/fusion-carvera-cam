@@ -19,7 +19,7 @@ The simulation ([simulation.md](simulation.md)) comes after both.
    A finding that is wrong is a bug in the rule: fix it in `check_cam.py`.
 2. **The order makes sense.**
    `build` orders each setup's operations for the fewest tool changes, keeping each one after the operations it depends on (conventions.md, "Run order"), and no rule checks the order as a whole.
-   Drills come before the cuts that enter their holes, the outline cut before anything that enters from its groove, every roughing pass before its finishing pass, the drills in a pocket floor before the floor's finishing pass, the deburr last but for the tab cut, and the tab cut last of all, in its own program.
+   Drills come before the cuts that enter their holes, the outline cut before anything that enters from its groove, every roughing pass before its finishing pass, the drills in a pocket floor and the slots before the finishing pockets, the deburr last but for the tab cut, and the tab cut last of all, in its own program.
 3. **The times are plausible.**
    Facing usually takes the longest.
    An operation that takes many times longer than a similar one, or whose cut length is far longer than its feature needs, often means a toolpath that wanders, such as one that feeds in from the stock's edge.
