@@ -5273,8 +5273,10 @@ def _shelf_regions(root, a, sk, pocket_entries):
     hand. The region is entered at its centre, or its most open point if the end
     mill does not fit there; that lands in the deeper pocket and is drilled to the
     shelf's depth. A shelf the region reaches only through a gap narrower than the
-    end mill gets no hole of its own: the small end mill's rest machining comes in
-    through the gap. Each region's 'keys' name its entries in pocket_entries.
+    end mill is left out of the region when it has room for its own entry hole,
+    which _make_layout gave it; else it gets no hole of its own, and the small
+    end mill's rest machining comes in through the gap. Each region's 'keys'
+    name its entries in pocket_entries.
     """
     out = {}
     by_level = {}
@@ -5329,8 +5331,16 @@ def _shelf_regions(root, a, sk, pocket_entries):
                     ccw = not ccw
                 regions[k] = ({'curves': curves, 'clockwise': not ccw, 'keys': [],
                                'rings': (rings[0], rings[1], None), 'side': side, 'z': z,
-                               'face': f['face']}, pt)
-            region, pt = regions[k]
+                               'face': f['face']}, pt,
+                              _reaches(rings, pt, TOOL_R) if pt is not None else None)
+            region, pt, reach = regions[k]
+            # a shelf the end mill can reach from the region's entry only through
+            # a gap narrower than itself, with room for its own entry hole: it
+            # keeps that hole and its own pockets (conventions.md, "Entry holes")
+            own = pocket_entries.get(f['face'].tempId)
+            if reach is not None and own is not None and own['drill'] and \
+                    not reach(own['point'].geometry.x, own['point'].geometry.y):
+                continue
             out[f['face'].tempId] = region
             if pt is not None:
                 placed.append((f, pt))
@@ -5342,6 +5352,32 @@ def _shelf_regions(root, a, sk, pocket_entries):
                 'point': points[xy], 'side': side, 'depth': f['depth'], 'drill': True}
             out[f['face'].tempId]['keys'].append(f['face'].tempId)
     return out
+
+
+def _reaches(rings, start, r, step=0.04):
+    """A test of whether a tool of radius r (cm) at `start` (x, y) inside a
+    profile's rings can move to (x, y) keeping r off them: a flood fill of
+    tool centres on a grid `step` cm apart."""
+    x0, y0 = start
+    free = {}
+
+    def ok(c):
+        if c not in free:
+            x, y = x0 + c[0] * step, y0 + c[1] * step
+            free[c] = _in_profile(rings, x, y) and _ring_clearance(rings, x, y) >= r
+        return free[c]
+    seen, todo = {(0, 0)}, [(0, 0)]
+    while todo:
+        i, j = todo.pop()
+        for c in ((i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)):
+            if c not in seen and ok(c):
+                seen.add(c)
+                todo.append(c)
+
+    def test(x, y):
+        i, j = round((x - x0) / step), round((y - y0) / step)
+        return any((i + di, j + dj) in seen for di in (-1, 0, 1) for dj in (-1, 0, 1))
+    return test
 
 
 def _enclosing(u, units, top, bottom):
